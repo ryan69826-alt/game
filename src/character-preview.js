@@ -1,6 +1,6 @@
-/* Layered runtime renderer: 16 body cells + palette swaps + aligned hair layers.
- * Head, body, and hair are independent canvases. Only height changes their
- * common geometry; body composition and model selection never reposition head.
+/* Layered runtime renderer: six fitted bodies + separate clothing + aligned hair.
+ * Head, body, clothing, and hair are independent canvases. Body fit and
+ * equipment never reposition the shared head or change the foot baseline.
  * Atlases and canvas objects are never stored in SugarCube's save data.
  */
 setup.characterPreview = (() => {
@@ -177,25 +177,6 @@ setup.characterPreview = (() => {
             fullHeight:source.canvas.height,eye:eyeAnchor(source.pixels,source.canvas.width,source.canvas.height)};
         return sharedHead;
     }
-    function neckAnchor(cell) {
-        if(cell.neck) return cell.neck;
-        const {width,height}=cell.canvas;
-        for(let y=0;y<height*.15;y++) {
-            const xs=[];
-            for(let x=0;x<width;x++) {
-                const i=(y*width+x)*4;
-                if(cell.pixels.data[i+3]>180 && skinPixel(...cell.pixels.data.slice(i,i+3))) xs.push(x);
-            }
-            if(xs.length>=5) {
-                const width=xs.at(-1)-xs[0]+1;
-                // Trim the redundant upper neck; the shared head already
-                // contains its own lower neck pixels.
-                cell.neck={x:(xs[0]+xs.at(-1))/2,y:y+Math.round(width*.45),width};
-                return cell.neck;
-            }
-        }
-        throw new Error('Body sprite has no neck attachment point');
-    }
     function clearLayer(canvas) {
         const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
         ctx.imageSmoothingEnabled=false;return ctx;
@@ -217,30 +198,18 @@ setup.characterPreview = (() => {
         hairContext.drawImage(mask,0,0);hairContext.restore();
     }
     function draw(sources, layers, canvas, character) {
-        const fat=setup.character.choices.bodyFat.indexOf(character.bodyFat);
-        const muscle=setup.character.choices.muscleMass.indexOf(character.muscleMass);
-        const model=character.gender==='Female'?`female-${character.breastSize.toLowerCase()}`:'male-bodies';
-        const cell=bodyCell(sources[model],fat,muscle),head=headPart(sources['head-reference']);
-        const bodyContext=clearLayer(layers.body),headContext=clearLayer(layers.head),hairContext=clearLayer(layers.hair);
-        const baseline=193,height=Math.round(166*character.heightInches/84);
+        const head=headPart(sources['head-reference']);
+        const bodyContext=clearLayer(layers.body),clothingContext=clearLayer(layers.clothing),headContext=clearLayer(layers.head),hairContext=clearLayer(layers.hair);
+        const baseline=193,height=140;
         const headScale=height/head.fullHeight*HEAD_SCALE,headWidth=Math.round(head.canvas.width*headScale);
         const headHeight=Math.round(head.canvas.height*headScale),headTop=baseline-height;
         const neckX=72,headLeft=Math.round(neckX-head.neckX*headScale);
         const neckY=headTop+headHeight-2;
-        // Each body is attached below the same neck and stretched only to the
-        // same foot baseline. No selected body bounds affect head geometry.
-        const neck=neckAnchor(cell),bodyScale=(baseline-neckY)/(cell.canvas.height-neck.y);
-        const bodyLeft=Math.round(neckX-neck.x*bodyScale),bodyTop=neckY-neck.y*bodyScale;
-        bodyContext.save();bodyContext.beginPath();bodyContext.rect(0,neckY,canvas.width,canvas.height-neckY);bodyContext.clip();
-        bodyContext.drawImage(tintedBody(cell,character),bodyLeft,Math.round(bodyTop),Math.round(cell.canvas.width*bodyScale),Math.round(cell.canvas.height*bodyScale));
-        // A short skin bridge overlaps both layers, hiding the atlas neck cap
-        // and smoothly tapering the body neck into the shared head's neck.
+        const model=setup.characterBody.draw(bodyContext,clothingContext,character,neckY,SKIN[character.skinTone]);
+        // Cover the common neck joint with the exact shared skin palette.
         const upper=Math.max(4,Math.round(head.neckWidth*headScale)/2);
-        const lower=Math.max(3,Math.round(neck.width*bodyScale)/2);
         bodyContext.fillStyle=`rgb(${SKIN[character.skinTone].join(',')})`;
-        bodyContext.beginPath();bodyContext.moveTo(neckX-upper,neckY);bodyContext.lineTo(neckX+upper,neckY);
-        bodyContext.lineTo(neckX+lower,neckY+4);bodyContext.lineTo(neckX-lower,neckY+4);bodyContext.closePath();bodyContext.fill();
-        bodyContext.restore();
+        bodyContext.fillRect(neckX-upper,neckY,upper*2,4);
         headContext.drawImage(tintedBody(head,character,true),headLeft,headTop,headWidth,headHeight);
         // Preserve a one-pixel iris when nearest-neighbor downsampling would
         // otherwise discard every source iris pixel on the smaller head.
@@ -255,10 +224,11 @@ setup.characterPreview = (() => {
         canvas.dataset.headHeight=headHeight;
         canvas.dataset.figureHeight=height;
         const ctx=clearLayer(canvas);
-        for(const layer of [layers.body,layers.head,layers.hair]) ctx.drawImage(layer,0,0);
+        for(const layer of [layers.body,layers.clothing,layers.head,layers.hair]) ctx.drawImage(layer,0,0);
         const breast=character.gender==='Female'?`, ${character.breastSize.toLowerCase()} breast size`:'';
-        canvas.setAttribute('aria-label',`Adult ${character.gender.toLowerCase()} model, ${setup.character.heightLabel(character.heightInches)}, ${character.bodyFat.toLowerCase()} body fat, ${character.muscleMass.toLowerCase()} muscle${breast}, ${character.skinTone.toLowerCase()} skin, ${character.eyeColor.toLowerCase()} eyes, ${character.hairColor.toLowerCase()} ${character.hairLength.toLowerCase()} hair.`);
-        canvas.dataset.variation=`${model}-${fat}-${muscle}`;
+        canvas.setAttribute('aria-label',`Adult ${character.gender.toLowerCase()} model, ${character.bodySize.toLowerCase()} body${breast}, ${character.skinTone.toLowerCase()} skin, ${character.eyeColor.toLowerCase()} eyes, ${character.hairColor.toLowerCase()} ${character.hairLength.toLowerCase()} hair.`);
+        canvas.dataset.variation=model;
+        canvas.dataset.clothingFit=model;
         canvas.dataset.neckY=neckY;
         canvas.dataset.neckX=neckX;
     }

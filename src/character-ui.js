@@ -6,7 +6,7 @@ $(document).on(':passagedisplay', () => {
     const preview=setup.characterDisplay.mount(character);
     const groups=[
         ['Identity',[['gender','Gender'],['genitals','Genitals']]],
-        ['Body',[['heightInches','Height'],['bodyFat','Body Fat'],['muscleMass','Muscle Mass'],['breastSize','Breast Size']]],
+        ['Body',[['bodySize','Body Size'],['breastSize','Breast Size']]],
         ['Appearance',[['eyeColor','Eye Color'],['hairColor','Hair Color'],['hairLength','Hair Length'],['skinTone','Skin Tone']]]
     ];
     function update() {
@@ -15,8 +15,8 @@ $(document).on(':passagedisplay', () => {
             breast.disabled=character.gender!=='Female';
             breast.closest('.character-field').hidden=character.gender!=='Female';
         }
-        document.getElementById('build-description').textContent=`${character.bodyFat} build · ${character.muscleMass} muscle`;
-        document.getElementById('appearance-description').textContent=setup.character.heightLabel(character.heightInches);
+        document.getElementById('build-description').textContent=`${character.gender} · ${character.bodySize} body`;
+        document.getElementById('appearance-description').textContent=Object.entries(character.clothing).filter(([, worn]) => worn).map(([slot]) => setup.clothing.definitions[slot].name).join(' · ') || 'Underwear only';
         preview.refresh();
     }
     for(const [title,items] of groups) {
@@ -26,30 +26,27 @@ $(document).on(':passagedisplay', () => {
         for(const [key,label] of items) {
             const row=document.createElement('div');row.className='character-field';
             const labelNode=document.createElement('label');labelNode.htmlFor=`character-${key}`;labelNode.textContent=label;row.append(labelNode);
-            const input=document.createElement(key==='heightInches'?'input':'select');input.id=labelNode.htmlFor;input.name=key;
-            if(key==='heightInches') {
-                row.classList.add('height-field');input.type='range';input.min='48';input.max='84';input.step='1';
-                const output=document.createElement('output');output.htmlFor=input.id;output.id='height-output';output.textContent=setup.character.heightLabel(character.heightInches);labelNode.append(output);
-                const limits=document.createElement('div');limits.className='range-limits';limits.innerHTML='<span>4 ft</span><span>7 ft</span>';
-                row.append(input,limits);
-            } else {
-                for(const value of setup.character.choices[key]) input.append(new Option(value,value));
-                row.append(input);
-            }
-            input.value=character[key];
-            input.addEventListener(key==='heightInches'?'input':'change',()=>{
-                character[key]=key==='heightInches'?Number(input.value):input.value;
-                if(key==='heightInches') {
-                    document.getElementById('height-output').textContent=setup.character.heightLabel(character.heightInches);
-                    input.setAttribute('aria-valuetext',setup.character.heightLabel(character.heightInches));
-                }
-                update();
-            });
-            if(key==='heightInches') input.setAttribute('aria-valuetext',setup.character.heightLabel(character.heightInches));
+            const input=document.createElement('select');input.id=labelNode.htmlFor;input.name=key;
+            for(const value of setup.character.choices[key]) input.append(new Option(value,value));
+            row.append(input);input.value=character[key];
+            input.addEventListener('change',()=>{character[key]=input.value;update();});
             grid.append(row);
         }
         root.append(group);
     }
+    const clothing = document.createElement('fieldset');clothing.className = 'customization-group';
+    const legend = document.createElement('legend');legend.textContent = 'Clothing';clothing.append(legend);
+    const grid = document.createElement('div');grid.className = 'clothing-choices';
+    for (const slot of setup.clothing.slots) {
+        const definition = setup.clothing.definitions[slot];
+        const label = document.createElement('label'), input = document.createElement('input');
+        input.type = 'checkbox';input.id = `clothing-${slot}`;input.checked = character.clothing[slot];
+        input.addEventListener('change', () => {character.clothing[slot] = input.checked;update();});
+        label.append(input, ` ${definition.name} · ${definition.columns * definition.rows} blocks`);grid.append(label);
+    }
+    const note = document.createElement('p');note.className = 'world-note';
+    note.textContent = 'Only worn pockets and bags provide storage. Underwear and shoes have no storage.';
+    clothing.append(grid, note);root.append(clothing);
     setup.characterCreationBuild.mount(root, character);
     update();
 });

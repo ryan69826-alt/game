@@ -41,7 +41,7 @@ Neon Meridian
 <div class="preview-heading"><span class="eyebrow">LIVE PREVIEW</span><span class="preview-badge">ADULT · 26</span></div>
 <<include "CharacterArtwork">>
 <figcaption><span id="build-description"></span><br><span id="appearance-description"></span></figcaption>
-<p class="preview-note">Male and female body models share a fixed head. Breast size applies to the female model. Genitals are saved independently of appearance.</p>
+<p class="preview-note">Six adult body fits share a fixed head. Clothing uses separate fitted layers. Genitals are saved independently of appearance.</p>
 <p id="preview-status" class="preview-status" role="status" aria-live="polite"></p>
 </figure>
 </div>
@@ -62,13 +62,10 @@ Neon Meridian
 <div class="sprite-stage"><canvas id="character-canvas" width="144" height="208" role="img" aria-label="Adult character appearance preview"></canvas></div>
 <div hidden aria-hidden="true">
 <canvas id="body-layer" width="144" height="208"></canvas>
+<canvas id="clothing-layer" width="144" height="208"></canvas>
 <canvas id="head-layer" width="144" height="208"></canvas>
 <canvas id="hair-layer" width="144" height="208"></canvas>
 <img class="character-source" id="head-reference" src="asset:characters/body-atlas.png" alt="">
-<img class="character-source" id="male-bodies" src="asset:characters/male-bodies.png" alt="">
-<img class="character-source" id="female-small" src="asset:characters/female-small.png" alt="">
-<img class="character-source" id="female-medium" src="asset:characters/female-medium.png" alt="">
-<img class="character-source" id="female-large" src="asset:characters/female-large.png" alt="">
 <img class="character-source" id="long-hair-atlas" src="asset:characters/hair-layers.png" alt="">
 <img class="character-source" id="hair-atlas" src="asset:characters/hair-atlas.png" alt="">
 </div>

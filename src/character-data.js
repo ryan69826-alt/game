@@ -3,8 +3,7 @@ setup.character = (() => {
     const choices = {
         gender: ['Male', 'Female'],
         genitals: ['Male', 'Female', 'Both'],
-        bodyFat: ['Skinny', 'Petite', 'Average', 'Fat'],
-        muscleMass: ['Skinny', 'Toned', 'Athletic', 'Muscular'],
+        bodySize: ['Small', 'Medium', 'Large'],
         breastSize: ['Small', 'Medium', 'Large'],
         eyeColor: ['Blue', 'Green', 'Brown'],
         hairColor: ['Blonde', 'Black', 'Brown', 'Orange', 'Gray'],
@@ -12,8 +11,8 @@ setup.character = (() => {
         skinTone: ['Pale', 'Tan', 'Olive', 'Dark']
     };
     const defaults = () => ({
-        version: 3, age: 26, gender: 'Male', genitals: 'Male', heightInches: 66,
-        bodyFat: 'Average', muscleMass: 'Toned', eyeColor: 'Brown',
+        version: 4, age: 26, gender: 'Male', genitals: 'Male', bodySize: 'Medium',
+        clothing: setup.clothing.defaults(), eyeColor: 'Brown',
         hairColor: 'Black', hairLength: 'Ear', skinTone: 'Tan', breastSize: 'Medium',
         traits: [], skills: Object.fromEntries(setup.characterRules.skills.map(name => [name, 0]))
     });
@@ -23,8 +22,10 @@ setup.character = (() => {
             for (const [key, allowed] of Object.entries(choices)) {
                 if (allowed.includes(value[key])) result[key] = value[key];
             }
-            if (Number.isFinite(value.heightInches)) {
-                result.heightInches = Math.max(48, Math.min(84, Math.round(value.heightInches)));
+            // Old composition/height choices migrate to the medium fit. Never
+            // overwrite valid new equipment selections (including all false).
+            for (const slot of setup.clothing.slots) {
+                if (typeof value.clothing?.[slot] === 'boolean') result.clothing[slot] = value.clothing[slot];
             }
             const rules = setup.characterRules;
             if (Array.isArray(value.traits)) {
@@ -44,6 +45,5 @@ setup.character = (() => {
         State.variables.character = normalize(State.variables.character);
         return State.variables.character;
     }
-    const heightLabel = inches => `${Math.floor(inches / 12)} ft ${inches % 12} in`;
-    return {choices, defaults, normalize, ensure, heightLabel};
+    return {choices, defaults, normalize, ensure};
 })();

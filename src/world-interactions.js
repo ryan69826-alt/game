@@ -1,6 +1,6 @@
 /* Object definitions and action handlers are separate from movement/save data.
  * Ground items and NPCs can use the same rectangular reach test and supply their
- * own actions. This feature adds no inventory, interiors, or NPC simulation.
+ * own actions. Cars face north; only their sides and rear are usable.
  */
 setup.interactions = (() => {
     const inspect = {id: 'inspect', label: 'Inspect', result: object => object.description || `You examine ${object.name.toLowerCase()}.`};
@@ -28,10 +28,19 @@ setup.interactions = (() => {
             const dx = Math.max(object.x - world.x, 0, world.x - (object.x + (object.width || 1) - 1));
             const dy = Math.max(object.y - world.y, 0, world.y - (object.y + (object.height || 1) - 1));
             return {object, distance: dx + dy};
-        }).filter(target => target.distance <= 1)
+        }).filter(target => target.distance <= 1 && actionsFor(target.object, world).length)
             .sort((a, b) => a.distance - b.distance || a.object.name.localeCompare(b.object.name));
     }
-    function actionsFor(object) {
+    function actionsFor(object, world = State.variables.world) {
+        if (object.kind === 'car') {
+            if (!world) return [];
+            const width = object.width || 1, height = object.height || 1;
+            const side = (world.x === object.x - 1 || world.x === object.x + width) && world.y >= object.y && world.y < object.y + height;
+            const rear = world.y === object.y + height && world.x >= object.x && world.x < object.x + width;
+            if (side) return types.car;
+            if (rear) return [{id: 'trunk', label: 'Open trunk', result: () => 'You open the trunk.'}];
+            return [];
+        }
         return object.actions || (Object.hasOwn(types, object.kind) ? types[object.kind] : [inspect]);
     }
     function run(objectId, actionId) {
@@ -42,7 +51,7 @@ setup.interactions = (() => {
         if (!action) return {ok: false, message: 'That interaction is not available.'};
         if (action.enabled && !action.enabled(target.object)) return {ok: false, message: 'The door is already open.'};
         const message = typeof action.result === 'function' ? action.result(target.object) : action.result;
-        return {ok: true, message};
+        return {ok: true, message, ...(action.id === 'trunk' ? {trunkId: target.object.id} : {})};
     }
     return {nearby, actionsFor, run, isOpen};
 })();

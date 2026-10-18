@@ -1,245 +1,166 @@
 # Neon Meridian
 
-For a click-to-play website, see [GitHub Pages deployment](DEPLOYMENT.md).
+A modular browser RPG prototype built with Twine 2, SugarCube 2.37.3 and Tweego
+2.1.1. For the click-to-play site, see [GitHub Pages deployment](DEPLOYMENT.md).
+All protagonists are adults (age 26). Only the Apartments location is available;
+no story, NPC schedules, time simulation, or trait modifiers have been added.
 
-A small browser RPG interface built with **Twine 2 / SugarCube 2.37.3**.
-The current prototype opens on a main menu with exactly three choices:
-Character Creation (Continue after entering the world), Options, and Import/Export Saves. Character Creation has
-independent gender and genital choices, a 4–7 ft height slider in one-inch steps,
-four body-fat levels, four muscle levels, three eye colors, five hair colors,
-seven hair lengths, and four skin tones. Male and female select different body
-models. The female model also has Small/Medium/Large breast sizes under clothing.
-Each model/size supports all 16 fat/muscle combinations: 64 body variants total.
-Height, build, skin, eyes, hair, gender, and female breast size update the preview.
-Genitals are saved independently and do not alter the clothed art. A breast-size
-selection is retained when switching to male and restored when returning to female.
-Character Creation also has 15 independent starting-trait checkboxes and 18 skills.
-Traits are saved but have no stat or skill modifiers until those effects are defined.
-Skills begin untrained at level 0 and have a shared, refundable 250 XP creation pool.
-Reaching level 1 costs 50 XP; each following level costs twice the previous cost
-(100 more for level 2, 200 more for level 3), through level 10. XP entered per skill
-is cumulative: 150 XP means level 2 with 0/200 toward level 3. Use the number fields
-or ±10 XP buttons; the last increment uses the remaining pool. Reset refunds all
-skill XP. No combinations of traits are restricted yet.
-All protagonists are adults (age 26 in this prototype).
-Use **Start at Apartments** in the creator to enter the first urban location.
-Apartments has a vertical area map on the right (40% of the main area) and a
-description column on the left (60%). On narrow screens, the map stacks below
-the description so both remain readable. The local and world maps share a
-viewport-sized stack, with proportional canvases that shrink to fit the available
-height. Desktop layouts fit both maps without page scrolling.
-Apartments is a 50×50 square grid with
-four buildings facing a small park, a parking lot, a road across the south edge,
-and a second road running north from that road. Both roads are five squares wide
-with markings on their center squares. The parking lot has edge bays, clear drive
-aisles, and extra bays beside a planted median. Each car occupies a 2×2 square
-footprint. A continuous sidewalk circles the park and connects all four apartment
-entrances; no sidewalk crosses the park. The scrolling local map follows
-the player; the world map below shows the complete current area, player position,
-and local camera rectangle. Only Apartments is available for now.
+## Current character and equipment
 
-Use arrow keys, WASD, on-screen direction buttons, or click an adjacent square.
-Each successful cardinal step costs one turn; walls, cars, trees, area boundaries,
-and nonadjacent clicks cost none. Hold a direction key or an on-screen button to
-repeat steps every 200 milliseconds after the initial step. Multiple held directions
-alternate at that same overall pace; releasing one leaves the others active.
-Aliases such as W and Up share one direction slot. Blocked steps spend no turn and
-do not cancel held inputs, allowing another direction to open a route. Dialogs,
-window blur, tab hiding, and navigation clear all held inputs.
-The compact movement panel sits above the location title and is the only place
-that displays the exact terrain/position description. Doors are
-walkable thresholds; building interiors are not implemented. Open dialogs pause
-movement. Coordinates shown to players start at 1. Movement position and turn count
-survive reloads, menu/Continue, and disk saves. No time or NPC simulation runs yet.
-A persistent
-left sidebar displays the exact customized full-body character, a location link,
-and Character/Stats buttons. Both buttons open read-only windows over the unchanged
-Apartments screen. Character shows the saved identity, appearance, and traits;
-Stats shows all 18 skill levels and XP progress. There is no editing link, and
-character creation cannot reopen after entering the world. Close windows with
-Escape, the close button, or the backdrop; focus returns to the opening button.
-Old saves on Character/Stats passages return safely to Apartments.
-Additional stats and trait effects remain undefined. No other locations, story,
-NPCs, or time simulation are implemented. Continue returns to Apartments.
-Press **E** (or the **Interact [E]** button) on or directly beside a door/car to
-open an interaction window over the map. Diagonal tiles are out of reach. Doors
-provide Knock and Open; cars provide Look through window and Open door. When
-several objects are nearby, choose one first. The prompt updates after every move.
-Opening the window stops held movement. These starter actions spend no turns.
-Opening a door updates its map appearance and persists in `$openedObjects` through moves, reloads, and portable saves. There
-are no access restrictions yet. Building interiors and vehicle use are not implemented.
-No NPCs or ground items have been placed yet, but both types can use the same
-registry and define custom actions.
-The sidebar's Saves link supports saving/loading from world pages.
-Options provides larger text and reduced motion. Save management uses
-SugarCube's built-in browser slots and disk import/export.
+The menu has Character Creation (Continue after starting), Options, and
+Import/Export Saves. The creator has independent gender/genital selections,
+Small/Medium/Large body sizes for each gender, female breast size, three eye
+colors, five hair colors, seven hair lengths, and four skin tones. Height,
+body-fat and muscle controls have been replaced. The six body fits use more
+pronounced masculine/feminine silhouettes and a shared fixed head.
 
-## Local browser preview
+Clothing selection follows Appearance: generic shirt, pants, shoes and optional
+backpack. Clothing renders separately from the body using the corresponding
+one of six fit models. Shoes have similar geometry across fits. Underwear remains
+opaque when outer clothing is removed. Head/hair use the approved PNG references;
+body/clothing use pixel geometry. See [artwork details](assets/characters/README.md).
 
-Requires Python 3.9+ and Linux x64; no Python packages or Node dependencies
-are needed to build or play. Node is only required for automated browser tests.
+There are 15 independent starting-trait checkboxes and 18 skills. Traits are saved
+but have no modifiers until those effects are defined. Skills start at level 0
+(untrained) with a refundable 250 XP creation pool. Level 1 costs 50 XP, level 2
+costs another 100, then 200, doubling through level 10. Entries are cumulative
+(150 XP = level 2). Number fields and ±10 buttons allocate/refund XP; Reset refunds
+all. The last increment uses the remaining pool. No trait combinations are restricted.
+
+Start at Apartments locks creation. The sidebar shows the same full-body sprite.
+Character and Stats are read-only windows over the map; Inventory is also a
+window. Escape, close button, or backdrop closes them. Character creation cannot
+be reopened after starting. Use a private browser window to review a fresh creator
+without changing an existing playthrough; disk export preserves saves across origins.
+
+## Block inventories and cars
+
+Cars face north (top of map). On either side, E offers Look through window and
+Open door. Behind a car (south), E offers Open trunk. Its front and diagonal tiles
+have no car interactions. Doors offer Knock/Open. Nearby prompts update every
+move; multiple objects produce a chooser. Actions recheck reach and direction.
+Opening a door updates both maps and persists. There are no access restrictions,
+interiors, driving, or NPC/ground objects placed yet. Ground/NPC definitions can
+still provide their own actions through the same interaction registry.
+
+Opening a trunk shows its storage beside the player's worn storage. Select an
+item, then select a free destination square; keyboard Tab/Enter also works.
+Rectangular items require adjoining squares, cannot overlap or extend past a grid,
+and do not rotate. Transfers and interactions currently spend no movement turns.
+Opening dialogs clears held movement; the world remains visible behind them.
+
+Prototype capacities:
+
+| Equipment / container | Grid | Blocks |
+| --- | --- | --- |
+| Shirt pockets | 2×1 | 2 |
+| Pants pockets | 2×2 | 4 |
+| Shoes / underwear | None | 0 |
+| Backpack | 4×4 | 16 |
+| Each car trunk | 6×4 | 24 |
+
+There is no base or invisible player inventory. Each worn storage item has its
+own grid; an unequipped item grants no storage. Equipment is selected in creation;
+changing equipment during play is outside this feature. Trunks contain placeholder
+water (1×2), tools (2×2), and cloth (1×1) to test packing/transfers. Each trunk is
+independent, initialized only once, and never restocks when emptied. Contents and
+placements persist through movement, reload, menu/Continue and disk saves.
+
+## World and movement
+
+Apartments is a 50×50 grid: four buildings face a park, a parking lot has edge and
+median bays, and two five-square-wide roads meet at the south edge. Cars occupy
+2×2 squares. A continuous sidewalk surrounds the park and connects each entrance.
+Doors are walkable thresholds; buildings, cars, trees, and medians block movement.
+
+The description takes 60% of the main area and maps take 40%, beside the character
+sidebar. The scrolling local map sits above a complete current-area world overview.
+Both maps fit desktop viewport heights; narrow screens stack them below the text.
+The compact movement panel above the location title is the only exact-location
+readout. Player coordinates are displayed starting at 1.
+
+Use arrows, WASD, direction buttons, or click an adjacent square. Every successful
+cardinal step spends one turn. Holding repeats every 200 ms. Multiple held
+directions alternate at that shared pace; releasing one leaves the others active.
+Direction aliases share a slot. Blocked attempts cost nothing and keep inputs
+active. Dialogs, blur, hidden tabs, and navigation clear held inputs. Movement and
+turn count persist through reloads, Continue, and disk saves.
+
+## Local development and preview
+
+Requires Python 3.9+ and Linux x64. Node 20+ and Chromium are needed only for tests.
+The setup downloads official release archives using verified HTTPS and pinned
+SHA-256 hashes. Existing tool/dependency installations can be reused.
 
 ```sh
 cd /workspace/game
 python3 scripts/project.py setup
+npm ci
 python3 scripts/project.py dev
 ```
 
-On your own computer, use the directory where you cloned this project instead.
-Open `http://127.0.0.1:8000` in your browser. Editing a file under `src/` or `assets/`
-automatically rebuilds and reloads the page. SugarCube restores the current
-browser session on reload. Display preferences are stored locally.
-Use **Save & return to menu** to retain character edits between visits and
-reloads; reloading before returning can discard edits made in the current passage.
-The save manager supports one browser slot and portable disk saves. Compilation errors appear in
-the terminal and preserve the last successful HTML build. Stop with Ctrl+C.
+On your computer use the cloned repository's directory and open
+`http://127.0.0.1:8000`. Source/artwork edits rebuild and reload automatically.
+Compilation failures preserve the last good build. Ctrl+C stops the server.
+Cloud loopback addresses are not accessible on the player's computer; use the
+published Pages site for cloud review. Never use a chat HTML source viewer as the
+browser preview. `python3 scripts/project.py build` produces identical standalone
+`dist/index.html` and `dist/Neon-Meridian.html`, with all active PNG assets embedded.
 
-The cloud instance's loopback address is not your computer's loopback address.
-The single-file browser build is `dist/Neon-Meridian.html` (also available as
-`dist/index.html`). Open it in a web browser. A chat source viewer may show HTML
-as text instead of executing it; that viewer behavior is outside the game.
-You can also clone the project and run the commands above. The HTML is self-contained:
-no CDN, account, API key, or network connection is required to play it.
+Creation edits are committed when navigating out of the passage. Use Save & return
+to menu before reloading. SugarCube provides a browser save slot and portable disk
+Save/Load. Browser saves are tied to origin; Options stores larger text/reduced
+motion locally. Import the compiled HTML into Twine 2 if desired, but modular files
+under `src/` remain the source of truth.
 
-To create a standalone build:
+On Windows/macOS install native Tweego 2.1.1 and SugarCube 2.37.3 from their official
+repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
+`python3 scripts/project.py build --tweego /absolute/path/to/tweego`.
 
-```sh
-python3 scripts/project.py build
-```
+## Source and saves
 
-Build also produces the named `dist/Neon-Meridian.html` entry.
-Open either HTML file directly in any modern browser. The menu adapts to
-narrow screens. Existing sessions from the earlier world preview redirect to
-the main menu, except the old Apartment passage which now redirects to Apartments.
+- `story.twee`, `world.twee`: menu, creator, world, sidebar and window markup.
+- `character-data.js`: version-4 serializable schema, defaults and migrations.
+- `character-rules.js`, `character-creation-build.js`: traits, XP and allocation UI.
+- `character-ui.js`, `character-display.js`: creator controls/shared preview lifecycle.
+- `character-body.js`, `character-preview.js`, `clothing.js`: body fits, independent
+  equipment art, head/hair, equipment and capacity definitions.
+- `inventory.js`, `inventory-ui.js`: packing, access, transfers and block windows.
+- `world-map-data.js`, `world-movement.js`, `world-map-ui.js`: terrain, movement,
+  held-input pacing, map rendering and camera.
+- `world-interactions.js`, `world-interaction-ui.js`: reach, directional actions,
+  prompts and object windows. Definitions can supply custom action text/handlers.
+- `world-ui.js`, `world.css`, `interface.css`, `settings.js`: sheets, responsive
+  presentation and preferences.
+- `scripts/project.py`: setup/build/watching preview. `.tools/` and `dist/` are ignored.
 
-## Source layout
+`$character` stores appearance, equipped-slot booleans, traits and skill XP.
+Old character saves migrate to Medium with shirt/pants/shoes and no backpack;
+other valid selections, traits and XP remain. Removed height/composition fields
+are discarded. Invalid traits are filtered; imported XP is rounded down and capped
+to 250 in skill order. `$world` stores only map ID, position and turn. `$openedObjects`
+stores door flags; `$inventory` version 1 stores container IDs and item placements.
+SugarCube history is bounded to ten moments. Artwork, item definitions, geometry,
+DOM and canvas caches stay outside saves.
 
-- `src/story.twee`: Twine metadata, menu, creator, and shared artwork markup.
-- `src/world.twee`: Apartments, Character, Stats, and the shared sidebar.
-- `src/world-ui.js`: read-only character and skill windows.
-- `src/world-map-data.js`: location definitions, grid dimensions, terrain, and entrances.
-- `src/world-movement.js`: position validation, collision rules, and turn/session commits.
-- `src/world-interactions.js`: proximity checks, action definitions, and action validation.
-- `src/world-interaction-ui.js`: E input, nearby prompts, object choice, and action windows.
-- `src/world-map-ui.js`: map rendering, scrolling camera, input, and movement feedback.
-- `src/world.css`: responsive world layout with a left sidebar.
-- `src/character-display.js`: shared artwork loading/rendering lifecycle.
-- `src/character-data.js`: versioned serializable character schema and validation.
-- `src/character-ui.js`: accessible appearance inputs and live SugarCube state updates.
-- `src/character-rules.js`: trait/skill definitions, doubling XP thresholds and budget rules.
-- `src/character-creation-build.js`: trait checkboxes and refundable skill allocation UI.
-- `src/character-preview.js`: atlas selection, palette changes, hair alignment.
-- `src/interface.css`: responsive interface and character preview styling.
-- `assets/characters/`: replaceable placeholder artwork, embedded into the HTML.
-- `src/settings.js`: SugarCube configuration and display preferences.
-- `scripts/project.py`: pinned tool installation, build, and preview server.
-- `.tools/`, `dist/`: ignored downloaded tools and generated output.
-
-Character values live in SugarCube's `$character` variable and travel with
-browser/disk saves. Artwork, DOM elements, and caches stay outside save data.
-Older saves without character data receive defaults when opening creation.
-Assets are embedded into the HTML for offline play; the renderer has no external
-runtime dependencies. Head, body, and hair have independent canvas layers. One
-canonical adult head is shared by both models, fixed to a common neck position.
-Fat, muscle, gender, and breast size never move or resize it. Bodies attach to
-that neck and reach a common foot baseline. A short overlapping skin bridge joins
-the layers. The head uses balanced stylized adult proportions,
-and overlapping neck sections are trimmed. Height still scales the whole figure.
-Hair is anchored to the shared
-head and can combine with every body variant, skin tone, and eye color.
-Chest and longer hair use complete body-free templates, with head fit and length
-handled independently so both sides remain intact. Small breast size uses the
-former Medium artwork; Medium is between that size and the unchanged Large.
-Version-1 character saves receive a default Medium breast size without losing
-their other choices. Version 3 adds empty starting traits and zero XP for every
-skill to older saves. Invalid trait IDs are discarded; imported skill XP is rounded
-down, made nonnegative, and capped to the 250 XP pool in the listed skill order.
-
-Twee is the text source representation of Twine passages. Tweego 2.1.1 compiles
-it with the genuine SugarCube runtime. The installer downloads official release
-archives over verified HTTPS and checks pinned SHA-256 hashes before extraction.
-Third-party licenses are retained under `.tools/`.
-
-On Windows or macOS, install the matching native Tweego 2.1.1 release and the
-SugarCube 2.37.3 story format from their official repositories. Put SugarCube's
-`sugarcube-2` directory in Tweego's `storyformats` directory, then run:
-
-```sh
-mkdir -p dist
-python3 scripts/project.py build --tweego /absolute/path/to/tweego
-python3 -m http.server 8000 --directory dist
-```
-
-Alternatively, use Twine 2's **Import From File** on the compiled HTML. The
-modular files under `src/` remain the source of truth; changes made inside the
-Twine editor must be exported and reconciled before the next source build.
-
-## Review this feature
-
-Check all three main menu choices, the return link from Character Creation,
-display preference toggles, save export/import, keyboard navigation, and a
-narrow screen. In Character Creation, try both body controls independently, height
-endpoints, and appearance colors/lengths. Save and return, then reopen creation
-or use disk saves to verify your selections. Check that body changes keep the
-head and hair fixed and the neck connected. Switch Female on to try all three
-breast sizes. These remain placeholder sprites; the default neutral outfit stays on.
-
-## Automated checks
-
-Requires Node 20+ and Chromium. On this cloud machine Chromium is already
-available at `/usr/bin/chromium`. On other machines, install Playwright's browser
-after installing the locked development dependencies:
+## Verification
 
 ```sh
 npm ci
-npx playwright install chromium
+npx playwright install chromium  # or CHROMIUM_EXECUTABLE_PATH / system Chromium
 npm test
 ```
 
-Alternatively set `CHROMIUM_EXECUTABLE_PATH` to an existing Chromium binary.
-Tests build and serve their own copy on loopback port 8765. Thirty checks cover all
-64 body renders with pixel-identical heads/hair and connected necks, gender and
-breast-size switching, all other visual choices, keyboard height control,
-menu/reload persistence, disk save/load, legacy save defaults, and narrow screens.
-Proportion and long-hair regressions additionally check both height endpoints,
-continuous left hair silhouettes, and room around the complete hair in the canvas.
-Face-visibility checks cover Waist/Knee/Floor hair at both height limits, with
-light/dark skin and hair, verifying that eyes, nose, and mouth retain their pixels.
+Tests build their own copy, serve it on loopback port 8765, and exercise the real
+SugarCube browser runtime. Coverage includes six distinct body/clothing fits,
+fixed head/hair and connected necks, independent clothing layers, breast sizes,
+all visual choices, long-hair face/curtain regressions, creator migration,
+traits/XP, responsive layouts, read-only sheets, map geometry/collision,
+movement/held-direction pacing, interaction reach/actions, directional car access,
+block packing/failed transfers, no invisible storage, empty-trunk persistence,
+reloads, and portable save round trips. CI runs the same suite before Pages deploys.
 
-Starting-build checks cover all trait selections, XP thresholds through level 10,
-allocation/refunds, overspending and invalid input, legacy normalization, and
-trait/skill persistence through menu, reload, and disk save/load.
-
-World checks compare the sidebar sprite with the creator and verify read-only
-windows, unchanged location DOM/history, focus restoration, three ways to close,
-XP display, reloads, disk saves, and old passage compatibility. Sidebar and window
-layouts are checked at 1440, 700, 390, and 320 pixels with larger text enabled.
-To review manually, enter Apartments,
-open and close both sidebar windows, then use Saves or Main menu.
-
-Movement checks cover the two roads, connected routes to all four inward-facing
-entrances, obstacles and bounds, button/keyboard/map input, camera updates,
-dialog pauses, legacy defaults, and position/turn persistence through reload and
-portable saves. Map geometry and rendering stay outside saves; `$world` stores
-only version, area ID, position, and movement turn count. Each accepted step creates
-a SugarCube moment without rebuilding the page; the existing ten-moment history
-limit keeps session history bounded.
-
-Hold-input checks use a controlled browser clock to verify repeat timing, release
-without an extra click step, keyboard repeat suppression, pointer cancellation,
-window blur, dialogs, blocked moves, and cleanup when leaving the location.
-
-Multiple-input regression checks cover alternating directions, shared pacing,
-resuming the original key after releasing a newer one, direction aliases,
-opposite directions, and recovering from a blocked direction without repressing it.
-
-Interaction checks cover cardinal reach, door thresholds, all sides of 2×2 cars,
-no-target feedback, E/button opening, paused movement, unchanged location/history,
-starter actions, multiple targets, custom ground/NPC definitions, and revalidating
-reach before running an action. Add objects to a map's `interactables` list with
-stable IDs, `kind`, name, tile rectangle, and description. Optional `actions`
-entries have IDs, labels, and a result string or handler returning display text.
-Object/action definitions remain outside SugarCube save data.
-
-Open-door checks verify local/overview redraws, duplicate-open prevention, and
-opened-object persistence through movement, reload, and disk export/import.
+For review: try all six fits and clothing checkboxes in a fresh creator, enter
+Apartments, open sidebar Inventory, walk to a car's side/back and press E, and
+transfer the differently sized placeholder items between pockets, backpack and
+trunk. Stop here for feedback before adding another feature.

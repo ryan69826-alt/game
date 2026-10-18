@@ -29,7 +29,9 @@ setup.interactionUI = (() => {
             const result = document.createElement('p');result.id = 'interaction-result';result.setAttribute('role', 'status');result.setAttribute('aria-live', 'polite');
             for (const action of setup.interactions.actionsFor(object)) {
                 const control = button(action.label, () => {
-                    result.textContent = setup.interactions.run(object.id, action.id).message;
+                    const outcome = setup.interactions.run(object.id, action.id);
+                    if (outcome.ok && outcome.trunkId) {setup.inventoryUI.open(outcome.trunkId);return;}
+                    result.textContent = outcome.message;
                     control.disabled = !!action.enabled && !action.enabled(object);
                 });
                 control.disabled = !!action.enabled && !action.enabled(object);actions.append(control);

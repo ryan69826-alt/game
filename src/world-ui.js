@@ -3,7 +3,7 @@ $(document).on(':passagedisplay', () => {
     if (!document.querySelector('.world-sidebar')) return;
     const character = State.variables.character;
     setup.characterDisplay.mount(character);
-    document.querySelector('[data-character-summary]').textContent = `${character.gender} · ${setup.character.heightLabel(character.heightInches)}`;
+    document.querySelector('[data-character-summary]').textContent = `${character.gender} · ${character.bodySize} body`;
     for (const link of document.querySelectorAll('.sidebar-nav a')) {
         if (link.dataset.passage === State.passage) link.setAttribute('aria-current', 'page');
     }
@@ -15,8 +15,7 @@ setup.worldWindows = (() => {
         const details = root.querySelector('#character-details');
         if (details) {
             const fields = {Age: character.age, Gender: character.gender, Genitals: character.genitals,
-                Height: setup.character.heightLabel(character.heightInches), 'Body fat': character.bodyFat,
-                'Muscle mass': character.muscleMass, ...(character.gender === 'Female' ? {'Breast size': character.breastSize} : {}),
+                'Body size': character.bodySize, Clothing: Object.entries(character.clothing).filter(([, worn]) => worn).map(([slot]) => setup.clothing.definitions[slot].name).join(', ') || 'Underwear only', ...(character.gender === 'Female' ? {'Breast size': character.breastSize} : {}),
                 'Eye color': character.eyeColor, 'Hair color': character.hairColor, 'Hair length': character.hairLength, 'Skin tone': character.skinTone};
             for (const [name, value] of Object.entries(fields)) {
                 const term = document.createElement('dt');term.textContent = name;
