@@ -524,7 +524,11 @@ test('movement position and turn round-trip through disk saves',async()=>{
     await page.getByRole('button',{name:'Move east',exact:true}).click();
     await page.getByRole('button',{name:'Saves',exact:true}).click();
     const [chooser]=await Promise.all([page.waitForEvent('filechooser'),page.getByText('Load…',{exact:true}).click()]);
-    await chooser.setFiles(save);await page.waitForSelector('#local-map[data-player-x]');
+    const previousMap=await page.locator('#local-map').elementHandle();
+    await chooser.setFiles(save);
+    // Disk import is asynchronous; an unchanged selector can match the old map.
+    await page.waitForFunction(previous=>document.getElementById('local-map')!==previous,previousMap);
+    await page.waitForSelector('#local-map[data-player-x]');
     assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),expected);
 });
 
