@@ -114,33 +114,54 @@
         }
         const directions = {north: [0, -1], east: [1, 0], south: [0, 1], west: [-1, 0]};
         const repeatDelay = 200;
-        let held = null, repeatTimer = 0;
+        const heldInputs = new Map();
+        let lastDirection = null, repeatTimer = 0;
         function stopHold() {
             clearTimeout(repeatTimer);
-            const previous = held;held = null;
-            if (previous?.button?.hasPointerCapture(previous.key)) previous.button.releasePointerCapture(previous.key);
+            repeatTimer = 0;lastDirection = null;
+            const previous = [...heldInputs.values()];heldInputs.clear();
+            for (const input of previous) {
+                if (input.button?.hasPointerCapture(input.key)) input.button.releasePointerCapture(input.key);
+            }
+        }
+        function releaseInput(id) {
+            const input = heldInputs.get(id);
+            if (!input) return;
+            heldInputs.delete(id);
+            if (input.button?.hasPointerCapture(input.key)) input.button.releasePointerCapture(input.key);
+            if (!heldInputs.size) stopHold();
         }
         function repeatStep() {
-            if (!held || !local.isConnected || document.hidden || Dialog.isOpen() || !step(...directions[held.direction])) {
+            repeatTimer = 0;
+            if (!heldInputs.size || !local.isConnected || document.hidden || Dialog.isOpen()) {
                 stopHold();return;
             }
+            // Rotate through distinct directions, so W + Up counts as one
+            // direction and adding a key never increases the overall pace.
+            const active = [...new Set([...heldInputs.values()].map(input => input.direction))];
+            lastDirection = active[(active.indexOf(lastDirection) + 1) % active.length];
+            step(...directions[lastDirection]);
             repeatTimer = setTimeout(repeatStep, repeatDelay);
         }
         function startHold(direction, source, key, button = null) {
-            stopHold();
-            held = {direction, source, key, button};
-            if (!step(...directions[direction])) {stopHold();return;}
-            repeatTimer = setTimeout(repeatStep, repeatDelay);
+            const id = `${source}:${key}`;
+            if (heldInputs.has(id)) return;
+            const wasEmpty = heldInputs.size === 0;
+            heldInputs.set(id, {direction, key, button});
+            if (wasEmpty) {
+                lastDirection = direction;step(...directions[direction]);
+                repeatTimer = setTimeout(repeatStep, repeatDelay);
+            }
         }
         for (const button of document.querySelectorAll('[data-move]')) {
             button.addEventListener('pointerdown', event => {
                 if (event.button !== 0 || Dialog.isOpen()) return;
                 event.preventDefault();button.focus({preventScroll: true});
                 startHold(button.dataset.move, 'pointer', event.pointerId, button);
-                if (held) button.setPointerCapture(event.pointerId);
+                if (heldInputs.has(`pointer:${event.pointerId}`)) button.setPointerCapture(event.pointerId);
             });
             function release(event) {
-                if (held?.source === 'pointer' && held.key === event.pointerId) stopHold();
+                releaseInput(`pointer:${event.pointerId}`);
             }
             for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, release);
             button.addEventListener('contextmenu', event => event.preventDefault());
@@ -155,10 +176,10 @@
             if (!direction) return;
             event.preventDefault();
             const key = event.code || event.key.toLowerCase();
-            if (!event.repeat && !(held?.source === 'keyboard' && held.key === key)) startHold(direction, 'keyboard', key);
+            if (!event.repeat) startHold(direction, 'keyboard', key);
         }
         function keyup(event) {
-            if (held?.source === 'keyboard' && held.key === (event.code || event.key.toLowerCase())) stopHold();
+            releaseInput(`keyboard:${event.code || event.key.toLowerCase()}`);
         }
         function visibilityChange() {if (document.hidden) stopHold();}
         document.addEventListener('keydown', keydown);

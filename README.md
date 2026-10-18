@@ -41,8 +41,11 @@ and local camera rectangle. Only Apartments is available for now.
 Use arrow keys, WASD, on-screen direction buttons, or click an adjacent square.
 Each successful cardinal step costs one turn; walls, cars, trees, area boundaries,
 and nonadjacent clicks cost none. Hold a direction key or an on-screen button to
-repeat steps every 200 milliseconds after the initial step. Release stops movement;
-obstacles, dialogs, window blur, tab hiding, and navigation also stop a held input.
+repeat steps every 200 milliseconds after the initial step. Multiple held directions
+alternate at that same overall pace; releasing one leaves the others active.
+Aliases such as W and Up share one direction slot. Blocked steps spend no turn and
+do not cancel held inputs, allowing another direction to open a route. Dialogs,
+window blur, tab hiding, and navigation clear all held inputs.
 The compact movement panel sits above the location title and is the only place
 that displays the exact terrain/position description. Doors are
 walkable thresholds; building interiors are not implemented. Open dialogs pause
@@ -183,7 +186,7 @@ npm test
 ```
 
 Alternatively set `CHROMIUM_EXECUTABLE_PATH` to an existing Chromium binary.
-Tests build and serve their own copy on loopback port 8765. Twenty-four checks cover all
+Tests build and serve their own copy on loopback port 8765. Twenty-six checks cover all
 64 body renders with pixel-identical heads/hair and connected necks, gender and
 breast-size switching, all other visual choices, keyboard height control,
 menu/reload persistence, disk save/load, legacy save defaults, and narrow screens.
@@ -214,3 +217,7 @@ limit keeps session history bounded.
 Hold-input checks use a controlled browser clock to verify repeat timing, release
 without an extra click step, keyboard repeat suppression, pointer cancellation,
 window blur, dialogs, blocked moves, and cleanup when leaving the location.
+
+Multiple-input regression checks cover alternating directions, shared pacing,
+resuming the original key after releasing a newer one, direction aliases,
+opposite directions, and recovering from a blocked direction without repressing it.

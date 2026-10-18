@@ -544,7 +544,7 @@ test('movement position and turn round-trip through disk saves',async()=>{
     assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),expected);
 });
 
-test('held keys move at a controlled pace and stop on release, blur, dialogs, and obstacles',async()=>{
+test('held keys move at a controlled pace, stop on release/blur/dialogs, and respect obstacles',async()=>{
     await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});
     await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
@@ -601,4 +601,52 @@ test('holding a direction button repeats without an extra release step and clean
     await page.keyboard.up('s');
     await page.getByRole('link',{name:'Continue',exact:true}).click();
     await page.keyboard.press('s');assert.equal((await world()).turn,left.turn+1,'no stale or duplicated repeat listeners');
+});
+
+test('held directions alternate at one shared pace and releasing a key resumes the others',async()=>{
+    await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const world=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
+    const initial=await world();
+    await page.keyboard.down('ArrowUp');
+    assert.deepEqual(await world(),{...initial,y:22,turn:1});
+    await page.keyboard.down('w'); // An alias must not give north extra turns.
+    await page.keyboard.down('ArrowRight');
+    assert.equal((await world()).turn,1,'adding held keys does not add immediate steps');
+    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:31,y:22,turn:2});
+    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:31,y:21,turn:3});
+    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:32,y:21,turn:4});
+    await page.keyboard.up('ArrowRight');
+    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:32,y:20,turn:5},'the original Up key resumes when Right is released');
+    await page.keyboard.up('ArrowUp');
+    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:32,y:19,turn:6},'W remains active after the other keys are released');
+    await page.keyboard.up('w');const released=await world();
+    await page.clock.runFor(600);assert.deepEqual(await world(),released);
+    await page.keyboard.down('ArrowLeft');await page.keyboard.down('ArrowRight');
+    assert.equal((await world()).x,31);
+    await page.clock.runFor(200);assert.equal((await world()).x,32);
+    await page.clock.runFor(200);assert.equal((await world()).x,31,'opposite directions also alternate');
+    await page.keyboard.up('ArrowLeft');await page.keyboard.up('ArrowRight');
+});
+
+test('a blocked held direction remains active and can resume after another direction clears it',async()=>{
+    await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.evaluate(()=>{
+        SugarCube.State.variables.world={version:1,mapId:'apartments',x:26,y:20,turn:0};
+        SugarCube.Engine.play('Apartments');
+    });
+    await page.waitForSelector('#local-map[data-player-x="26"]');
+    const world=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
+    await page.keyboard.down('d');await page.clock.runFor(400);
+    assert.equal((await world()).turn,0,'the tree blocks east without spending turns');
+    await page.keyboard.down('s');await page.clock.runFor(200);
+    assert.equal((await world()).y,21);assert.equal((await world()).turn,1);
+    await page.clock.runFor(200);assert.equal((await world()).x,27);assert.equal((await world()).turn,2,'east is still held and now unblocked');
+    await page.keyboard.up('s');await page.clock.runFor(200);
+    assert.equal((await world()).x,28);assert.equal((await world()).turn,3);
+    await page.keyboard.up('d');const released=await world();
+    await page.clock.runFor(600);assert.deepEqual(await world(),released);
 });
