@@ -18,6 +18,14 @@ setup.worldMaps = (() => {
     ];
     const cars = [[11, 28], [15, 28], [21, 28], [13, 41], [19, 41], [21, 41], [14, 33], [18, 37]]
         .map(([x, y], index) => ({x, y, width: 2, height: 2, color: ['#718da0', '#a69782', '#697c75'][index % 3]}));
+    const interactables = [
+        ...buildings.map((building, index) => ({id: `apartment-door-${index + 1}`, kind: 'door',
+            name: `${building.name} door`, ...building.door, width: 1, height: 1,
+            description: 'An apartment entrance facing the central park.'})),
+        ...cars.map((car, index) => ({id: `parked-car-${index + 1}`, kind: 'car',
+            name: `Parked car ${index + 1}`, x: car.x, y: car.y, width: car.width, height: car.height,
+            description: 'A car parked inside a marked bay.'}))
+    ];
     const inside = (x, y, rect) => inRect(x, y, rect.x, rect.y, rect.width, rect.height);
     const tile = (kind, label, walkable = true) => ({kind, label, walkable});
     function apartmentTile(x, y) {
@@ -44,5 +52,5 @@ setup.worldMaps = (() => {
         return tile('ground', 'Apartment grounds');
     }
     return {apartments: {id: 'apartments', name: 'Apartments', width: 50, height: 50,
-        spawn: {x: 30, y: 23}, buildings, roads, park, parking, parkingBays, cars, tileAt: apartmentTile}};
+        spawn: {x: 30, y: 23}, buildings, roads, park, parking, parkingBays, cars, interactables, tileAt: apartmentTile}};
 })();

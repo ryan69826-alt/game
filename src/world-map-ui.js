@@ -68,14 +68,31 @@
             ctx.beginPath();ctx.arc(x, y, radius, 0, Math.PI * 2);ctx.fillStyle = '#bcf4d7';ctx.fill();
             ctx.strokeStyle = '#fff';ctx.lineWidth = 1;ctx.stroke();
         }
+        function drawOpenDoors(ctx, scale = 1, offsetX = 0, offsetY = 0) {
+            ctx.save();ctx.scale(scale, scale);ctx.translate(-offsetX * tileSize, -offsetY * tileSize);
+            for (const object of map.interactables || []) {
+                if (!setup.interactions.isOpen(object.id, map.id)) continue;
+                const x = object.x * tileSize, y = object.y * tileSize;
+                if (object.kind === 'door') {
+                    ctx.fillStyle = '#889182';ctx.fillRect(x + 1, y + 1, 14, 14);
+                    ctx.strokeStyle = '#dfb777';ctx.lineWidth = 2;
+                    ctx.strokeRect(x + 1, y + 1, 14, 14);
+                } else if (object.kind === 'car') {
+                    ctx.fillStyle = '#dfb777';ctx.fillRect(x + 1, y + 12, 4, 10);
+                }
+            }
+            ctx.restore();
+        }
         function draw() {
             const world = State.variables.world;
             const ctx = local.getContext('2d');ctx.imageSmoothingEnabled = false;
             ctx.clearRect(0, 0, local.width, local.height);
             ctx.drawImage(terrain, camera.x * tileSize, camera.y * tileSize, local.width, local.height, 0, 0, local.width, local.height);
+            drawOpenDoors(ctx, 1, camera.x, camera.y);
             marker(ctx, (world.x - camera.x + .5) * tileSize, (world.y - camera.y + .5) * tileSize, 5);
             const small = overview.getContext('2d'), scale = overview.width / terrain.width;
             small.imageSmoothingEnabled = false;small.drawImage(terrain, 0, 0, overview.width, overview.height);
+            drawOpenDoors(small, scale);
             small.strokeStyle = '#e1f6d9';small.lineWidth = 1;
             small.strokeRect(camera.x * tileSize * scale, camera.y * tileSize * scale, local.width * scale, local.height * scale);
             marker(small, (world.x + .5) * tileSize * scale, (world.y + .5) * tileSize * scale, 3);
@@ -88,6 +105,7 @@
             document.getElementById('movement-position').textContent = `X ${world.x + 1} · Y ${world.y + 1}`;
             document.getElementById('movement-turn').textContent = world.turn;
             document.getElementById('position-description').textContent = `You are at: ${map.tileAt(world.x, world.y).label.toLowerCase()}.`;
+            setup.interactionUI.refresh();
             cancelAnimationFrame(frame);
             if (!animate || document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 camera = target;local.dataset.animating = 'false';draw();return;
@@ -187,6 +205,7 @@
         document.addEventListener('visibilitychange', visibilityChange);
         window.addEventListener('blur', stopHold);
         $(document).on(':dialogopening.worldMovement', stopHold);
+        $(document).on(':interactionchange.worldMovement', draw);
         local.addEventListener('click', event => {
             if (Dialog.isOpen()) return;
             const rect = local.getBoundingClientRect(), world = State.variables.world;
@@ -200,6 +219,7 @@
             document.removeEventListener('keydown', keydown);document.removeEventListener('keyup', keyup);
             document.removeEventListener('visibilitychange', visibilityChange);window.removeEventListener('blur', stopHold);
             $(document).off(':dialogopening.worldMovement', stopHold);
+            $(document).off(':interactionchange.worldMovement', draw);
         };
     });
 })();

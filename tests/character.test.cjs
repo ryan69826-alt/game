@@ -650,3 +650,113 @@ test('a blocked held direction remains active and can resume after another direc
     await page.keyboard.up('d');const released=await world();
     await page.clock.runFor(600);assert.deepEqual(await world(),released);
 });
+
+test('interaction reach uses door squares and full car footprints, excluding diagonals',async()=>{
+    const reach=await page.evaluate(()=>{
+        const api=SugarCube.setup.interactions,map=SugarCube.setup.worldMaps.apartments;
+        const has=(id,x,y)=>api.nearby({mapId:'apartments',x,y}).some(target=>target.object.id===id);
+        return {count:map.interactables.length,unique:new Set(map.interactables.map(object=>object.id)).size,
+            doorAdjacent:has('apartment-door-1',30,16),doorOn:has('apartment-door-1',30,15),doorDiagonal:has('apartment-door-1',31,16),
+            carLeft:has('parked-car-1',10,28),carRight:has('parked-car-1',13,29),carBelow:has('parked-car-1',12,30),carDiagonal:has('parked-car-1',13,30)};
+    });
+    assert.deepEqual(reach,{count:12,unique:12,doorAdjacent:true,doorOn:true,doorDiagonal:false,carLeft:true,carRight:true,carBelow:true,carDiagonal:false});
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    assert.ok(await page.getByRole('button',{name:'Interact [E]',exact:true}).isDisabled());
+    await page.keyboard.press('e');assert.equal(await page.getByRole('dialog').count(),0);
+    assert.match(await page.locator('#movement-status').textContent(),/Nothing to interact/);
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.turn),0);
+});
+
+test('E opens a door action window over the location and pauses held movement without spending turns',async()=>{
+    await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    for(let i=0;i<7;i++) await page.keyboard.press('w');
+    assert.equal(await page.locator('#interaction-hint').textContent(),'Apartment 1 door');
+    assert.ok(await page.getByRole('button',{name:'Interact [E]',exact:true}).isEnabled());
+    await page.keyboard.down('w');
+    const expected=await page.evaluate(()=>({world:structuredClone(SugarCube.State.variables.world),length:SugarCube.State.length}));
+    const location=await page.locator('.world-content').elementHandle();
+    await page.keyboard.press('e');
+    const dialog=page.getByRole('dialog',{name:'Interact',exact:true});await dialog.waitFor({state:'visible'});
+    assert.equal(await dialog.getByRole('heading',{name:'Apartment 1 door',exact:true}).count(),1);
+    assert.ok(await dialog.getByRole('button',{name:'Open',exact:true}).isEnabled());
+    await dialog.getByRole('button',{name:'Knock',exact:true}).click();
+    assert.equal(await dialog.locator('#interaction-result').textContent(),'You knock on the door.');
+    await page.clock.runFor(800);await page.keyboard.up('w');
+    assert.deepEqual(await page.evaluate(()=>({world:structuredClone(SugarCube.State.variables.world),length:SugarCube.State.length})),expected);
+    assert.ok(await location.evaluate(node=>node===document.querySelector('.world-content')));
+    assert.equal(await page.evaluate(()=>SugarCube.State.passage),'Apartments');
+    await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
+    await page.getByRole('button',{name:'Interact [E]',exact:true}).click();await dialog.waitFor({state:'visible'});
+});
+
+test('car actions, nearby object selection, ground objects, and NPC definitions share one interaction system',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=13;SugarCube.State.variables.world.y=29;SugarCube.Engine.play('Apartments');});
+    await page.waitForSelector('#local-map[data-player-x="13"]');
+    await page.keyboard.press('e');
+    const dialog=page.getByRole('dialog',{name:'Interact',exact:true});await dialog.waitFor({state:'visible'});
+    await dialog.getByRole('button',{name:'Look through window',exact:true}).click();
+    assert.match(await dialog.locator('#interaction-result').textContent(),/No one is inside/);
+    await page.keyboard.press('Escape');
+    await page.evaluate(()=>{
+        const map=SugarCube.setup.worldMaps.apartments;
+        map.interactables.push({id:'test-note',name:'Folded note',kind:'ground',x:30,y:23,
+            actions:[{id:'read',label:'Read',result:'A short handwritten message.'}]},
+            {id:'test-resident',name:'Test resident',kind:'npc',x:31,y:23,description:'A resident standing nearby.'});
+        SugarCube.State.variables.world.x=30;SugarCube.State.variables.world.y=23;SugarCube.Engine.play('Apartments');
+    });
+    await page.waitForSelector('#local-map[data-player-x="30"]');
+    assert.equal(await page.locator('#interaction-hint').textContent(),'2 objects nearby');
+    await page.keyboard.press('e');await dialog.waitFor({state:'visible'});
+    await dialog.getByRole('button',{name:'Test resident',exact:true}).click();
+    await dialog.getByRole('button',{name:'Inspect',exact:true}).click();
+    assert.equal(await dialog.locator('#interaction-result').textContent(),'A resident standing nearby.');
+    await dialog.getByRole('button',{name:'Back to nearby objects',exact:true}).click();
+    await dialog.getByRole('button',{name:'Folded note',exact:true}).click();
+    await dialog.getByRole('button',{name:'Read',exact:true}).click();
+    assert.equal(await dialog.locator('#interaction-result').textContent(),'A short handwritten message.');
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=40;SugarCube.State.variables.world.y=40;});
+    await dialog.getByRole('button',{name:'Read',exact:true}).click();
+    assert.match(await dialog.locator('#interaction-result').textContent(),/no longer within reach/);
+});
+
+
+test('opening apartment and car doors updates both maps and persists across movement, reload, and disk saves',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=30;SugarCube.State.variables.world.y=16;SugarCube.Engine.play('Apartments');});
+    await page.waitForSelector('#local-map[data-player-y="16"]');
+    const pixels=()=>page.locator('#local-map').evaluate(canvas=>canvas.toDataURL());
+    const closed=await pixels();
+    const overviewClosed=await page.locator('#world-map').evaluate(canvas=>canvas.toDataURL());
+    const turn=await page.evaluate(()=>SugarCube.State.variables.world.turn);
+    await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
+    await dialog.getByRole('button',{name:'Open',exact:true}).click();
+    assert.equal(await dialog.locator('#interaction-result').textContent(),'You open the door.');
+    assert.ok(await dialog.getByRole('button',{name:'Open',exact:true}).isDisabled());
+    assert.notEqual(await pixels(),closed,'open door is drawn on the map');
+    assert.notEqual(await page.locator('#world-map').evaluate(canvas=>canvas.toDataURL()),overviewClosed,'world overview updates too');
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.turn),turn);
+    await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map[data-player-y="16"]');
+    assert.notEqual(await pixels(),closed,'open appearance survives reload');
+    await page.keyboard.press('e');assert.ok(await dialog.getByRole('button',{name:'Open',exact:true}).isDisabled());
+    await page.keyboard.press('Escape');
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=13;SugarCube.State.variables.world.y=29;SugarCube.Engine.play('Apartments');});
+    await page.waitForSelector('#local-map[data-player-x="13"]');
+    const carClosed=await pixels();
+    await page.keyboard.press('e');await dialog.getByRole('button',{name:'Open door',exact:true}).click();
+    assert.ok(await dialog.getByRole('button',{name:'Open door',exact:true}).isDisabled());
+    assert.notEqual(await pixels(),carClosed);
+    await page.keyboard.press('Escape');await page.getByRole('button',{name:'Move south',exact:true}).click();
+    const expected=await page.evaluate(()=>structuredClone(SugarCube.State.variables.openedObjects));
+    assert.deepEqual(expected,{'apartments:apartment-door-1':true,'apartments:parked-car-1':true});
+    await page.getByRole('button',{name:'Saves',exact:true}).click();
+    const [download]=await Promise.all([page.waitForEvent('download'),page.getByText('Save…',{exact:true}).click()]);
+    const save=join(temp,'interactions.save');await download.saveAs(save);await page.locator('#ui-dialog-close').click();
+    await page.evaluate(()=>{SugarCube.State.variables.openedObjects={};});
+    await page.getByRole('button',{name:'Saves',exact:true}).click();
+    const [chooser]=await Promise.all([page.waitForEvent('filechooser'),page.getByText('Load…',{exact:true}).click()]);
+    await chooser.setFiles(save);await page.waitForFunction(()=>SugarCube.State.variables.openedObjects?.['apartments:apartment-door-1']===true);
+    assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.openedObjects)),expected);
+});

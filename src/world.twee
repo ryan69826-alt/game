@@ -30,10 +30,11 @@
 
 <section class="movement-panel" aria-labelledby="movement-title">
 <div class="movement-info">
-<h2 id="movement-title">Move around</h2>
+<div class="movement-heading"><h2 id="movement-title">Move around</h2><button id="interact-button" type="button" disabled>Interact [E]</button></div>
 <p id="movement-help">Hold arrows, WASD, or a button. One square per turn.</p>
 <p id="position-description"></p>
 <div class="movement-readout"><span id="movement-position"></span><span>Turn <output id="movement-turn">0</output></span></div>
+<p id="interaction-hint" class="interaction-hint"></p>
 </div>
 <div class="movement-pad" role="group" aria-label="Movement controls">
 <button type="button" data-move="north" aria-label="Move north">↑</button>

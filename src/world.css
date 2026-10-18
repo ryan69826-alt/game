@@ -78,3 +78,12 @@ html:has(#ui-dialog-body.character-window) #ui-overlay{background:#050c10;opacit
 @media(max-width:440px){.movement-panel{grid-template-columns:minmax(0,1fr);gap:10px}.movement-pad{display:flex;justify-content:flex-start;gap:4px}.movement-pad button{width:36px;height:36px;flex:none}.movement-pad>span{display:none}.map-heading{padding:10px}.map-legend{padding:0 10px 10px}}
 
 #position-description{font-size:.75rem;color:var(--accent);line-height:1.5;margin:0 0 6px}
+.movement-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:5px}
+.movement-heading h2{margin:0}
+#interact-button{font-size:.65rem;padding:3px 7px;white-space:nowrap}
+.interaction-hint{font-size:.65rem;color:var(--muted);line-height:1.4;margin:6px 0 0}
+.interaction-title{font-size:1.2rem;font-weight:400;color:var(--accent);margin:0 0 12px}
+.interaction-actions{display:flex;flex-direction:column;gap:10px}
+.interaction-actions button{padding:10px 14px;text-align:left;font-size:.9rem}
+#interaction-result{font-size:.85rem;line-height:1.7;color:var(--accent);margin:18px 0}
+#interaction-result:empty{display:none}

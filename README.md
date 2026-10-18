@@ -61,6 +61,15 @@ Escape, the close button, or the backdrop; focus returns to the opening button.
 Old saves on Character/Stats passages return safely to Apartments.
 Additional stats and trait effects remain undefined. No other locations, story,
 NPCs, or time simulation are implemented. Continue returns to Apartments.
+Press **E** (or the **Interact [E]** button) on or directly beside a door/car to
+open an interaction window over the map. Diagonal tiles are out of reach. Doors
+provide Knock and Open; cars provide Look through window and Open door. When
+several objects are nearby, choose one first. The prompt updates after every move.
+Opening the window stops held movement. These starter actions spend no turns.
+Opening a door updates its map appearance and persists in `$openedObjects` through moves, reloads, and portable saves. There
+are no access restrictions yet. Building interiors and vehicle use are not implemented.
+No NPCs or ground items have been placed yet, but both types can use the same
+registry and define custom actions.
 The sidebar's Saves link supports saving/loading from world pages.
 Options provides larger text and reduced motion. Save management uses
 SugarCube's built-in browser slots and disk import/export.
@@ -110,6 +119,8 @@ the main menu, except the old Apartment passage which now redirects to Apartment
 - `src/world-ui.js`: read-only character and skill windows.
 - `src/world-map-data.js`: location definitions, grid dimensions, terrain, and entrances.
 - `src/world-movement.js`: position validation, collision rules, and turn/session commits.
+- `src/world-interactions.js`: proximity checks, action definitions, and action validation.
+- `src/world-interaction-ui.js`: E input, nearby prompts, object choice, and action windows.
 - `src/world-map-ui.js`: map rendering, scrolling camera, input, and movement feedback.
 - `src/world.css`: responsive world layout with a left sidebar.
 - `src/character-display.js`: shared artwork loading/rendering lifecycle.
@@ -186,7 +197,7 @@ npm test
 ```
 
 Alternatively set `CHROMIUM_EXECUTABLE_PATH` to an existing Chromium binary.
-Tests build and serve their own copy on loopback port 8765. Twenty-six checks cover all
+Tests build and serve their own copy on loopback port 8765. Thirty checks cover all
 64 body renders with pixel-identical heads/hair and connected necks, gender and
 breast-size switching, all other visual choices, keyboard height control,
 menu/reload persistence, disk save/load, legacy save defaults, and narrow screens.
@@ -221,3 +232,14 @@ window blur, dialogs, blocked moves, and cleanup when leaving the location.
 Multiple-input regression checks cover alternating directions, shared pacing,
 resuming the original key after releasing a newer one, direction aliases,
 opposite directions, and recovering from a blocked direction without repressing it.
+
+Interaction checks cover cardinal reach, door thresholds, all sides of 2×2 cars,
+no-target feedback, E/button opening, paused movement, unchanged location/history,
+starter actions, multiple targets, custom ground/NPC definitions, and revalidating
+reach before running an action. Add objects to a map's `interactables` list with
+stable IDs, `kind`, name, tile rectangle, and description. Optional `actions`
+entries have IDs, labels, and a result string or handler returning display text.
+Object/action definitions remain outside SugarCube save data.
+
+Open-door checks verify local/overview redraws, duplicate-open prevention, and
+opened-object persistence through movement, reload, and disk export/import.
