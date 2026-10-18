@@ -7,6 +7,7 @@ setup.characterPreview = (() => {
     const SKIN = {Pale: [231,190,165], Tan: [183,119,75], Olive: [166,145,95], Dark: [99,61,45]};
     const HAIR = {Blonde: [210,176,97], Black: [37,31,35], Brown: [89,55,36], Orange: [190,94,35], Gray: [151,153,160]};
     const EYES = {Blue: [83,155,220], Green: [92,165,104], Brown: [113,72,40]};
+    const HEAD_SCALE = .84;
     const cache = new Map();
     const hairCache = new Map();
     const hairRowSplits = new Map();
@@ -172,7 +173,7 @@ setup.characterPreview = (() => {
             const points=eyePixels.filter(point=>columns.includes(point.x));
             return {x:points.reduce((sum,p)=>sum+p.x,0)/points.length,y:points.reduce((sum,p)=>sum+p.y,0)/points.length};
         });
-        sharedHead={canvas,pixels,eyePoints,faceWidth:faceRight-faceLeft+1,neckX:(left+right)/2,neckWidth:right-left+1,
+        sharedHead={canvas,pixels,eyePoints,faceLeft,faceWidth:faceRight-faceLeft+1,neckX:(left+right)/2,neckWidth:right-left+1,
             fullHeight:source.canvas.height,eye:eyeAnchor(source.pixels,source.canvas.width,source.canvas.height)};
         return sharedHead;
     }
@@ -199,6 +200,22 @@ setup.characterPreview = (() => {
         const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
         ctx.imageSmoothingEnabled=false;return ctx;
     }
+    function keepFaceVisible(hairContext, headCanvas, head, headLeft, headTop, headScale) {
+        // Hair templates and the shared head have different jaw/nose outlines.
+        // Respect the actual rendered face instead of trusting the template's
+        // transparent face opening. Leave fringe/temple hair above the brows.
+        const faceX=Math.floor(headLeft+(head.faceLeft+head.faceWidth*.25)*headScale);
+        const browY=Math.floor(headTop+(head.eye.y-head.faceWidth*.14)*headScale);
+        const mask=makeCanvas(headCanvas.width,headCanvas.height),ctx=mask.getContext('2d');
+        const pixels=headCanvas.getContext('2d').getImageData(0,0,mask.width,mask.height);
+        for(let y=0;y<mask.height;y++) for(let x=0;x<mask.width;x++) {
+            const i=(y*mask.width+x)*4;
+            pixels.data[i+3]=x>=faceX && y>=browY && pixels.data[i+3]>20?255:0;
+        }
+        ctx.putImageData(pixels,0,0);
+        hairContext.save();hairContext.globalCompositeOperation='destination-out';
+        hairContext.drawImage(mask,0,0);hairContext.restore();
+    }
     function draw(sources, layers, canvas, character) {
         const fat=setup.character.choices.bodyFat.indexOf(character.bodyFat);
         const muscle=setup.character.choices.muscleMass.indexOf(character.muscleMass);
@@ -206,7 +223,7 @@ setup.characterPreview = (() => {
         const cell=bodyCell(sources[model],fat,muscle),head=headPart(sources['head-reference']);
         const bodyContext=clearLayer(layers.body),headContext=clearLayer(layers.head),hairContext=clearLayer(layers.hair);
         const baseline=193,height=Math.round(166*character.heightInches/84);
-        const headScale=height/head.fullHeight*.72,headWidth=Math.round(head.canvas.width*headScale);
+        const headScale=height/head.fullHeight*HEAD_SCALE,headWidth=Math.round(head.canvas.width*headScale);
         const headHeight=Math.round(head.canvas.height*headScale),headTop=baseline-height;
         const neckX=72,headLeft=Math.round(neckX-head.neckX*headScale);
         const neckY=headTop+headHeight-2;
@@ -233,6 +250,7 @@ setup.characterPreview = (() => {
         const longHair=['Chest','Waist','Knee','Floor'].includes(character.hairLength);
         const hair=hairLayer(sources[longHair?'long-hair-atlas':'hair-atlas'],character.hairLength,character.hairColor,longHair);
         const bounds=drawHair(hairContext,hair.canvas,hair,destination,head.faceWidth*headScale,neckY,baseline,character.hairLength);
+        keepFaceVisible(hairContext,layers.head,head,headLeft,headTop,headScale);
         canvas.dataset.hairBounds=JSON.stringify(bounds);
         canvas.dataset.headHeight=headHeight;
         canvas.dataset.figureHeight=height;

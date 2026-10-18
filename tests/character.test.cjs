@@ -137,7 +137,43 @@ test('head has adult proportions at both height endpoints and stays joined to th
             }
             return {head:height('head-layer'),figure:height('character-canvas')};
         });
-        assert.ok(proportions.head/proportions.figure>=.12 && proportions.head/proportions.figure<=.18,'head is approximately one seventh of adult figure height');
+        assert.ok(proportions.head/proportions.figure>=.16 && proportions.head/proportions.figure<=.20,'head fits the stylized adult figure without the oversized or undersized extremes');
+    }
+});
+
+test('the three longest hairstyles preserve the rendered eyes, nose, and mouth',async()=>{
+    await page.getByLabel('Eye Color',{exact:true}).selectOption('Blue');
+    for(const key of ['Home','End']) {
+        await page.getByRole('slider',{name:'Height'}).press(key);
+        for(const skin of ['Pale','Dark']) for(const color of ['Blonde','Black']) for(const length of ['Waist','Knee','Floor']) {
+            await page.getByLabel('Skin Tone',{exact:true}).selectOption(skin);
+            await page.getByLabel('Hair Color',{exact:true}).selectOption(color);
+            await page.getByLabel('Hair Length',{exact:true}).selectOption(length);
+            const face=await page.evaluate(()=>{
+                const head=document.getElementById('head-layer'),preview=document.getElementById('character-canvas');
+                const original=head.getContext('2d').getImageData(0,0,head.width,head.height).data;
+                const rendered=preview.getContext('2d').getImageData(0,0,preview.width,preview.height).data;
+                const body=document.getElementById('body-layer').getContext('2d').getImageData(0,0,head.width,head.height).data;
+                const eyes=[];
+                for(let y=0;y<head.height;y++) for(let x=0;x<head.width;x++) {
+                    const i=(y*head.width+x)*4;
+                    if(original[i]===83 && original[i+1]===155 && original[i+2]===220 && original[i+3]===255) eyes.push({x,y});
+                }
+                const startX=Math.min(...eyes.map(p=>p.x))-1,startY=Math.min(...eyes.map(p=>p.y))-1;
+                let checked=0,obscured=0;
+                for(let y=startY;y<head.height;y++) for(let x=startX;x<head.width;x++) {
+                    const i=(y*head.width+x)*4;
+                    // Source skin has near-opaque alpha; include it as well
+                    // as irises. Exclude the neck where body pixels overlap.
+                    if(original[i+3]<180 || body[i+3]>0) continue;
+                    checked++;
+                    if([0,1,2,3].some(k=>original[i+k]!==rendered[i+k])) obscured++;
+                }
+                return {eyeCount:eyes.length,checked,obscured};
+            });
+            assert.ok(face.eyeCount>=1 && face.checked>10,'the test locates the rendered face');
+            assert.equal(face.obscured,0,`${length}, ${skin}, ${color}, ${key}: face remains unobscured`);
+        }
     }
 });
 

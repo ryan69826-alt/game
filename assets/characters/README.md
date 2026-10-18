@@ -32,8 +32,9 @@ The customization renderer uses original AI-generated transparent atlases:
   so their silhouettes cannot leave baked-in gaps in the long hair.
 
 The head is extracted once into its own object. Its neck anchor is fixed for
-every body choice; only height changes head geometry. Its scale is 72% of the
-first prototype's shared head (about one seventh of overall figure height).
+every body choice; only height changes head geometry. Its scale is 84% of the
+first prototype's shared head, between the oversized first version and the
+undersized 72% revision, for a balanced stylized adult figure.
 Body neck anchors are
 detected from the skin pixels at the top of each body part. A short overlapping
 skin bridge joins each neck to the common head. Redundant upper-neck pixels are
@@ -48,5 +49,9 @@ below the neck stretches to the chest/waist/knee/floor endpoint; head-sized caps
 remain unchanged. Both draw sections use one shared integer row to prevent a
 one-pixel seam. Complete curtain outlines are preserved without rectangular cuts.
 One-pixel irises remain visible when shrinking the head would skip source eye pixels.
+The actual rendered head silhouette also protects the front face below the brow:
+hair pixels are removed where they would cover that face. This preserves eyes,
+nose, mouth, and jaw even when template faces have different outlines. Fringe
+above the brow and hair at the rear temple remain visible.
 Replacement atlases must preserve the cell ordering, blue eye alignment anchors,
 tan skin source palette, and magenta hair mask. See `src/character-preview.js`.

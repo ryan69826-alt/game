@@ -75,7 +75,7 @@ runtime dependencies. Head, body, and hair have independent canvas layers. One
 canonical adult head is shared by both models, fixed to a common neck position.
 Fat, muscle, gender, and breast size never move or resize it. Bodies attach to
 that neck and reach a common foot baseline. A short overlapping skin bridge joins
-the layers. The head uses adult proportions (about one seventh of the figure),
+the layers. The head uses balanced stylized adult proportions,
 and overlapping neck sections are trimmed. Height still scales the whole figure.
 Hair is anchored to the shared
 head and can combine with every body variant, skin tone, and eye color.
@@ -127,9 +127,11 @@ npm test
 ```
 
 Alternatively set `CHROMIUM_EXECUTABLE_PATH` to an existing Chromium binary.
-Tests build and serve their own copy on loopback port 8765. Ten checks cover all
+Tests build and serve their own copy on loopback port 8765. Eleven checks cover all
 64 body renders with pixel-identical heads/hair and connected necks, gender and
 breast-size switching, all other visual choices, keyboard height control,
 menu/reload persistence, disk save/load, legacy save defaults, and narrow screens.
 Proportion and long-hair regressions additionally check both height endpoints,
 continuous left hair silhouettes, and room around the complete hair in the canvas.
+Face-visibility checks cover Waist/Knee/Floor hair at both height limits, with
+light/dark skin and hair, verifying that eyes, nose, and mouth retain their pixels.
