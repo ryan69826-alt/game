@@ -25,7 +25,10 @@ All protagonists are adults (age 26 in this prototype).
 Use **Start at Apartments** in the creator to enter the first urban location.
 Apartments has a vertical area map on the right (40% of the main area) and a
 description column on the left (60%). On narrow screens, the map stacks below
-the description so both remain readable. Apartments is a 50×50 square grid with
+the description so both remain readable. The local and world maps share a
+viewport-sized stack, with proportional canvases that shrink to fit the available
+height. Desktop layouts fit both maps without page scrolling.
+Apartments is a 50×50 square grid with
 four buildings facing a small park, a parking lot, a road across the south edge,
 and a second road running north from that road. Both roads are five squares wide
 with markings on their center squares. The parking lot has edge bays, clear drive
@@ -40,7 +43,8 @@ Each successful cardinal step costs one turn; walls, cars, trees, area boundarie
 and nonadjacent clicks cost none. Hold a direction key or an on-screen button to
 repeat steps every 200 milliseconds after the initial step. Release stops movement;
 obstacles, dialogs, window blur, tab hiding, and navigation also stop a held input.
-The compact movement panel sits above the location description. Doors are
+The compact movement panel sits above the location title and is the only place
+that displays the exact terrain/position description. Doors are
 walkable thresholds; building interiors are not implemented. Open dialogs pause
 movement. Coordinates shown to players start at 1. Movement position and turn count
 survive reloads, menu/Continue, and disk saves. No time or NPC simulation runs yet.

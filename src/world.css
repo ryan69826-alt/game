@@ -1,5 +1,5 @@
 /* World shell is independent of the menu and creation layout. */
-body[data-tags~="world"] #ui-bar~#story{display:block;margin:0 0 0 260px;padding:56px 48px;min-height:100vh}
+body[data-tags~="world"] #ui-bar~#story{display:block;margin:0 0 0 260px;padding:24px 48px;min-height:100vh}
 body[data-tags~="world"] .passage{animation:none}
 body[data-tags~="world"] #passages{max-width:none;margin:0 auto}
 .world-sidebar{position:fixed;inset:0 auto 0 0;width:260px;background:#122125;border-right:1px solid #375048;padding:28px 22px;overflow-y:auto;z-index:5}
@@ -21,17 +21,17 @@ body[data-tags~="world"] #passages{max-width:none;margin:0 auto}
 .world-subtitle{color:var(--muted);font-size:.9rem;margin:18px 0 32px}
 .location-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:32px;align-items:start}
 .location-story{min-width:0}
-.map-stack{position:sticky;top:24px;min-width:0;display:grid;gap:18px}
-.district-map,.world-map-panel{margin:0;border:1px solid #3b5c51;background:#142326;min-width:0;overflow:hidden}
-.district-map canvas{display:block;width:100%;height:auto;image-rendering:pixelated;cursor:crosshair}
-.world-map-panel canvas{display:block;width:160px;max-width:100%;height:auto;margin:14px auto;image-rendering:pixelated}
-.district-map figcaption,.world-map-panel figcaption{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid var(--line);color:var(--muted);font-size:.7rem}
+.map-stack{position:sticky;top:24px;min-width:0;height:calc(100dvh - 48px);display:grid;grid-template-rows:minmax(0,1fr) clamp(140px,22dvh,180px);gap:12px}
+.district-map,.world-map-panel{display:flex;flex-direction:column;min-height:0;margin:0;border:1px solid #3b5c51;background:#142326;min-width:0;overflow:hidden}
+.map-viewport{flex:1;min-height:0;display:grid;place-items:center;container-type:size}
+.district-map> :not(.map-viewport),.world-map-panel> :not(.map-viewport){flex-shrink:0}
+.district-map canvas{display:block;width:min(100cqw,calc(100cqh * 5 / 7));height:auto;image-rendering:pixelated;cursor:crosshair}
+.world-map-panel canvas{display:block;width:min(100cqw,100cqh);height:auto;image-rendering:pixelated}
+.district-map figcaption,.world-map-panel figcaption{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 12px;border-top:1px solid var(--line);color:var(--muted);font-size:.7rem}
 .district-map figcaption>span:last-child,.world-map-panel figcaption>span:last-child{margin-left:auto;color:var(--accent)}
 .location-dot{display:inline-block;flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 .location-description{max-width:680px;font-size:1rem;line-height:1.9;color:#cedbd4}
 .location-description p{margin:0 0 18px}
-.location-footer{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.7rem}
-.location-footer strong{font-weight:400;color:var(--accent)}
 .world-panel{padding:22px;margin-bottom:24px;border:1px solid var(--line);background:#15272acc;min-width:0}
 .world-panel h2{font-size:1rem;font-weight:400;color:var(--accent);margin:0 0 18px}
 .world-note{font-size:.75rem;color:var(--muted);line-height:1.7;margin:0 0 22px}
@@ -59,7 +59,7 @@ html:has(#ui-dialog-body.character-window) #ui-overlay{background:#050c10;opacit
 @media(max-width:1000px){.location-layout{gap:24px}}
 @media(max-width:700px){.location-layout{grid-template-columns:minmax(0,1fr);gap:24px}.map-stack{position:static}}
 
-.map-heading{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:.55rem;letter-spacing:1px;color:var(--accent)}
+.map-heading{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:.55rem;letter-spacing:1px;color:var(--accent)}
 .map-heading span:last-child{color:var(--muted)}
 .map-legend{display:flex;flex-wrap:wrap;gap:10px;padding:0 14px 12px;font-size:.6rem;color:var(--muted)}
 .map-legend span{display:flex;align-items:center;gap:5px}
@@ -76,3 +76,5 @@ html:has(#ui-dialog-body.character-window) #ui-overlay{background:#050c10;opacit
 #movement-status{grid-column:1/-1;font-size:.7rem;line-height:1.5;color:var(--accent);margin:0}
 #movement-status:empty{display:none}
 @media(max-width:440px){.movement-panel{grid-template-columns:minmax(0,1fr);gap:10px}.movement-pad{display:flex;justify-content:flex-start;gap:4px}.movement-pad button{width:36px;height:36px;flex:none}.movement-pad>span{display:none}.map-heading{padding:10px}.map-legend{padding:0 10px 10px}}
+
+#position-description{font-size:.75rem;color:var(--accent);line-height:1.5;margin:0 0 6px}

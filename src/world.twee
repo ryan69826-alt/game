@@ -27,11 +27,12 @@
 <<run setup.worldMovement.ensure()>>
 <main class="world-content location-layout" aria-labelledby="location-title">
 <div class="location-story">
-<header class="world-heading"><p class="eyebrow">URBAN AREA · RESIDENTIAL</p><h1 id="location-title">Apartments</h1><p class="world-subtitle">A small corner of the city.</p></header>
+
 <section class="movement-panel" aria-labelledby="movement-title">
 <div class="movement-info">
 <h2 id="movement-title">Move around</h2>
 <p id="movement-help">Hold arrows, WASD, or a button. One square per turn.</p>
+<p id="position-description"></p>
 <div class="movement-readout"><span id="movement-position"></span><span>Turn <output id="movement-turn">0</output></span></div>
 </div>
 <div class="movement-pad" role="group" aria-label="Movement controls">
@@ -43,20 +44,21 @@
 </div>
 <p id="movement-status" role="status" aria-live="polite"></p>
 </section>
-<section class="location-description" aria-label="Location description"><p>Four apartment buildings face a small central park. Paths link their entrances, with a parking lot to the southwest and two roads meeting along the southern edge.</p><p id="position-description"></p></section>
+<header class="world-heading"><p class="eyebrow">URBAN AREA · RESIDENTIAL</p><h1 id="location-title">Apartments</h1><p class="world-subtitle">A small corner of the city.</p></header>
+<section class="location-description" aria-label="Location description"><p>Four apartment buildings face a small central park. Paths link their entrances, with a parking lot to the southwest and two roads meeting along the southern edge.</p></section>
 
-<div class="location-footer"><span class="location-dot" aria-hidden="true"></span> Current location <strong>Apartments</strong></div>
+
 </div>
 <div class="map-stack">
 <figure class="district-map">
 <div class="map-heading"><span>LOCAL MAP</span><span>APARTMENTS · 50 × 50</span></div>
-<canvas id="local-map" width="400" height="560" role="img" tabindex="0" aria-label="Apartments area map" aria-describedby="movement-help"></canvas>
+<div class="map-viewport"><canvas id="local-map" width="400" height="560" role="img" tabindex="0" aria-label="Apartments area map" aria-describedby="movement-help"></canvas></div>
 <figcaption><span class="location-dot" aria-hidden="true"></span> You <span>Scrolls as you move</span></figcaption>
 <div class="map-legend"><span><i class="legend-door"></i>Entrance</span><span><i class="legend-park"></i>Park</span><span><i class="legend-road"></i>Road</span></div>
 </figure>
 <figure class="world-map-panel">
 <div class="map-heading"><span>WORLD MAP</span><span>1 AREA</span></div>
-<canvas id="world-map" width="300" height="300" role="img" aria-label="World map showing Apartments and your position"></canvas>
+<div class="map-viewport"><canvas id="world-map" width="300" height="300" role="img" aria-label="World map showing Apartments and your position"></canvas></div>
 <figcaption><span class="location-dot" aria-hidden="true"></span> Apartments <span>Current area</span></figcaption>
 </figure>
 </div>

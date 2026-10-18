@@ -105,7 +105,10 @@
             if (Dialog.isOpen()) return false;
             const result = setup.worldMovement.move(dx, dy);
             const status = document.getElementById('movement-status');
-            if (status.textContent !== result.reason) status.textContent = result.reason;
+            const world = State.variables.world;
+            const entrance = map.tileAt(world.x, world.y).kind === 'entrance';
+            const feedback = result.moved ? (entrance ? 'Interiors are not available yet.' : '') : result.reason;
+            if (status.textContent !== feedback) status.textContent = feedback;
             refresh(result.moved);
             return result.moved;
         }
