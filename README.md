@@ -24,10 +24,14 @@ skill XP. No combinations of traits are restricted yet.
 All protagonists are adults (age 26 in this prototype).
 Use **Start at Apartments** in the creator to enter the first urban location.
 Apartments has a simple area map and generic exterior description. A persistent
-left sidebar displays the exact customized full-body character and links to
-Apartments, Character, and Stats. Character shows the saved identity, appearance,
-and traits, plus an edit link. Stats shows all 18 skill levels and XP progress;
-additional stats and trait effects remain undefined. No other locations, story,
+left sidebar displays the exact customized full-body character, a location link,
+and Character/Stats buttons. Both buttons open read-only windows over the unchanged
+Apartments screen. Character shows the saved identity, appearance, and traits;
+Stats shows all 18 skill levels and XP progress. There is no editing link, and
+character creation cannot reopen after entering the world. Close windows with
+Escape, the close button, or the backdrop; focus returns to the opening button.
+Old saves on Character/Stats passages return safely to Apartments.
+Additional stats and trait effects remain undefined. No other locations, story,
 NPCs, or time simulation are implemented. Continue returns to Apartments.
 The sidebar's Saves link supports saving/loading from world pages.
 Options provides larger text and reduced motion. Save management uses
@@ -151,7 +155,7 @@ npm test
 ```
 
 Alternatively set `CHROMIUM_EXECUTABLE_PATH` to an existing Chromium binary.
-Tests build and serve their own copy on loopback port 8765. Seventeen checks cover all
+Tests build and serve their own copy on loopback port 8765. Eighteen checks cover all
 64 body renders with pixel-identical heads/hair and connected necks, gender and
 breast-size switching, all other visual choices, keyboard height control,
 menu/reload persistence, disk save/load, legacy save defaults, and narrow screens.
@@ -164,8 +168,9 @@ Starting-build checks cover all trait selections, XP thresholds through level 10
 allocation/refunds, overspending and invalid input, legacy normalization, and
 trait/skill persistence through menu, reload, and disk save/load.
 
-World checks enter Apartments with a customized build, compare sidebar pixels
-with the creator, verify Character/Stats navigation and XP, and round-trip world
-passages through reload and disk saves. Sidebar layout is checked at 1440, 700,
-390, and 320 pixels with larger text enabled. To review manually, enter Apartments,
-open both sidebar pages, return to the location, then use Saves or Main menu.
+World checks compare the sidebar sprite with the creator and verify read-only
+windows, unchanged location DOM/history, focus restoration, three ways to close,
+XP display, reloads, disk saves, and old passage compatibility. Sidebar and window
+layouts are checked at 1440, 700, 390, and 320 pixels with larger text enabled.
+To review manually, enter Apartments,
+open and close both sidebar windows, then use Saves or Main menu.

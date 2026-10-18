@@ -25,6 +25,7 @@ Neon Meridian
 </main>
 
 :: CharacterCreation [nobr creation]
+<<if $worldStarted>><<goto "Apartments">><<else>>
 <<run setup.character.ensure()>>
 <main class="menu-screen creation-screen">
 <div class="creation-layout">
@@ -45,6 +46,8 @@ Neon Meridian
 </figure>
 </div>
 </main>
+
+<</if>>
 
 :: Apartment [nobr]
 <<goto "Apartments">>

@@ -13,8 +13,8 @@
 <p id="preview-status" class="preview-status" role="status" aria-live="polite"></p>
 <nav class="sidebar-nav" aria-label="Game pages">
 [[Apartments|Apartments]]
-[[Character|Character]]
-[[Stats|Stats]]
+<<link "Character">><<run setup.worldWindows.open("Character")>><</link>>
+<<link "Stats">><<run setup.worldWindows.open("Stats")>><</link>>
 </nav>
 <div class="sidebar-utilities">
 <<link "Saves">><<run UI.saves()>><</link>>
@@ -47,18 +47,21 @@
 <div class="location-footer"><span class="location-dot" aria-hidden="true"></span> Current location <strong>Apartments</strong></div>
 </main>
 
-:: Character [nobr world]
-<main class="world-content" aria-labelledby="character-title">
-<header class="world-heading"><p class="eyebrow">YOUR CHARACTER</p><h1 id="character-title">Character</h1><p class="world-subtitle">Identity, appearance, and starting traits.</p></header>
+:: CharacterSheet [nobr]
+<div class="character-window-content">
+<p class="world-note">Identity, appearance, and starting traits.</p>
 <section class="world-panel" aria-labelledby="identity-title"><h2 id="identity-title">Identity & appearance</h2><dl id="character-details" class="character-details"></dl></section>
 <section class="world-panel" aria-labelledby="traits-title"><h2 id="traits-title">Starting traits</h2><ul id="character-traits" class="trait-tags"></ul></section>
-<nav class="world-actions" aria-label="Character page actions">[[Return to Apartments|Apartments]][[Edit character|CharacterCreation]]</nav>
-</main>
+</div>
 
-:: Stats [nobr world]
-<main class="world-content" aria-labelledby="stats-title">
-<header class="world-heading"><p class="eyebrow">YOUR CHARACTER</p><h1 id="stats-title">Stats</h1><p class="world-subtitle">Skills and experience.</p></header>
+:: StatsSheet [nobr]
+<div class="character-window-content">
 <section class="world-panel" aria-labelledby="skills-title"><h2 id="skills-title">Skills</h2><p class="world-note">Levels range from 0 (untrained) to 10. XP shown is progress toward the next level.</p><div id="world-skills" class="world-skills"></div></section>
 <p class="world-note">Additional character stats and trait effects have not been defined yet.</p>
-<nav class="world-actions" aria-label="Stats page actions">[[Return to Apartments|Apartments]]</nav>
-</main>
+</div>
+
+:: Character [nobr]
+<<goto "Apartments">>
+
+:: Stats [nobr]
+<<goto "Apartments">>

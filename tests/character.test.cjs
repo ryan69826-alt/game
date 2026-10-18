@@ -328,7 +328,7 @@ test('creator fits narrow screens and large-text preference without horizontal s
     }
 });
 
-test('creator enters Apartments with the exact character, and sidebar pages preserve the build',async()=>{
+test('character and stats are read-only dialogs over the unchanged Apartments screen',async()=>{
     await page.getByLabel('Gender',{exact:true}).selectOption('Female');
     await page.getByLabel('Breast Size',{exact:true}).selectOption('Large');
     await page.getByLabel('Hair Length',{exact:true}).selectOption('Floor');
@@ -338,39 +338,49 @@ test('creator enters Apartments with the exact character, and sidebar pages pres
     const expected=await value(),sprite=await image();
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await page.waitForFunction(()=>document.querySelector('#character-canvas')?.hasAttribute('data-variation'));
-    assert.equal(await page.getByRole('heading',{name:'Apartments',exact:true}).count(),1);
-    assert.equal(await page.getByRole('img',{name:'Apartments area map'}).count(),1);
-    assert.equal(await image(),sprite,'sidebar uses the exact creator render');
-    assert.deepEqual(await value(),expected);
-    const nav=page.getByRole('navigation',{name:'Game pages'});
-    assert.equal(await nav.getByRole('link',{name:'Apartments',exact:true}).getAttribute('aria-current'),'page');
-    await nav.getByRole('link',{name:'Character',exact:true}).click();
-    await page.waitForSelector('#character-details dd');
-    assert.match(await page.locator('#character-details').textContent(),/Breast sizeLarge/);
-    assert.equal(await page.locator('#character-traits').textContent(),'Nerd');
-    await page.waitForFunction(()=>document.querySelector('#character-canvas')?.hasAttribute('data-variation'));
+    const location=await page.locator('.world-content').elementHandle();
+    const history=await page.evaluate(()=>SugarCube.State.length);
     assert.equal(await image(),sprite);
-    await nav.getByRole('link',{name:'Stats',exact:true}).click();
-    assert.equal(await page.locator('.world-skill').count(),18);
-    const lock=page.locator('.world-skill[data-skill="Lockpicking"]');
+    const nav=page.getByRole('navigation',{name:'Game pages'});
+    const trigger=nav.getByRole('button',{name:'Character',exact:true});
+    await trigger.click();
+    const dialog=page.getByRole('dialog',{name:'Character',exact:true});
+    await dialog.waitFor({state:'visible'});
+    assert.match(await dialog.locator('#character-details').textContent(),/Breast sizeLarge/);
+    assert.equal(await dialog.locator('#character-traits').textContent(),'Nerd');
+    assert.equal(await dialog.locator('input,select,textarea,[contenteditable="true"],a').count(),0,'no editing controls or links');
+    assert.equal(await page.getByRole('link',{name:'Edit character',exact:true}).count(),0);
+    assert.ok(await location.evaluate(node=>node===document.querySelector('.world-content')),'same location DOM remains behind the window');
+    assert.equal(await page.evaluate(()=>SugarCube.State.passage),'Apartments');
+    assert.equal(await page.evaluate(()=>SugarCube.State.length),history,'opening a window does not add history');
+    assert.ok(await page.evaluate(()=>document.getElementById('ui-dialog').contains(document.activeElement)),'focus enters the dialog');
+    await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
+    assert.ok(await trigger.evaluate(node=>document.activeElement===node),'focus returns to Character button');
+    await nav.getByRole('button',{name:'Stats',exact:true}).click();
+    const stats=page.getByRole('dialog',{name:'Stats',exact:true});await stats.waitFor({state:'visible'});
+    assert.equal(await stats.locator('.world-skill').count(),18);
+    const lock=stats.locator('.world-skill[data-skill="Lockpicking"]');
     assert.equal(await lock.locator('.world-skill-level').textContent(),'Level 2 / 10');
     assert.equal(await lock.locator('.world-skill-xp').textContent(),'0 / 200 XP toward level 3');
-    await page.getByRole('link',{name:'Return to Apartments',exact:true}).click();
-    assert.deepEqual(await value(),expected,'read-only world pages never change the build');
+    await page.getByRole('button',{name:'Close',exact:true}).click();await stats.waitFor({state:'hidden'});
+    assert.equal(await page.evaluate(()=>SugarCube.State.passage),'Apartments');
+    assert.deepEqual(await value(),expected);assert.equal(await image(),sprite);
+    await trigger.click();await dialog.waitFor({state:'visible'});
+    await page.mouse.click(10,10);await dialog.waitFor({state:'hidden'});
     await page.getByRole('link',{name:'Main menu',exact:true}).click();
-    assert.equal(await page.locator('.world-sidebar').count(),0);
     await page.getByRole('link',{name:'Continue',exact:true}).click();
-    await nav.getByRole('link',{name:'Character',exact:true}).click();
-    await page.getByRole('link',{name:'Edit character',exact:true}).click();
-    assert.deepEqual(await value(),expected);assert.equal(await page.locator('.world-sidebar').count(),0);
+    assert.deepEqual(await value(),expected);
 });
 
-test('world passage and character survive reload and disk save/load',async()=>{
+test('world reloads and disk saves retain location and character, without persisting dialogs',async()=>{
     await page.getByRole('checkbox',{name:'Athlete',exact:true}).check();
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await page.getByRole('navigation',{name:'Game pages'}).getByRole('link',{name:'Stats',exact:true}).click();
+    await page.getByRole('navigation',{name:'Game pages'}).getByRole('button',{name:'Stats',exact:true}).click();
+    await page.getByRole('dialog',{name:'Stats',exact:true}).waitFor({state:'visible'});
     const expected=await value();
-    await page.reload();await page.waitForSelector('#world-skills .world-skill');
+    await page.reload();await page.waitForSelector('.world-sidebar');
+    assert.equal(await page.evaluate(()=>SugarCube.State.passage),'Apartments');
+    assert.equal(await page.getByRole('dialog').count(),0);
     assert.deepEqual(await value(),expected);
     await page.getByRole('button',{name:'Saves',exact:true}).click();
     const [download]=await Promise.all([page.waitForEvent('download'),page.getByText('Save…',{exact:true}).click()]);
@@ -378,23 +388,39 @@ test('world passage and character survive reload and disk save/load',async()=>{
     await page.getByRole('link',{name:'Main menu',exact:true}).click();
     await page.locator('.main-menu a').filter({hasText:'Import/Export Saves'}).click();
     const [chooser]=await Promise.all([page.waitForEvent('filechooser'),page.getByText('Load…',{exact:true}).click()]);
-    await chooser.setFiles(save);await page.waitForSelector('#world-skills .world-skill');
+    await chooser.setFiles(save);await page.waitForSelector('.world-sidebar');
     assert.deepEqual(await value(),expected);
-    assert.equal(await page.getByRole('navigation',{name:'Game pages'}).getByRole('link',{name:'Stats',exact:true}).getAttribute('aria-current'),'page');
+    await page.getByRole('navigation',{name:'Game pages'}).getByRole('button',{name:'Character',exact:true}).click();
+    assert.equal(await page.getByRole('dialog',{name:'Character',exact:true}).locator('#character-traits').textContent(),'Athlete');
 });
 
-test('world sidebar stays left of usable content on desktop and narrow screens',async()=>{
+test('sidebar and popups fit desktop and narrow screens while keeping the world behind them',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     for(const width of [1440,700,390,320]) {
         await page.setViewportSize({width,height:844});
         await page.evaluate(()=>document.documentElement.classList.add('large-text'));
-        for(const name of ['Apartments','Character','Stats']) {
-            await page.getByRole('navigation',{name:'Game pages'}).getByRole('link',{name,exact:true}).click();
-            await page.waitForFunction(()=>document.querySelector('#character-canvas')?.hasAttribute('data-variation'));
+        await page.waitForFunction(()=>Math.abs(parseFloat(getComputedStyle(document.querySelector('#story')).marginLeft)-document.querySelector('.world-sidebar').getBoundingClientRect().width)<1);
+        const sidebar=await page.locator('.world-sidebar').boundingBox(),content=await page.locator('.world-content').boundingBox();
+        assert.ok(sidebar.x+sidebar.width<=content.x);
+        for(const name of ['Character','Stats']) {
+            await page.getByRole('navigation',{name:'Game pages'}).getByRole('button',{name,exact:true}).click();
+            const dialog=page.getByRole('dialog',{name,exact:true});await dialog.waitFor({state:'visible'});
             assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${name} fits ${width}px`);
-            const sidebar=await page.locator('.world-sidebar').boundingBox(),content=await page.locator('.world-content').boundingBox();
-            assert.ok(sidebar.x+sidebar.width<=content.x,'sidebar remains on the left without covering story content');
-            const sprite=await page.locator('#character-canvas').boundingBox();assert.ok(sprite.width>70 && sprite.height>100,'full character stays visible');
+            const bounds=await dialog.boundingBox();assert.ok(bounds.x>=0 && bounds.x+bounds.width<=width,'window stays within viewport');
+            assert.ok(bounds.width<width,'some of the main screen remains visible around the window');
+            assert.ok(await page.locator('.district-map').isVisible());
+            await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
         }
+    }
+});
+
+test('old Character/Stats saves return to Apartments and creation stays closed after starting',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const expected=await value();
+    for(const passage of ['Character','Stats','CharacterCreation']) {
+        await page.evaluate(name=>SugarCube.Engine.play(name),passage);
+        await page.waitForFunction(()=>SugarCube.State.passage==='Apartments' && !!document.querySelector('.world-sidebar'));
+        assert.equal(await page.locator('#character-controls').count(),0);
+        assert.deepEqual(await value(),expected);
     }
 });
