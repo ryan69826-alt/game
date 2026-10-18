@@ -11,22 +11,44 @@
         const terrain = document.createElement('canvas');terrain.width = map.width * tileSize;terrain.height = map.height * tileSize;
         const terrainContext = terrain.getContext('2d');
         const colors = {ground: '#293e35', park: '#416444', road: '#3b4750', parking: '#47525a',
-            pavement: '#66736c', path: '#889182', building: '#536b70', entrance: '#dfb777', tree: '#204b35', car: '#718da0'};
+            pavement: '#66736c', path: '#889182', building: '#536b70', entrance: '#dfb777', tree: '#204b35', car: '#47525a', median: '#416444'};
         for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) {
             const {kind} = map.tileAt(x, y), px = x * tileSize, py = y * tileSize;
             terrainContext.fillStyle = colors[kind];terrainContext.fillRect(px, py, tileSize, tileSize);
             terrainContext.strokeStyle = '#b7d6c41b';terrainContext.lineWidth = .6;terrainContext.strokeRect(px, py, tileSize, tileSize);
-            if (kind === 'parking') {
-                terrainContext.fillStyle = '#a4b6ad';terrainContext.fillRect(px + 1, py + 2, 1, 12);
-            } else if (kind === 'car') {
-                terrainContext.fillStyle = '#283a48';terrainContext.fillRect(px + 3, py + 4, 10, 7);
-                terrainContext.fillStyle = '#b6c3c1';terrainContext.fillRect(px + 2, py + 1, 12, 2);
-            } else if (kind === 'tree') {
+            if (kind === 'tree') {
                 terrainContext.fillStyle = '#6e9170';terrainContext.fillRect(px + 4, py + 3, 8, 9);
-            } else if (kind === 'road' && (y === 46 && x % 3 === 0 || x === 6 && y % 3 === 0)) {
+            } else if (kind === 'road') {
+                const centerY = map.roads.horizontal.y + Math.floor(map.roads.horizontal.height / 2);
+                const centerX = map.roads.vertical.x + Math.floor(map.roads.vertical.width / 2);
                 terrainContext.fillStyle = '#98a99b';
-                terrainContext.fillRect(px + 3, py + 7, x === 6 ? 2 : 10, x === 6 ? 8 : 2);
+                if (y === centerY && x % 3 === 0 && (x < map.roads.vertical.x || x >= map.roads.vertical.x + map.roads.vertical.width)) terrainContext.fillRect(px + 3, py + 7, 10, 2);
+                if (x === centerX && y % 3 === 0 && y < map.roads.horizontal.y) terrainContext.fillRect(px + 7, py + 3, 2, 10);
             }
+        }
+        // Draw complete bays and vehicles once, rather than a mark per tile.
+        terrainContext.strokeStyle = '#b2bdb2';terrainContext.lineWidth = 1;
+        for (const bay of map.parkingBays) {
+            const x = bay.x * tileSize, y = bay.y * tileSize, w = bay.width * tileSize, h = bay.height * tileSize;
+            const opensSouth = bay.y === map.parking.y || bay.y === map.parking.median.y + map.parking.median.height;
+            terrainContext.beginPath();
+            terrainContext.moveTo(x, opensSouth ? y + h : y);terrainContext.lineTo(x, opensSouth ? y : y + h);
+            terrainContext.lineTo(x + w, opensSouth ? y : y + h);terrainContext.lineTo(x + w, opensSouth ? y + h : y);
+            terrainContext.stroke();
+        }
+        const median = map.parking.median;
+        terrainContext.strokeStyle = '#9aaa8b';
+        terrainContext.strokeRect(median.x * tileSize + 1, median.y * tileSize + 1, median.width * tileSize - 2, median.height * tileSize - 2);
+        for (let x = median.x; x < median.x + median.width; x += 2) {
+            terrainContext.fillStyle = '#5c8056';terrainContext.fillRect(x * tileSize + 8, median.y * tileSize + 8, 16, 16);
+        }
+        for (const car of map.cars) {
+            const x = car.x * tileSize, y = car.y * tileSize;
+            terrainContext.fillStyle = '#17282c';
+            for (const wx of [2, 26]) for (const wy of [6, 22]) terrainContext.fillRect(x + wx, y + wy, 4, 6);
+            terrainContext.fillStyle = car.color;terrainContext.fillRect(x + 5, y + 2, 22, 28);
+            terrainContext.fillStyle = '#273e49';terrainContext.fillRect(x + 8, y + 7, 16, 6);terrainContext.fillRect(x + 8, y + 22, 16, 5);
+            terrainContext.fillStyle = '#d2d7c2';terrainContext.fillRect(x + 7, y + 3, 4, 2);terrainContext.fillRect(x + 21, y + 3, 4, 2);
         }
         map.buildings.forEach((building, i) => {
             terrainContext.strokeStyle = '#9bb7b4';terrainContext.lineWidth = 2;

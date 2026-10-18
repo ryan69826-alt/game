@@ -435,20 +435,38 @@ test('Apartments has a connected 50 by 50 grid with two roads, parking, park, an
             seen.add(key);for(const [dx,dy] of [[0,1],[1,0],[0,-1],[-1,0]]) queue.push({x:x+dx,y:y+dy});
         }
         const towardPark={north:[0,-1],south:[0,1],east:[1,0],west:[-1,0]};
+        const sidewalks=new Set(),pathQueue=[{x:25,y:18}];
+        for(let i=0;i<pathQueue.length;i++) {
+            const {x,y}=pathQueue[i],key=`${x},${y}`;
+            if(sidewalks.has(key) || !['path','entrance'].includes(map.tileAt(x,y).kind)) continue;
+            sidewalks.add(key);for(const [dx,dy] of [[0,1],[1,0],[0,-1],[-1,0]]) pathQueue.push({x:x+dx,y:y+dy});
+        }
         return {width:map.width,height:map.height,
             horizontal:Array.from({length:50},(_,x)=>map.tileAt(x,46).kind),
             vertical:Array.from({length:46},(_,y)=>map.tileAt(6,y).kind),
             parking:map.tileAt(13,35).kind,park:map.tileAt(28,22).kind,
+            horizontalWidth:[43,44,45,46,47,48,49].map(y=>map.tileAt(30,y).kind==='road'),
+            verticalWidth:[3,4,5,6,7,8,9].map(x=>map.tileAt(x,5).kind==='road'),
+            parkIsUncut:Array.from({length:81},(_,i)=>map.tileAt(26+i%9,19+Math.floor(i/9)).kind).every(kind=>kind==='park'||kind==='tree'),
+            ring:Array.from({length:11},(_,i)=>[[25+i,18],[25+i,28],[25,18+i],[35,18+i]]).flat().every(([x,y])=>map.tileAt(x,y).kind==='path'),
+            cars:map.cars.map(car=>({area:car.width*car.height,cells:Array.from({length:car.width*car.height},(_,i)=>map.tileAt(car.x+i%car.width,car.y+Math.floor(i/car.width))).every(tile=>tile.kind==='car'&&!tile.walkable)})),
+            median:map.tileAt(16,35),
+            aisles:[[12,31],[21,31],[12,36],[21,36],[12,40],[21,40]].every(([x,y])=>map.tileAt(x,y).kind==='parking'&&seen.has(`${x},${y}`)),
             entrances:map.buildings.map(building=>{
                 const {x,y}=building.door,[dx,dy]=towardPark[building.facing];
-                return {reached:seen.has(`${x},${y}`),door:map.tileAt(x,y).kind,
+                return {reached:seen.has(`${x},${y}`),sidewalkConnected:sidewalks.has(`${x},${y}`),door:map.tileAt(x,y).kind,
                     outward:map.tileAt(x+dx,y+dy).walkable,inward:map.tileAt(x-dx,y-dy).walkable};
             })};
     });
     assert.equal(layout.width,50);assert.equal(layout.height,50);
     assert.ok(layout.horizontal.every(kind=>kind==='road'));assert.ok(layout.vertical.every(kind=>kind==='road'));
+    assert.deepEqual(layout.horizontalWidth,[false,true,true,true,true,true,false]);
+    assert.deepEqual(layout.verticalWidth,[false,true,true,true,true,true,false]);
+    assert.ok(layout.parkIsUncut&&layout.ring,'sidewalk surrounds the intact park');
+    assert.ok(layout.cars.length>0);for(const car of layout.cars) assert.deepEqual(car,{area:4,cells:true});
+    assert.equal(layout.median.kind,'median');assert.equal(layout.median.walkable,false);assert.ok(layout.aisles);
     assert.equal(layout.parking,'parking');assert.equal(layout.park,'park');assert.equal(layout.entrances.length,4);
-    for(const entrance of layout.entrances) assert.deepEqual(entrance,{reached:true,door:'entrance',outward:true,inward:false});
+    for(const entrance of layout.entrances) assert.deepEqual(entrance,{reached:true,sidewalkConnected:true,door:'entrance',outward:true,inward:false});
 });
 
 test('movement buttons, keyboard, and adjacent map clicks spend one turn, scroll, and persist on reload',async()=>{
@@ -491,7 +509,7 @@ test('movement buttons, keyboard, and adjacent map clicks spend one turn, scroll
 
 test('walls, parked cars, trees, map bounds, and distant clicks do not spend turns',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    for(const [x,y,dx,dy] of [[30,15,0,-1],[12,35,0,-1],[27,21,0,-1],[0,0,-1,0],[49,49,1,0]]) {
+    for(const [x,y,dx,dy] of [[30,15,0,-1],[14,32,0,1],[13,35,1,0],[27,21,0,-1],[0,0,-1,0],[49,49,1,0]]) {
         const result=await page.evaluate(({x,y,dx,dy})=>{
             SugarCube.State.variables.world={mapId:'apartments',x,y,turn:7};
             const result=SugarCube.setup.worldMovement.move(dx,dy);

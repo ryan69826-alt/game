@@ -27,7 +27,11 @@ Apartments has a vertical area map on the right (40% of the main area) and a
 description column on the left (60%). On narrow screens, the map stacks below
 the description so both remain readable. Apartments is a 50×50 square grid with
 four buildings facing a small park, a parking lot, a road across the south edge,
-and a second road running north from that road. The scrolling local map follows
+and a second road running north from that road. Both roads are five squares wide
+with markings on their center squares. The parking lot has edge bays, clear drive
+aisles, and extra bays beside a planted median. Each car occupies a 2×2 square
+footprint. A continuous sidewalk circles the park and connects all four apartment
+entrances; no sidewalk crosses the park. The scrolling local map follows
 the player; the world map below shows the complete current area, player position,
 and local camera rectangle. Only Apartments is available for now.
 
