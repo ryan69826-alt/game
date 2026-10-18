@@ -48,6 +48,7 @@ Neon Meridian
 <img class="character-source" id="female-small" src="asset:characters/female-small.png" alt="">
 <img class="character-source" id="female-medium" src="asset:characters/female-medium.png" alt="">
 <img class="character-source" id="female-large" src="asset:characters/female-large.png" alt="">
+<img class="character-source" id="long-hair-atlas" src="asset:characters/hair-layers.png" alt="">
 <img class="character-source" id="hair-atlas" src="asset:characters/hair-atlas.png" alt="">
 </div>
 <figcaption><span id="build-description"></span><br><span id="appearance-description"></span></figcaption>

@@ -123,6 +123,54 @@ test('height slider is keyboard accessible from 4 ft to 7 ft and scales the figu
     assert.ok(tall/short>1.6 && tall/short<1.9,'height visibly scales while feet stay on the baseline');
 });
 
+test('head has adult proportions at both height endpoints and stays joined to the body',async()=>{
+    const slider=page.getByRole('slider',{name:'Height'});
+    for(const key of ['Home','End']) {
+        await slider.focus();await slider.press(key);
+        const proportions=await page.evaluate(()=>{
+            function height(id) {
+                const canvas=document.getElementById(id),ctx=canvas.getContext('2d');
+                const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+                let min=canvas.height,max=0;
+                for(let y=0;y<canvas.height;y++) for(let x=0;x<canvas.width;x++) if(pixels[(y*canvas.width+x)*4+3]>150){min=Math.min(min,y);max=Math.max(max,y);}
+                return max-min+1;
+            }
+            return {head:height('head-layer'),figure:height('character-canvas')};
+        });
+        assert.ok(proportions.head/proportions.figure>=.12 && proportions.head/proportions.figure<=.18,'head is approximately one seventh of adult figure height');
+    }
+});
+
+test('long hair keeps its left curtain continuous, inside the canvas, at both height endpoints',async()=>{
+    await page.getByLabel('Hair Color',{exact:true}).selectOption('Blonde');
+    for(const key of ['Home','End']) {
+        await page.getByRole('slider',{name:'Height'}).press(key);
+        for(const length of ['Chest','Waist','Knee','Floor']) {
+            await page.getByLabel('Hair Length',{exact:true}).selectOption(length);
+            const hair=await page.evaluate(()=>{
+                const head=document.getElementById('head-layer'),canvas=document.getElementById('hair-layer');
+                const headPixels=head.getContext('2d').getImageData(0,0,head.width,head.height).data;
+                const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+                let headBottom=0,bottom=0,left=canvas.width,right=0;
+                for(let y=0;y<canvas.height;y++) for(let x=0;x<canvas.width;x++) {
+                    if(headPixels[(y*canvas.width+x)*4+3]>150) headBottom=Math.max(headBottom,y);
+                    if(pixels[(y*canvas.width+x)*4+3]>150){bottom=Math.max(bottom,y);left=Math.min(left,x);right=Math.max(right,x);}
+                }
+                const gaps=[];
+                for(let y=headBottom+1;y<bottom-6;y++) {
+                    let visible=false;
+                    for(let x=0;x<72;x++) if(pixels[(y*canvas.width+x)*4+3]>150) visible=true;
+                    if(!visible) gaps.push(y);
+                }
+                return {left,right,gaps,bottom};
+            });
+            assert.deepEqual(hair.gaps,[],`${length} has no left-side gaps at ${key}`);
+            assert.ok(hair.left>2 && hair.right<141,'the complete hair silhouette fits inside the stage');
+            assert.equal(await page.locator('#preview-status').innerText(),'');
+        }
+    }
+});
+
 test('independent identity and appearance survive menu, reload, and disk save round trip',async()=>{
     for(const [label,choice] of Object.entries({'Gender':'Female','Genitals':'Both','Body Fat':'Fat','Muscle Mass':'Muscular','Breast Size':'Large','Eye Color':'Green','Hair Color':'Gray','Hair Length':'Floor','Skin Tone':'Dark'})) {
         await page.getByLabel(label,{exact:true}).selectOption(choice);

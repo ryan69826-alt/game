@@ -9,7 +9,7 @@ setup.characterPreview = (() => {
     const EYES = {Blue: [83,155,220], Green: [92,165,104], Brown: [113,72,40]};
     const cache = new Map();
     const hairCache = new Map();
-    let hairRowSplit;
+    const hairRowSplits = new Map();
     const makeCanvas = (w, h) => Object.assign(document.createElement('canvas'), {width:w, height:h});
     const skinPixel = (r,g,b) => r > 65 && r > g * 1.18 && g > b * 1.12;
 
@@ -58,9 +58,9 @@ setup.characterPreview = (() => {
 
     const hairPixel = (r,g,b) => r>65 && b>55 && r>g*1.45 && b>g*1.35 && b>r*.5;
     const eyePixel = (r,g,b) => b>r*1.12 && b>=g*.95 && g>70;
-    function eyeAnchor(pixels, width, height) {
+    function eyeAnchor(pixels, width, height, fraction=.25) {
         let xSum=0,ySum=0,count=0;
-        for(let y=0;y<height*.25;y++) for(let x=0;x<width;x++) {
+        for(let y=0;y<height*fraction;y++) for(let x=0;x<width;x++) {
             const i=(y*width+x)*4;
             if(pixels.data[i+3]>150 && eyePixel(...pixels.data.slice(i,i+3))) {
                 xSum+=x;ySum+=y;count++;
@@ -69,17 +69,16 @@ setup.characterPreview = (() => {
         if(!count) throw new Error('Missing eye alignment anchor in sprite artwork');
         return {x:xSum/count,y:ySum/count};
     }
-    function hairLayer(atlas, length, color) {
-        const index=setup.character.choices.hairLength.indexOf(length), key=`${index}-${color}`;
+    function hairLayer(atlas, length, color, longHair=false) {
+        const lengths=longHair?['Chest','Waist','Knee','Floor']:setup.character.choices.hairLength;
+        const index=lengths.indexOf(length),key=`${atlas.id}-${index}-${color}`;
         if(hairCache.has(key)) return hairCache.get(key);
-        // Generated sheet has uneven outer padding. Locate the transparent row
-        // gutter rather than cutting the second row's hair at image mid-height.
-        if(hairRowSplit===undefined) {
+        if(!hairRowSplits.has(atlas.id)) {
             const sample=makeCanvas(atlas.naturalWidth,atlas.naturalHeight);
             const context=sample.getContext('2d');context.drawImage(atlas,0,0);
             const data=context.getImageData(0,0,sample.width,sample.height).data;
             let start=0,bestStart=0,bestLength=0;
-            for(let y=Math.floor(sample.height*.4);y<sample.height*.55;y++) {
+            for(let y=Math.floor(sample.height*.32);y<sample.height*.58;y++) {
                 let opaque=0;
                 for(let x=0;x<sample.width;x++) if(data[(y*sample.width+x)*4+3]>180) opaque++;
                 if(opaque<8) {
@@ -88,27 +87,54 @@ setup.characterPreview = (() => {
                 } else start=0;
             }
             if(!bestLength) throw new Error('Missing hair atlas row gutter');
-            hairRowSplit=Math.round(bestStart+bestLength/2);
+            hairRowSplits.set(atlas.id,Math.round(bestStart+bestLength/2));
         }
-        const cw=atlas.naturalWidth/4;
-        const sy=index<4?0:hairRowSplit;
-        const ch=index<4?hairRowSplit:atlas.naturalHeight-hairRowSplit;
+        const columns=longHair?2:4,cw=atlas.naturalWidth/columns,split=hairRowSplits.get(atlas.id);
+        const sy=index<columns?0:split,ch=index<columns?split:atlas.naturalHeight-split;
         const cell=makeCanvas(Math.floor(cw),Math.floor(ch)),ctx=cell.getContext('2d');
-        ctx.drawImage(atlas,(index%4)*cw,sy,cw,ch,0,0,cell.width,cell.height);
+        ctx.drawImage(atlas,(index%columns)*cw,sy,cw,ch,0,0,cell.width,cell.height);
         const pixels=ctx.getImageData(0,0,cell.width,cell.height);
-        const eye=eyeAnchor(pixels,cell.width,cell.height);
-        let bottom=0;
-        const rgb=HAIR[color];
+        const eye=eyeAnchor(pixels,cell.width,cell.height,longHair?1:.25);
+        // Skin beside the eyes measures the head, independent of hair length.
+        let faceLeft=cell.width,faceRight=0;
+        for(let y=Math.max(0,Math.floor(eye.y-ch*.035));y<Math.min(cell.height,eye.y+ch*.035);y++) for(let x=0;x<cell.width;x++) {
+            const i=(y*cell.width+x)*4;
+            if(pixels.data[i+3]>180 && skinPixel(...pixels.data.slice(i,i+3))) {faceLeft=Math.min(faceLeft,x);faceRight=Math.max(faceRight,x);}
+        }
+        const faceWidth=faceRight-faceLeft+1,cut=Math.round(eye.y+faceWidth*.65);
+        const rgb=HAIR[color];let bottom=0,left=cell.width,right=0,top=cell.height;
         for(let i=0;i<pixels.data.length;i+=4) {
             const [r,g,b,a]=pixels.data.slice(i,i+4);
-            if(a>180 && !hairPixel(r,g,b)) bottom=Math.max(bottom,Math.floor(i/4/cell.width));
             if(a>110 && hairPixel(r,g,b)) {
+                const y=Math.floor(i/4/cell.width),x=i/4%cell.width;
+                bottom=Math.max(bottom,y);top=Math.min(top,y);left=Math.min(left,x);right=Math.max(right,x);
                 const shade=Math.max(.4,Math.min(1.4,(r*.3+g*.59+b*.11)/115));
                 rgb.forEach((v,k)=>pixels.data[i+k]=Math.min(255,Math.round(v*shade)));
             } else pixels.data[i+3]=0;
         }
+        // Complete curtains have no baked-in arm/body holes. Preserve their
+        // natural outlines instead of cutting rectangular strips from the left.
         ctx.putImageData(pixels,0,0);
-        const result={canvas:cell,eye,bottom};hairCache.set(key,result);return result;
+        const result={canvas:cell,eye,faceWidth,cut,bottom,bounds:{left,right,top,bottom},longHair};
+        hairCache.set(key,result);return result;
+    }
+    function drawHair(ctx, image, hair, destination, faceWidth, neckY, baseline, length) {
+        // Head fit and length are independent. Long hair stretches only BELOW
+        // the neck; shrinking the head never shortens it or shifts the scalp.
+        const scale=faceWidth/hair.faceWidth;
+        const x=destination.x-hair.eye.x*scale,y=destination.y-hair.eye.y*scale;
+        if(!hair.longHair) {
+            ctx.drawImage(image,Math.round(x),Math.round(y),Math.round(image.width*scale),Math.round(image.height*scale));
+            return {left:x+hair.bounds.left*scale,right:x+hair.bounds.right*scale,end:y+hair.bottom*scale};
+        }
+        const topY=Math.round(y),upperHeight=Math.round(hair.cut*scale);
+        const cutY=topY+upperHeight;
+        const fraction={Chest:.25,Waist:.43,Knee:.75,Floor:1}[length];
+        const end=neckY+(baseline-neckY)*fraction;
+        const lowerScale=(end-cutY)/(hair.bottom-hair.cut);
+        ctx.drawImage(image,0,0,image.width,hair.cut,Math.round(x),topY,Math.round(image.width*scale),upperHeight);
+        ctx.drawImage(image,0,hair.cut,image.width,image.height-hair.cut,Math.round(x),cutY,Math.round(image.width*scale),Math.round((image.height-hair.cut)*lowerScale));
+        return {left:x+hair.bounds.left*scale,right:x+hair.bounds.right*scale,end};
     }
 
     let sharedHead;
@@ -126,7 +152,27 @@ setup.characterPreview = (() => {
             const i=(y*canvas.width+x)*4;
             if(pixels.data[i+3]>180 && skinPixel(...pixels.data.slice(i,i+3))) {left=Math.min(left,x);right=Math.max(right,x);}
         }
-        sharedHead={canvas,pixels,neckX:(left+right)/2,neckWidth:right-left+1,
+        const eye=eyeAnchor(source.pixels,source.canvas.width,source.canvas.height);
+        let faceLeft=canvas.width,faceRight=0;
+        for(let y=Math.floor(eye.y-source.canvas.height*.025);y<eye.y+source.canvas.height*.025;y++) for(let x=0;x<canvas.width;x++) {
+            const i=(y*canvas.width+x)*4;
+            if(pixels.data[i+3]>180 && skinPixel(...pixels.data.slice(i,i+3))) {faceLeft=Math.min(faceLeft,x);faceRight=Math.max(faceRight,x);}
+        }
+        const eyePixels=[];
+        for(let y=0;y<cut;y++) for(let x=0;x<canvas.width;x++) {
+            const i=(y*canvas.width+x)*4;
+            if(pixels.data[i+3]>150 && eyePixel(...pixels.data.slice(i,i+3))) eyePixels.push({x,y});
+        }
+        const eyeColumns=[...new Set(eyePixels.map(pixel=>pixel.x))].sort((a,b)=>a-b),groups=[];
+        for(const x of eyeColumns) {
+            if(!groups.length || x-groups.at(-1).at(-1)>2) groups.push([]);
+            groups.at(-1).push(x);
+        }
+        const eyePoints=groups.map(columns=>{
+            const points=eyePixels.filter(point=>columns.includes(point.x));
+            return {x:points.reduce((sum,p)=>sum+p.x,0)/points.length,y:points.reduce((sum,p)=>sum+p.y,0)/points.length};
+        });
+        sharedHead={canvas,pixels,eyePoints,faceWidth:faceRight-faceLeft+1,neckX:(left+right)/2,neckWidth:right-left+1,
             fullHeight:source.canvas.height,eye:eyeAnchor(source.pixels,source.canvas.width,source.canvas.height)};
         return sharedHead;
     }
@@ -140,7 +186,10 @@ setup.characterPreview = (() => {
                 if(cell.pixels.data[i+3]>180 && skinPixel(...cell.pixels.data.slice(i,i+3))) xs.push(x);
             }
             if(xs.length>=5) {
-                cell.neck={x:(xs[0]+xs.at(-1))/2,y,width:xs.at(-1)-xs[0]+1};
+                const width=xs.at(-1)-xs[0]+1;
+                // Trim the redundant upper neck; the shared head already
+                // contains its own lower neck pixels.
+                cell.neck={x:(xs[0]+xs.at(-1))/2,y:y+Math.round(width*.45),width};
                 return cell.neck;
             }
         }
@@ -157,7 +206,7 @@ setup.characterPreview = (() => {
         const cell=bodyCell(sources[model],fat,muscle),head=headPart(sources['head-reference']);
         const bodyContext=clearLayer(layers.body),headContext=clearLayer(layers.head),hairContext=clearLayer(layers.hair);
         const baseline=193,height=Math.round(166*character.heightInches/84);
-        const headScale=height/head.fullHeight,headWidth=Math.round(head.canvas.width*headScale);
+        const headScale=height/head.fullHeight*.72,headWidth=Math.round(head.canvas.width*headScale);
         const headHeight=Math.round(head.canvas.height*headScale),headTop=baseline-height;
         const neckX=72,headLeft=Math.round(neckX-head.neckX*headScale);
         const neckY=headTop+headHeight-2;
@@ -176,10 +225,17 @@ setup.characterPreview = (() => {
         bodyContext.lineTo(neckX+lower,neckY+4);bodyContext.lineTo(neckX-lower,neckY+4);bodyContext.closePath();bodyContext.fill();
         bodyContext.restore();
         headContext.drawImage(tintedBody(head,character,true),headLeft,headTop,headWidth,headHeight);
+        // Preserve a one-pixel iris when nearest-neighbor downsampling would
+        // otherwise discard every source iris pixel on the smaller head.
+        headContext.fillStyle=`rgb(${EYES[character.eyeColor].join(',')})`;
+        for(const eye of head.eyePoints) headContext.fillRect(Math.round(headLeft+eye.x*headScale),Math.round(headTop+eye.y*headScale),1,1);
         const destination={x:headLeft+head.eye.x*headScale,y:headTop+head.eye.y*headScale};
-        const hair=hairLayer(sources['hair-atlas'],character.hairLength,character.hairColor);
-        const hairScale=(baseline-destination.y)/(hair.bottom-hair.eye.y);
-        hairContext.drawImage(hair.canvas,Math.round(destination.x-hair.eye.x*hairScale),Math.round(destination.y-hair.eye.y*hairScale),Math.round(hair.canvas.width*hairScale),Math.round(hair.canvas.height*hairScale));
+        const longHair=['Chest','Waist','Knee','Floor'].includes(character.hairLength);
+        const hair=hairLayer(sources[longHair?'long-hair-atlas':'hair-atlas'],character.hairLength,character.hairColor,longHair);
+        const bounds=drawHair(hairContext,hair.canvas,hair,destination,head.faceWidth*headScale,neckY,baseline,character.hairLength);
+        canvas.dataset.hairBounds=JSON.stringify(bounds);
+        canvas.dataset.headHeight=headHeight;
+        canvas.dataset.figureHeight=height;
         const ctx=clearLayer(canvas);
         for(const layer of [layers.body,layers.head,layers.hair]) ctx.drawImage(layer,0,0);
         const breast=character.gender==='Female'?`, ${character.breastSize.toLowerCase()} breast size`:'';

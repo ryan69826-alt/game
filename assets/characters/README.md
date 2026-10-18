@@ -21,17 +21,32 @@ The customization renderer uses original AI-generated transparent atlases:
 - `female-small.png`, `female-medium.png`, `female-large.png`: 4 × 4 female
   body parts per breast size, fully clothed, without heads. Each sheet preserves
   all 16 independent fat/muscle combinations in the same ordering as above.
+  Small is the exact previously published Medium artwork. Medium is a new
+  intermediate chest size; Large retains its original artwork.
 - `hair-atlas.png`: 4 columns × 2 rows. First seven cells are Shaved/Ear/Neck/
-  Chest/Waist/Knee/Floor; last cell is unused. Magenta is a mask color, not the
+  Chest/Waist/Knee/Floor; only the first three are used by the current renderer.
+  Magenta is a mask color, not the
   final hair color. Runtime isolates those pixels and applies the selected palette.
+- `hair-layers.png`: 2 × 2 complete head/hair templates, Chest/Waist on the top
+  row and Knee/Floor on the bottom. No clothing or arms are present in this art,
+  so their silhouettes cannot leave baked-in gaps in the long hair.
 
 The head is extracted once into its own object. Its neck anchor is fixed for
-every body choice; only height changes head geometry. Body neck anchors are
+every body choice; only height changes head geometry. Its scale is 72% of the
+first prototype's shared head (about one seventh of overall figure height).
+Body neck anchors are
 detected from the skin pixels at the top of each body part. A short overlapping
-skin bridge joins each neck to the common head. Head, body, and hair each have
+skin bridge joins each neck to the common head. Redundant upper-neck pixels are
+trimmed so the head and body necks do not add up to an overlong neck.
+Head, body, and hair each have
 their own canvas layer, then are composited into the visible character canvas.
 
 Eye locations align the hair to the fixed head. The renderer detects the transparent
 gutter between hair rows because the generated artwork has uneven outside padding.
+Hair width fits the head using skin beside the eyes. For long styles, only hair
+below the neck stretches to the chest/waist/knee/floor endpoint; head-sized caps
+remain unchanged. Both draw sections use one shared integer row to prevent a
+one-pixel seam. Complete curtain outlines are preserved without rectangular cuts.
+One-pixel irises remain visible when shrinking the head would skip source eye pixels.
 Replacement atlases must preserve the cell ordering, blue eye alignment anchors,
 tan skin source palette, and magenta hair mask. See `src/character-preview.js`.

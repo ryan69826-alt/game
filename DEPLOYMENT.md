@@ -13,7 +13,7 @@ permission to enable Pages, and the repository's visibility/plan must support it
 ## Publish updates
 
 Pushing to `main` runs **Publish game to GitHub Pages**. It installs the pinned
-compiler/story format, runs the eight browser checks, and uploads only the built
+compiler/story format, runs the browser checks, and uploads only the built
 standalone HTML and `.nojekyll`. Deployment runs only after validation succeeds.
 No custom secret or external hosting account is needed; GitHub supplies the
 workflow token with Pages deployment permissions.
