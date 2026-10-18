@@ -36,7 +36,20 @@ jobs:
       - name: Validate character creator
         run: |
           export CHROMIUM_EXECUTABLE_PATH="$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')"
-          npm test
+          npm test > "$RUNNER_TEMP/browser-tests.log" 2>&1 || {
+            test_status=$?
+            cat "$RUNNER_TEMP/browser-tests.log"
+            python3 - "$RUNNER_TEMP/browser-tests.log" <<'PY'
+          import pathlib, sys
+          output = pathlib.Path(sys.argv[1]).read_text()
+          start = output.rfind('✖ failing tests:')
+          detail = (output[start:] if start >= 0 else output[-6000:])[:6000]
+          escaped = detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print('::error title=Browser test failure::' + escaped)
+          PY
+            exit "$test_status"
+          }
+          cat "$RUNNER_TEMP/browser-tests.log"
       - name: Prepare standalone website
         run: |
           mkdir -p _site
