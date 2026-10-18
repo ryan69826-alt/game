@@ -208,6 +208,12 @@ test('long hair keeps its left curtain continuous, inside the canvas, at both he
 });
 
 test('independent identity and appearance survive menu, reload, and disk save round trip',async()=>{
+    await page.getByRole('checkbox',{name:'Nerd',exact:true}).check();
+    await page.getByRole('checkbox',{name:'Beautiful',exact:true}).check();
+    await page.getByRole('spinbutton',{name:'XP allocated to Lockpicking',exact:true}).fill('150');
+    await page.getByRole('spinbutton',{name:'XP allocated to Lockpicking',exact:true}).press('Tab');
+    await page.getByRole('spinbutton',{name:'XP allocated to Stealth',exact:true}).fill('100');
+    await page.getByRole('spinbutton',{name:'XP allocated to Stealth',exact:true}).press('Tab');
     for(const [label,choice] of Object.entries({'Gender':'Female','Genitals':'Both','Body Fat':'Fat','Muscle Mass':'Muscular','Breast Size':'Large','Eye Color':'Green','Hair Color':'Gray','Hair Length':'Floor','Skin Tone':'Dark'})) {
         await page.getByLabel(label,{exact:true}).selectOption(choice);
     }
@@ -236,7 +242,74 @@ test('old saves without character data open safely; malformed fields normalize',
     await page.evaluate(()=>{SugarCube.State.variables.character={gender:'Unknown',genitals:'Both',heightInches:900,bodyFat:'Fat'};SugarCube.Engine.play('CharacterCreation');});
     await page.waitForSelector('#character-gender');const character=await value();
     assert.equal(character.gender,'Male');assert.equal(character.genitals,'Both');assert.equal(character.heightInches,84);assert.equal(character.bodyFat,'Fat');
-    assert.equal(character.breastSize,'Medium');assert.equal(character.version,2);
+    assert.equal(character.breastSize,'Medium');assert.equal(character.version,3);
+    assert.deepEqual(character.traits,[]);assert.ok(Object.values(character.skills).every(xp=>xp===0));
+});
+
+test('all requested traits toggle independently without inventing stat effects',async()=>{
+    const names=['Nerd','Athlete','Delinquent','Promiscuous','Exhibitionist','Deviant','Beautiful','Lustful','Masochist','Sadist','Polyamorous','Nudist','Insane','Ugly','Innocent'];
+    assert.equal(await page.getByRole('checkbox').count(),15);
+    for(const name of names) await page.getByRole('checkbox',{name,exact:true}).check();
+    assert.deepEqual((await value()).traits,names);
+    await page.getByRole('checkbox',{name:'Nerd',exact:true}).uncheck();
+    assert.deepEqual((await value()).traits,names.slice(1));
+    assert.ok(Object.values((await value()).skills).every(xp=>xp===0),'traits have no undefined effects');
+});
+
+test('18 skills share 250 XP, cross level boundaries, reject overspending, and refund',async()=>{
+    assert.equal(await page.getByRole('spinbutton').count(),18);
+    const lock=page.getByRole('spinbutton',{name:'XP allocated to Lockpicking',exact:true});
+    const stealth=page.getByRole('spinbutton',{name:'XP allocated to Stealth',exact:true});
+    const row=page.locator('.skill-row').filter({has:lock});
+    const set=async(input,xp)=>{await input.fill(String(xp));await input.press('Tab');};
+    assert.equal(await page.locator('#skill-budget').textContent(),'250 / 250 XP remaining');
+    await set(lock,49);assert.equal(await row.locator('.skill-level').textContent(),'Level 0 / 10');
+    await set(lock,50);assert.equal(await row.locator('.skill-level').textContent(),'Level 1 / 10');
+    assert.equal(await row.locator('.skill-progress-label').textContent(),'0 / 100 XP toward level 2');
+    await set(lock,149);assert.equal(await row.locator('.skill-level').textContent(),'Level 1 / 10');
+    await set(lock,150);assert.equal(await row.locator('.skill-level').textContent(),'Level 2 / 10');
+    assert.equal(await row.locator('.skill-progress-label').textContent(),'0 / 200 XP toward level 3');
+    await set(stealth,101);assert.equal((await value()).skills.Stealth,0);
+    assert.match(await page.locator('.allocation-status').textContent(),/0 to 100 XP/);
+    await set(stealth,100);assert.equal(await page.locator('#skill-budget').textContent(),'0 / 250 XP remaining');
+    assert.ok(await page.getByRole('button',{name:'Add 10 XP to Lockpicking',exact:true}).isDisabled());
+    await page.getByRole('button',{name:'Refund 10 XP from Lockpicking',exact:true}).click();
+    assert.equal(await row.locator('.skill-level').textContent(),'Level 1 / 10');
+    assert.equal(await row.locator('.skill-progress-label').textContent(),'90 / 100 XP toward level 2');
+    await page.getByRole('button',{name:'Add 10 XP to Stealth',exact:true}).click();
+    assert.equal((await value()).skills.Stealth,110);
+    for(const invalid of ['-1','1.5','']) {await set(lock,invalid);assert.equal((await value()).skills.Lockpicking,140);}
+    await page.getByRole('button',{name:'Reset skill XP',exact:true}).click();
+    assert.ok(Object.values((await value()).skills).every(xp=>xp===0));
+    await set(lock,247);
+    await page.getByRole('button',{name:'Add 10 XP to Stealth',exact:true}).click();
+    assert.equal((await value()).skills.Stealth,3,'the last partial increment uses only available XP');
+    assert.equal(await page.locator('#skill-budget').textContent(),'0 / 250 XP remaining');
+});
+
+test('doubling XP thresholds support all ten levels and imported builds stay within budget',async()=>{
+    const results=await page.evaluate(()=>{
+        const rules=SugarCube.setup.characterRules;
+        let cumulative=0;const levels=[];
+        for(let level=1;level<=10;level++) {
+            cumulative+=50*2**(level-1);
+            levels.push([rules.progress(cumulative-1).level,rules.progress(cumulative)]);
+        }
+        return levels;
+    });
+    results.forEach(([before,status],i)=>{
+        assert.equal(before,i);assert.equal(status.level,i+1);assert.equal(status.xp,0);
+        assert.equal(status.nextCost,i===9?null:50*2**(i+1));
+    });
+    await page.evaluate(()=>{
+        SugarCube.State.variables.character={traits:['Nerd','Nerd','Unknown','Ugly'],skills:{Lockpicking:150.9,Stealth:999,Focus:-5,Combat:'100',Swimming:null}};
+        SugarCube.Engine.play('CharacterCreation');
+    });
+    await page.waitForSelector('#skill-lockpicking');
+    const character=await value();assert.deepEqual(character.traits,['Nerd','Ugly']);
+    assert.equal(character.skills.Lockpicking,150);assert.equal(character.skills.Stealth,100);
+    assert.equal(Object.values(character.skills).reduce((a,b)=>a+b,0),250);
+    assert.equal(character.skills.Focus,0);assert.equal(character.skills.Combat,0);
 });
 
 test('creator fits narrow screens and large-text preference without horizontal scrolling',async()=>{

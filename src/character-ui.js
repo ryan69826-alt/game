@@ -62,6 +62,7 @@ $(document).on(':passagedisplay', () => {
         image.addEventListener('load',()=>{if(root.isConnected){ready=images.every(image=>image.complete && image.naturalWidth>0);update();}},{once:true});
         image.addEventListener('error',()=>{status.textContent='Character artwork could not load. Your selections are retained.';},{once:true});
     }
+    setup.characterCreationBuild.mount(root, character);
     if(!ready) status.textContent='Loading appearance…';
     update();
 });

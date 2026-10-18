@@ -12,9 +12,10 @@ setup.character = (() => {
         skinTone: ['Pale', 'Tan', 'Olive', 'Dark']
     };
     const defaults = () => ({
-        version: 2, age: 26, gender: 'Male', genitals: 'Male', heightInches: 66,
+        version: 3, age: 26, gender: 'Male', genitals: 'Male', heightInches: 66,
         bodyFat: 'Average', muscleMass: 'Toned', eyeColor: 'Brown',
-        hairColor: 'Black', hairLength: 'Ear', skinTone: 'Tan', breastSize: 'Medium'
+        hairColor: 'Black', hairLength: 'Ear', skinTone: 'Tan', breastSize: 'Medium',
+        traits: [], skills: Object.fromEntries(setup.characterRules.skills.map(name => [name, 0]))
     });
     function normalize(value) {
         const result = defaults();
@@ -24,6 +25,17 @@ setup.character = (() => {
             }
             if (Number.isFinite(value.heightInches)) {
                 result.heightInches = Math.max(48, Math.min(84, Math.round(value.heightInches)));
+            }
+            const rules = setup.characterRules;
+            if (Array.isArray(value.traits)) {
+                result.traits = rules.traits.filter(name => value.traits.includes(name));
+            }
+            let available = rules.budget;
+            for (const name of rules.skills) {
+                const xp = value.skills?.[name];
+                if (!Number.isFinite(xp)) continue;
+                result.skills[name] = Math.min(available, Math.max(0, Math.floor(xp)));
+                available -= result.skills[name];
             }
         }
         return result;

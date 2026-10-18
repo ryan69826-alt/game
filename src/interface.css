@@ -76,3 +76,25 @@ body[data-tags~="creation"] #passages{max-width:960px}
 /* Anchor the editor itself so revealing female-only controls cannot shift the preview. */
 body[data-tags~="creation"] #story{align-items:start}
 .character-field[hidden]{display:none}
+/* Starting build: keep trait choices and XP controls usable on narrow screens. */
+.creation-help{color:var(--muted);font-size:.75rem;line-height:1.6;margin:0 0 16px}
+.trait-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.trait-choice{display:flex;align-items:center;gap:9px;padding:8px;background:#182c2d;border:1px solid var(--line);font-size:.8rem;cursor:pointer;overflow-wrap:anywhere}
+.trait-choice:has(input:checked){border-color:#729b88;background:#25433b}
+.trait-choice input{flex:none;margin:0;accent-color:var(--accent);width:16px;height:16px}
+.skill-budget{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+#skill-budget{font-size:.85rem;color:var(--accent);font-variant-numeric:tabular-nums}
+.skill-budget button{font-size:.7rem;padding:7px 10px}
+.skill-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;padding:13px 0;border-bottom:1px solid var(--line)}
+.skill-heading{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.skill-heading label{font-size:.85rem;color:var(--text);overflow-wrap:anywhere}
+.skill-level,.skill-progress-label{font-size:.65rem;color:var(--muted)}
+.skill-allocation{display:flex;align-items:center;gap:5px}
+.skill-allocation button{width:30px;height:34px;padding:0;font-size:1rem}
+.skill-allocation input{width:65px;min-width:0;height:34px;padding:4px;background:#16292c;color:var(--text);border:1px solid #3c5952;font-size:.85rem;text-align:center;font-variant-numeric:tabular-nums}
+.skill-row progress{grid-column:1/-1;width:100%;height:5px;accent-color:var(--accent)}
+.skill-progress-label{grid-column:1/-1}
+.allocation-status{font-size:.75rem;color:var(--accent);line-height:1.6}
+.allocation-status:empty{display:none}
+button:disabled{opacity:.4;cursor:default}
+@media(max-width:360px){.skill-row{gap:6px 8px}.skill-allocation input{width:54px}.skill-allocation button{width:27px}.trait-grid{grid-template-columns:minmax(0,1fr)}}

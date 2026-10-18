@@ -22,7 +22,7 @@ The customization renderer uses original AI-generated transparent atlases:
   body parts per breast size, fully clothed, without heads. Each sheet preserves
   all 16 independent fat/muscle combinations in the same ordering as above.
   Small is the exact previously published Medium artwork. Medium is a new
-  intermediate chest size; Large retains its original artwork.
+  intermediate chest size with a small additional increase for this revision; Large retains its original artwork.
 - `hair-atlas.png`: 4 columns × 2 rows. First seven cells are Shaved/Ear/Neck/
   Chest/Waist/Knee/Floor; only the first three are used by the current renderer.
   Magenta is a mask color, not the

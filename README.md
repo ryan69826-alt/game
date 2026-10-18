@@ -13,6 +13,14 @@ Each model/size supports all 16 fat/muscle combinations: 64 body variants total.
 Height, build, skin, eyes, hair, gender, and female breast size update the preview.
 Genitals are saved independently and do not alter the clothed art. A breast-size
 selection is retained when switching to male and restored when returning to female.
+Character Creation also has 15 independent starting-trait checkboxes and 18 skills.
+Traits are saved but have no stat or skill modifiers until those effects are defined.
+Skills begin untrained at level 0 and have a shared, refundable 250 XP creation pool.
+Reaching level 1 costs 50 XP; each following level costs twice the previous cost
+(100 more for level 2, 200 more for level 3), through level 10. XP entered per skill
+is cumulative: 150 XP means level 2 with 0/200 toward level 3. Use the number fields
+or ±10 XP buttons; the last increment uses the remaining pool. Reset refunds all
+skill XP. No combinations of traits are restricted yet.
 All protagonists are adults (age 26 in this prototype). There is no world yet.
 Options provides larger text and reduced motion. Save management uses
 SugarCube's built-in browser slots and disk import/export.
@@ -59,7 +67,9 @@ the main menu; no previous world content is shown.
 
 - `src/story.twee`: Twine metadata, main menu, character creation layout.
 - `src/character-data.js`: versioned serializable character schema and validation.
-- `src/character-ui.js`: accessible inputs and live SugarCube state updates.
+- `src/character-ui.js`: accessible appearance inputs and live SugarCube state updates.
+- `src/character-rules.js`: trait/skill definitions, doubling XP thresholds and budget rules.
+- `src/character-creation-build.js`: trait checkboxes and refundable skill allocation UI.
 - `src/character-preview.js`: atlas selection, palette changes, hair alignment.
 - `src/interface.css`: responsive interface and character preview styling.
 - `assets/characters/`: replaceable placeholder artwork, embedded into the HTML.
@@ -83,7 +93,9 @@ Chest and longer hair use complete body-free templates, with head fit and length
 handled independently so both sides remain intact. Small breast size uses the
 former Medium artwork; Medium is between that size and the unchanged Large.
 Version-1 character saves receive a default Medium breast size without losing
-their other choices; the current schema version is 2.
+their other choices. Version 3 adds empty starting traits and zero XP for every
+skill to older saves. Invalid trait IDs are discarded; imported skill XP is rounded
+down, made nonnegative, and capped to the 250 XP pool in the listed skill order.
 
 Twee is the text source representation of Twine passages. Tweego 2.1.1 compiles
 it with the genuine SugarCube runtime. The installer downloads official release
@@ -127,7 +139,7 @@ npm test
 ```
 
 Alternatively set `CHROMIUM_EXECUTABLE_PATH` to an existing Chromium binary.
-Tests build and serve their own copy on loopback port 8765. Eleven checks cover all
+Tests build and serve their own copy on loopback port 8765. Fourteen checks cover all
 64 body renders with pixel-identical heads/hair and connected necks, gender and
 breast-size switching, all other visual choices, keyboard height control,
 menu/reload persistence, disk save/load, legacy save defaults, and narrow screens.
@@ -135,3 +147,7 @@ Proportion and long-hair regressions additionally check both height endpoints,
 continuous left hair silhouettes, and room around the complete hair in the canvas.
 Face-visibility checks cover Waist/Knee/Floor hair at both height limits, with
 light/dark skin and hair, verifying that eyes, nose, and mouth retain their pixels.
+
+Starting-build checks cover all trait selections, XP thresholds through level 10,
+allocation/refunds, overspending and invalid input, legacy normalization, and
+trait/skill persistence through menu, reload, and disk save/load.
