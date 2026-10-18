@@ -66,6 +66,7 @@ Neon Meridian
 <canvas id="clothing-layer" width="288" height="416"></canvas>
 <canvas id="head-layer" width="288" height="416"></canvas>
 <canvas id="hair-layer" width="288" height="416"></canvas>
+<img class="character-source" id="female-dolls" src="asset:characters/female-dolls.png" alt="">
 <img class="character-source" id="paper-dolls" src="asset:characters/paper-dolls.png" alt="">
 <img class="character-source" id="head-reference" src="asset:characters/body-atlas.png" alt="">
 <img class="character-source" id="long-hair-atlas" src="asset:characters/hair-layers.png" alt="">

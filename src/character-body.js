@@ -5,13 +5,13 @@ setup.characterBody = (() => {
     const make = (w,h) => Object.assign(document.createElement('canvas'),{width:w,height:h});
     const skinPixel = (r,g,b) => r > 65 && r > g*1.18 && g > b*1.12;
     const opaque = (r,g,b,a) => a > 210 && !(r > g*2.8 && r > b*2.8);
-    function extract(atlas,column,row) {
-        const key = `${column}:${row}`;
+    function extract(atlas,column,row,columns=6) {
+        const key = `${atlas.id}:${column}:${row}`;
         if (cache.has(key)) return cache.get(key);
-        const width = Math.floor(atlas.naturalWidth/6), split = Math.round(atlas.naturalHeight*.5);
+        const width = Math.floor(atlas.naturalWidth/columns), split = Math.round(atlas.naturalHeight*.5);
         const sy = row ? split : 0, height = row ? atlas.naturalHeight-split : split;
         const canvas = make(width,height), ctx = canvas.getContext('2d',{willReadFrequently:true});
-        ctx.drawImage(atlas,column*atlas.naturalWidth/6,sy,width,height,0,0,width,height);
+        ctx.drawImage(atlas,column*atlas.naturalWidth/columns,sy,width,height,0,0,width,height);
         const image = ctx.getImageData(0,0,width,height), data = image.data;
         let left=width,right=0,top=height,bottom=0;
         for(let y=0;y<height;y++) for(let x=0;x<width;x++) {
@@ -61,21 +61,42 @@ setup.characterBody = (() => {
         }
         ctx.putImageData(image,0,0);cache.set(key,canvas);return canvas;
     }
-    function draw(body,clothes,character,neckY,skin,atlas,baseline,neckX,backpack) {
-        const sizes=['Small','Medium','Large'],column=(character.gender==='Female'?3:0)+sizes.indexOf(character.bodySize);
-        const base=extract(atlas,column,0), dressed=extract(atlas,column,1), key=`${character.gender}-${character.bodySize}`;
-        function paint(ctx,source,image,bust=false) {
+    // Only the two breast volumes are adjusted. The bounded raster patch is
+    // below the shoulders and above the waist; no full-row body scaling occurs.
+    function adjustChest(context, character, neckX, neckY, shirt=false) {
+        const change={Small:-.9,Medium:0,Large:.95}[character.breastSize];
+        if(!change) return;
+        const left=neckX-36,top=neckY+28,width=100,height=shirt?44:52;
+        const offset=shirt?0:9;
+        const original=context.getImageData(left,top,width,height);
+        const output=new ImageData(new Uint8ClampedArray(original.data),width,height);
+        const volumes=[{x:neckX-7,y:neckY+35+offset,rx:20,ry:18,projection:-2},{x:neckX+22,y:neckY+37+offset,rx:34,ry:20,projection:8}];
+        for(let y=0;y<height;y++) for(let x=0;x<width;x++) {
+            let dx=0,dy=0,total=0,strongest=0;
+            for(const volume of volumes) {
+                const vx=left+x-volume.x,vy=top+y-volume.y;
+                const radius=(vx/volume.rx)**2+(vy/volume.ry)**2;
+                if(radius>=1) continue;
+                const weight=(1-radius)**2;dx+=(vx+volume.projection)*weight;dy+=vy*weight;total+=weight;strongest=Math.max(strongest,weight);
+            }
+            if(!total) continue;
+            strongest*=Math.min(1,y/6); // Fade in below the fixed shoulder line.
+            const sx=Math.max(0,Math.min(width-1,Math.round(x-change*dx/total*strongest)));
+            const sy=Math.max(0,Math.min(height-1,Math.round(y-change*dy/total*strongest)));
+            const from=(sy*width+sx)*4,to=(y*width+x)*4;
+            output.data.set(original.data.subarray(from,from+4),to);
+        }
+        context.putImageData(output,left,top);
+    }
+    function draw(body,clothes,character,neckY,skin,atlas,baseline,neckX,backpack,femaleAtlas) {
+        const female=character.gender==='Female';
+        const column=['Small','Medium','Large'].indexOf(character.bodySize), active=female?femaleAtlas:atlas;
+        const base=extract(active,column,0,female?3:6), dressed=extract(active,column,1,female?3:6), key=`${character.gender}-${character.bodySize}`;
+        function paint(ctx,source,image) {
             const trim=Math.round(source.canvas.height*.045),sourceHeight=source.canvas.height-trim;
             const scale=(baseline-neckY)/sourceHeight;
             ctx.imageSmoothingEnabled=false;
-            const change=character.gender==='Female' && bust ? {Small:-.06,Medium:0,Large:.08}[character.breastSize] : 0;
-            if(change) {
-                for(let y=0;y<baseline-neckY;y++) {
-                    const sy=trim+Math.floor(y/scale),t=(sy/source.canvas.height-.06)/.28;
-                    const factor=1+change*(t>0 && t<1?Math.sin(t*Math.PI):0);
-                    ctx.drawImage(image,0,sy,image.width,1,Math.round(neckX-source.neck*scale*factor),neckY+y,Math.round(image.width*scale*factor),1);
-                }
-            } else ctx.drawImage(image,0,trim,image.width,sourceHeight,Math.round(neckX-source.neck*scale),neckY,Math.round(source.canvas.width*scale),baseline-neckY);
+            ctx.drawImage(image,0,trim,image.width,sourceHeight,Math.round(neckX-source.neck*scale),neckY,Math.round(source.canvas.width*scale),baseline-neckY);
         }
         const worn=setup.clothing.equipped(character);
         // Backpack sits behind the torso and uses crisp integer rectangles.
@@ -91,14 +112,15 @@ setup.characterBody = (() => {
             backpack.fillStyle='#1b2825';backpack.fillRect(left+10,y-4,12,4);
 
         }
-        paint(body,base,layer(base,skin),true);
+        paint(body,base,layer(base,skin));
         for(const garment of ['shirt','pants','shoes']) if(worn.includes(garment)) {
             if(garment==='shoes') {
                 clothes.save();clothes.translate(-2,1);paint(clothes,dressed,layer(dressed,skin,garment));clothes.restore();
                 clothes.save();clothes.translate(2,1);paint(clothes,dressed,layer(dressed,skin,garment));clothes.restore();
             }
-            paint(clothes,dressed,layer(dressed,skin,garment),garment==='shirt');
+            paint(clothes,dressed,layer(dressed,skin,garment));
         }
+        if(female) {adjustChest(body,character,neckX,neckY);adjustChest(clothes,character,neckX,neckY,true);}
         if(worn.includes('backpack')) {
             for(let y=0;y<58;y++) {
                 const x=neckX-23-Math.round(y*.15);

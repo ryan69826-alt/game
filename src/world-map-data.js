@@ -13,18 +13,19 @@ setup.worldMaps = (() => {
     const parking = {x: 11, y: 28, width: 12, height: 15,
         median: {x: 14, y: 35, width: 6, height: 2}};
     const parkingBays = [
-        ...[11, 13, 15, 17, 19, 21].flatMap(x => [28, 41].map(y => ({x, y, width: 2, height: 2}))),
-        ...[14, 16, 18].flatMap(x => [33, 37].map(y => ({x, y, width: 2, height: 2})))
+        ...[11, 13, 15, 17, 19, 21].flatMap(x => [28, 41].map(y => ({x, y, width: 2, height: 2, facing: y === 28 ? 'north' : 'south'}))),
+        ...[14, 16, 18].flatMap(x => [33, 37].map(y => ({x, y, width: 2, height: 2, facing: y === 33 ? 'south' : 'north'})))
     ];
     const cars = [[11, 28], [15, 28], [21, 28], [13, 41], [19, 41], [21, 41], [14, 33], [18, 37]]
-        .map(([x, y], index) => ({x, y, width: 2, height: 2, color: ['#718da0', '#a69782', '#697c75'][index % 3]}));
+        .map(([x, y], index) => ({x, y, width: 2, height: 2, color: ['#718da0', '#a69782', '#697c75'][index % 3],
+            facing: parkingBays.find(bay => bay.x === x && bay.y === y).facing}));
     const interactables = [
         ...buildings.map((building, index) => ({id: `apartment-door-${index + 1}`, kind: 'door',
             name: `${building.name} door`, ...building.door, width: 1, height: 1,
             description: 'An apartment entrance facing the central park.'})),
         ...cars.map((car, index) => ({id: `parked-car-${index + 1}`, kind: 'car',
-            name: `Parked car ${index + 1}`, x: car.x, y: car.y, width: car.width, height: car.height,
-            description: 'A car parked inside a marked bay.'}))
+            name: `Parked car ${index + 1}`, x: car.x, y: car.y, width: car.width, height: car.height, facing: car.facing,
+            description: `Parked nose-in, facing ${car.facing}. The trunk faces the driving aisle.`}))
     ];
     const inside = (x, y, rect) => inRect(x, y, rect.x, rect.y, rect.width, rect.height);
     const tile = (kind, label, walkable = true) => ({kind, label, walkable});

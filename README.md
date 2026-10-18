@@ -11,8 +11,9 @@ The menu has Character Creation (Continue after starting), Options, and
 Import/Export Saves. The creator has independent gender/genital selections,
 Small/Medium/Large body sizes for each gender, female breast size, three eye
 colors, five hair colors, seven hair lengths, and four skin tones. Height,
-body-fat and muscle controls have been replaced. The six body fits use more
-pronounced masculine/feminine silhouettes and a shared fixed head.
+body-fat and muscle controls have been replaced. The six body fits use a shared fixed head. All three female fits use slimmer
+shoulders/limbs, a narrow hourglass waist, and more defined hips and bust. Breast
+size adjusts only the chest volumes, independently of shoulders, neck and waist.
 
 Clothing dropdowns follow Appearance: Top, Bottoms, Shoes, Wearable Storage, and
 Handheld. Current choices are None or a generic shirt/pants/shoes/backpack; Handheld
@@ -36,9 +37,12 @@ without changing an existing playthrough; disk export preserves saves across ori
 
 ## Block inventories and cars
 
-Cars face north (top of map). On either side, E offers Look through window and
-Open door. Behind a car (south), E offers Open trunk. Its front and diagonal tiles
-have no car interactions. Doors offer Knock/Open. Nearby prompts update every
+Cars park nose-in toward each bay's closed end: north along the top edge and below
+the median, south along the bottom edge and above the median. Headlights point
+into the bay; red taillights and trunks face the driving aisle. On either side, E
+offers Look through window and Open door. Behind a car, E offers Open trunk. Its
+front and diagonal tiles have no car interactions. Rendering and access share one
+orientation model, including door-open markings. Doors offer Knock/Open. Nearby prompts update every
 move; multiple objects produce a chooser. Actions recheck reach and direction.
 Opening a door updates both maps and persists. There are no access restrictions,
 interiors, driving, or NPC/ground objects placed yet. Ground/NPC definitions can
@@ -135,6 +139,7 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
   pointer dragging, cancellation/cleanup and block windows.
 - `world-map-data.js`, `world-movement.js`, `world-map-ui.js`: terrain, movement,
   held-input pacing, map rendering and camera.
+- `vehicle-geometry.js`: shared vehicle headings and front/rear/side geometry.
 - `world-interactions.js`, `world-interaction-ui.js`: reach, directional actions,
   prompts and object windows. Definitions can supply custom action text/handlers.
 - `world-ui.js`, `world.css`, `interface.css`, `settings.js`: sheets, responsive
@@ -167,7 +172,7 @@ SugarCube browser runtime. Coverage includes six distinct body/clothing fits,
 fixed head/hair and connected necks, independent clothing layers, breast sizes,
 all visual choices, long-hair face/curtain regressions, creator migration,
 traits/XP, responsive layouts, read-only sheets, map geometry/collision,
-movement/held-direction pacing, interaction reach/actions, directional car access,
+movement/held-direction pacing, interaction reach/actions, nose-in parking/headlight orientation, directional car access, localized breast-size changes,
 block packing/failed transfers, separate single-block pockets, dropdown categories,
 pointer tracking/drop/cancel behavior, legacy item migration, crisp sprite edges,
 no invisible storage, empty-trunk persistence,

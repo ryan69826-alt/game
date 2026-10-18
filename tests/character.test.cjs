@@ -970,3 +970,98 @@ test('detailed sprite rendering uses crisp opaque pixels at native preview resol
         assert.deepEqual(result,{width:288,height:416,soft:0,smoothing:false},`${gender} ${size} has no blurred alpha edges`);
     }
 });
+
+test('breast size changes chest pixels while shoulders, head, waist and limbs outside the chest stay fixed',async()=>{
+    await page.getByLabel('Gender',{exact:true}).selectOption('Female');
+    for(const size of ['Small','Medium','Large']) {
+        await page.getByLabel('Body Size',{exact:true}).selectOption(size);
+        for(const top of ['shirt','none']) {
+            await page.locator('#clothing-top').selectOption(top);
+            await page.getByLabel('Breast Size',{exact:true}).selectOption('Medium');
+            await page.evaluate(()=>{
+                const canvas=document.getElementById('character-canvas');
+                window.__testChestBaseline={pixels:canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data,
+                    head:document.getElementById('head-layer').toDataURL()};
+            });
+            for(const breast of ['Small','Large']) {
+                await page.getByLabel('Breast Size',{exact:true}).selectOption(breast);
+                const result=await page.evaluate(()=>{
+                    const canvas=document.getElementById('character-canvas'),reference=window.__testChestBaseline;
+                    const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+                    const neckX=Number(canvas.dataset.neckX),neckY=Number(canvas.dataset.neckY);let changes=0,outside=0;
+                    for(let i=0;i<pixels.length;i+=4) if([0,1,2,3].some(channel=>pixels[i+channel]!==reference.pixels[i+channel])) {
+                        const x=i/4%canvas.width,y=Math.floor(i/4/canvas.width);changes++;
+                        if(y<neckY+28 || y>=neckY+80 || x<neckX-36 || x>=neckX+64) outside++;
+                    }
+                    return {changes,outside,headSame:document.getElementById('head-layer').toDataURL()===reference.head};
+                });
+                assert.ok(result.headSame);assert.equal(result.outside,0,`${size} ${top} ${breast}: shoulders and body outside the chest stay fixed`);
+                assert.ok(result.changes>40,`${size} ${top} ${breast}: visible chest volume changes`);
+            }
+        }
+    }
+});
+
+test('cars park nose-in toward bay ends and expose trunks to the driving aisles',async()=>{
+    const results=await page.evaluate(()=>{
+        const {setup}=SugarCube,map=setup.worldMaps.apartments;
+        return map.cars.map((car,index)=>{
+            const object=map.interactables.find(object=>object.id===`parked-car-${index+1}`);
+            const bay=map.parkingBays.find(bay=>bay.x===car.x && bay.y===car.y);
+            const rear={mapId:map.id,x:car.x,y:car.facing==='north'?car.y+car.height:car.y-1};
+            const front={mapId:map.id,x:car.x,y:car.facing==='north'?car.y-1:car.y+car.height};
+            const side={mapId:map.id,x:car.x-1,y:car.y};
+            return {y:car.y,facing:car.facing,bay:bay.facing,object:object.facing,rearWalkable:map.tileAt(rear.x,rear.y).walkable,
+                rear:setup.interactions.actionsFor(object,rear).map(action=>action.id),front:setup.interactions.actionsFor(object,front),
+                side:setup.interactions.actionsFor(object,side).map(action=>action.id)};
+        });
+    });
+    assert.equal(results.length,8);
+    for(const car of results) {
+        const expected=[28,37].includes(car.y)?'north':'south';
+        assert.equal(car.facing,expected);assert.equal(car.bay,expected);assert.equal(car.object,expected);
+        assert.ok(car.rearWalkable,'trunk can be reached from the aisle');assert.deepEqual(car.rear,['trunk']);assert.deepEqual(car.front,[]);assert.deepEqual(car.side,['look-inside','open']);
+    }
+    const headings=await page.evaluate(()=>{
+        const {setup}=SugarCube,car={kind:'car',x:10,y:10,width:2,height:2};
+        const points={north:{x:10,y:9},east:{x:12,y:10},south:{x:10,y:12},west:{x:9,y:10}};
+        return Object.keys(points).map(facing=>({facing,edges:Object.fromEntries(Object.entries(points).map(([side,position])=>[side,setup.vehicles.edge({...car,facing},position)]))}));
+    });
+    const opposite={north:'south',south:'north',east:'west',west:'east'};
+    for(const result of headings) {assert.equal(result.edges[result.facing],'front');assert.equal(result.edges[opposite[result.facing]],'rear');assert.equal(Object.values(result.edges).filter(edge=>edge==='side').length,2);}
+});
+
+test('parked car headlights and taillights render in the same direction used by interactions',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=16;SugarCube.State.variables.world.y=34;SugarCube.Engine.play('Apartments');});
+    await page.waitForSelector('#local-map[data-player-x="16"]');
+    const lamps=await page.evaluate(()=>{
+        const canvas=document.getElementById('local-map'),ctx=canvas.getContext('2d');
+        const ox=Number(canvas.dataset.cameraX)*16,oy=Number(canvas.dataset.cameraY)*16;
+        return SugarCube.setup.worldMaps.apartments.cars.map(car=>{
+            const north=car.facing==='north',x=car.x*16-ox,y=car.y*16-oy;
+            return {front:Array.from(ctx.getImageData(x+(north?8:23),y+(north?3:28),1,1).data),
+                rear:Array.from(ctx.getImageData(x+(north?8:23),y+(north?29:3),1,1).data)};
+        });
+    });
+    for(const lamp of lamps) {assert.deepEqual(lamp.front,[233,227,186,255]);assert.deepEqual(lamp.rear,[182,106,97,255]);}
+});
+
+test('breast sizes increase actual chest coverage and front projection on each female body',async()=>{
+    await page.getByLabel('Gender',{exact:true}).selectOption('Female');
+    for(const body of ['Small','Medium','Large']) {
+        await page.getByLabel('Body Size',{exact:true}).selectOption(body);const samples=[];
+        for(const breast of ['Small','Medium','Large']) {
+            await page.getByLabel('Breast Size',{exact:true}).selectOption(breast);
+            samples.push(await page.evaluate(()=>{
+                const view=document.getElementById('character-canvas'),canvas=document.getElementById('clothing-layer');
+                const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+                const nx=Number(view.dataset.neckX),ny=Number(view.dataset.neckY);let area=0,front=0;
+                for(let y=ny+24;y<ny+62;y++) for(let x=nx-25;x<nx+62;x++) if(pixels[(y*canvas.width+x)*4+3]) {area++;front=Math.max(front,x);}
+                return {area,front};
+            }));
+        }
+        assert.ok(samples[0].area<samples[1].area && samples[1].area<samples[2].area,`${body}: breast volume increases`);
+        assert.ok(samples[0].front<samples[1].front && samples[1].front<samples[2].front,`${body}: breast contour projects farther forward`);
+    }
+});

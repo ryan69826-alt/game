@@ -207,7 +207,7 @@ setup.characterPreview = (() => {
         const headHeight=Math.round(head.canvas.height*headScale),headTop=baseline-height;
         const neckX=144,headLeft=Math.round(neckX-head.neckX*headScale);
         const neckY=headTop+headHeight-4;
-        const model=setup.characterBody.draw(bodyContext,clothingContext,character,neckY,SKIN[character.skinTone],sources['paper-dolls'],baseline,neckX,backpackContext);
+        const model=setup.characterBody.draw(bodyContext,clothingContext,character,neckY,SKIN[character.skinTone],sources['paper-dolls'],baseline,neckX,backpackContext,sources['female-dolls']);
         // Cover the common neck joint with the exact shared skin palette.
         const upper=Math.max(4,Math.round(head.neckWidth*headScale/2));
         bodyContext.fillStyle=`rgb(${SKIN[character.skinTone].join(',')})`;

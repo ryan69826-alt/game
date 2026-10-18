@@ -16,9 +16,17 @@ The game has no image-service dependency at runtime.
 quantizes its palette and attaches the selected body to the common head/feet.
 Color masks extract independent shirt, pants and shoe layers from the dressed
 row. A small neck trim avoids doubling up the head and body's neck. The breast
-selector adjusts upper-body rows while leaving the neck/head fixed. A separate
+selector adjusts only bounded chest patches on the base and shirt layers, keeping
+the shoulders, neck/head, waist and outer limbs fixed. It no longer scales whole
+upper-body rows. A separate
 pixel backpack sits behind the body, with its straps in front. Underwear is part of the base body,
 so deselecting outer garments does not reveal explicit anatomy.
+
+`female-dolls.png` replaces the female columns with three slimmer hourglass fits
+in a three-column, two-row atlas (underwear bases, then matching outfits). All
+three have slender shoulders/arms/legs, flat abdomens, narrower waists, and rounded
+hips/bust; Large is fuller while retaining the lean silhouette. Male artwork is
+unchanged. Each source is cached with its atlas ID to keep their layers separate.
 
 The approved older head/hair references remain active:
 

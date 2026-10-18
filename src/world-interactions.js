@@ -1,6 +1,6 @@
 /* Object definitions and action handlers are separate from movement/save data.
  * Ground items and NPCs can use the same rectangular reach test and supply their
- * own actions. Cars face north; only their sides and rear are usable.
+ * own actions. Car access follows the same orientation as the map sprite.
  */
 setup.interactions = (() => {
     const inspect = {id: 'inspect', label: 'Inspect', result: object => object.description || `You examine ${object.name.toLowerCase()}.`};
@@ -34,11 +34,9 @@ setup.interactions = (() => {
     function actionsFor(object, world = State.variables.world) {
         if (object.kind === 'car') {
             if (!world) return [];
-            const width = object.width || 1, height = object.height || 1;
-            const side = (world.x === object.x - 1 || world.x === object.x + width) && world.y >= object.y && world.y < object.y + height;
-            const rear = world.y === object.y + height && world.x >= object.x && world.x < object.x + width;
-            if (side) return types.car;
-            if (rear) return [{id: 'trunk', label: 'Open trunk', result: () => 'You open the trunk.'}];
+            const edge = setup.vehicles.edge(object,world);
+            if (edge === 'side') return types.car;
+            if (edge === 'rear') return [{id: 'trunk', label: 'Open trunk', result: () => 'You open the trunk.'}];
             return [];
         }
         return object.actions || (Object.hasOwn(types, object.kind) ? types[object.kind] : [inspect]);

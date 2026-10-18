@@ -30,7 +30,7 @@
         terrainContext.strokeStyle = '#b2bdb2';terrainContext.lineWidth = 1;
         for (const bay of map.parkingBays) {
             const x = bay.x * tileSize, y = bay.y * tileSize, w = bay.width * tileSize, h = bay.height * tileSize;
-            const opensSouth = bay.y === map.parking.y || bay.y === map.parking.median.y + map.parking.median.height;
+            const opensSouth = bay.facing === 'north';
             terrainContext.beginPath();
             terrainContext.moveTo(x, opensSouth ? y + h : y);terrainContext.lineTo(x, opensSouth ? y : y + h);
             terrainContext.lineTo(x + w, opensSouth ? y : y + h);terrainContext.lineTo(x + w, opensSouth ? y + h : y);
@@ -43,12 +43,16 @@
             terrainContext.fillStyle = '#5c8056';terrainContext.fillRect(x * tileSize + 8, median.y * tileSize + 8, 16, 16);
         }
         for (const car of map.cars) {
-            const x = car.x * tileSize, y = car.y * tileSize;
+            terrainContext.save();
+            terrainContext.translate((car.x+1)*tileSize,(car.y+1)*tileSize);
+            terrainContext.rotate(setup.vehicles.angle(car));terrainContext.translate(-tileSize,-tileSize);
             terrainContext.fillStyle = '#17282c';
-            for (const wx of [2, 26]) for (const wy of [6, 22]) terrainContext.fillRect(x + wx, y + wy, 4, 6);
-            terrainContext.fillStyle = car.color;terrainContext.fillRect(x + 5, y + 2, 22, 28);
-            terrainContext.fillStyle = '#273e49';terrainContext.fillRect(x + 8, y + 7, 16, 6);terrainContext.fillRect(x + 8, y + 22, 16, 5);
-            terrainContext.fillStyle = '#d2d7c2';terrainContext.fillRect(x + 7, y + 3, 4, 2);terrainContext.fillRect(x + 21, y + 3, 4, 2);
+            for (const wx of [2, 26]) for (const wy of [6, 22]) terrainContext.fillRect(wx, wy, 4, 6);
+            terrainContext.fillStyle = car.color;terrainContext.fillRect(5, 2, 22, 28);
+            terrainContext.fillStyle = '#273e49';terrainContext.fillRect(8, 7, 16, 6);terrainContext.fillRect(8, 22, 16, 5);
+            terrainContext.fillStyle = '#e9e3ba';terrainContext.fillRect(7, 3, 4, 2);terrainContext.fillRect(21, 3, 4, 2);
+            terrainContext.fillStyle = '#b66a61';terrainContext.fillRect(7, 28, 4, 2);terrainContext.fillRect(21, 28, 4, 2);
+            terrainContext.restore();
         }
         map.buildings.forEach((building, i) => {
             terrainContext.strokeStyle = '#9bb7b4';terrainContext.lineWidth = 2;
@@ -78,7 +82,8 @@
                     ctx.strokeStyle = '#dfb777';ctx.lineWidth = 2;
                     ctx.strokeRect(x + 1, y + 1, 14, 14);
                 } else if (object.kind === 'car') {
-                    ctx.fillStyle = '#dfb777';ctx.fillRect(x + 1, y + 12, 4, 10);
+                    ctx.save();ctx.translate(x+tileSize,y+tileSize);ctx.rotate(setup.vehicles.angle(object));
+                    ctx.fillStyle = '#dfb777';ctx.fillRect(-tileSize+1,-tileSize+12,4,10);ctx.restore();
                 }
             }
             ctx.restore();
