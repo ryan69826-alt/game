@@ -1,0 +1,6 @@
+.tools/
+dist/
+__pycache__/
+.preview.log
+node_modules/
+_site/

@@ -1,0 +1,67 @@
+:: StoryTitle
+Neon Meridian
+
+:: StoryData
+{
+  "ifid": "F14A62EB-1B82-455E-A371-8AA2DC8B73D5",
+  "format": "SugarCube",
+  "format-version": "2.37.3",
+  "start": "MainMenu",
+  "zoom": 1
+}
+
+:: MainMenu [nobr]
+<main class="menu-screen">
+<div class="brand-mark" aria-hidden="true">◈</div>
+<p class="eyebrow">A BROWSER RPG</p>
+<h1>Neon<br><span>Meridian</span></h1>
+<div class="menu-divider"></div>
+<nav class="main-menu" aria-label="Main menu">
+[[Character Creation|CharacterCreation]]
+<<link "Options">><<run UI.settings()>><</link>>
+<<link "Import/Export Saves">><<run UI.saves()>><</link>>
+</nav>
+<p class="menu-footer">EARLY DEVELOPMENT <span>·</span> INTERFACE PREVIEW</p>
+</main>
+
+:: CharacterCreation [nobr creation]
+<<run setup.character.ensure()>>
+<main class="menu-screen creation-screen">
+<div class="creation-layout">
+<section class="creation-intro" aria-labelledby="creation-title">
+<div class="brand-mark" aria-hidden="true">◈</div>
+<p class="eyebrow">ADULT CHARACTER · AGE 26</p>
+<h1 id="creation-title">Character<br><span>Creation</span></h1>
+<p class="menu-description">Every story starts with someone.</p>
+<div id="character-controls" aria-label="Character customization"></div>
+<nav class="main-menu character-actions" aria-label="Character creation navigation">[[Save & return to menu|MainMenu]]</nav>
+</section>
+<figure class="character-preview">
+<div class="preview-heading"><span class="eyebrow">LIVE PREVIEW</span><span class="preview-badge">ADULT · 26</span></div>
+<div class="sprite-stage"><canvas id="character-canvas" width="144" height="208" role="img" aria-label="Adult character appearance preview"></canvas></div>
+<div hidden aria-hidden="true">
+<canvas id="body-layer" width="144" height="208"></canvas>
+<canvas id="head-layer" width="144" height="208"></canvas>
+<canvas id="hair-layer" width="144" height="208"></canvas>
+<img class="character-source" id="head-reference" src="asset:characters/body-atlas.png" alt="">
+<img class="character-source" id="male-bodies" src="asset:characters/male-bodies.png" alt="">
+<img class="character-source" id="female-small" src="asset:characters/female-small.png" alt="">
+<img class="character-source" id="female-medium" src="asset:characters/female-medium.png" alt="">
+<img class="character-source" id="female-large" src="asset:characters/female-large.png" alt="">
+<img class="character-source" id="hair-atlas" src="asset:characters/hair-atlas.png" alt="">
+</div>
+<figcaption><span id="build-description"></span><br><span id="appearance-description"></span></figcaption>
+<p class="preview-note">Male and female body models share a fixed head. Breast size applies to the female model. Genitals are saved independently of appearance.</p>
+<p id="preview-status" class="preview-status" role="status" aria-live="polite"></p>
+</figure>
+</div>
+</main>
+
+:: Apartment [nobr]
+<<goto "MainMenu">>
+
+:: Street [nobr]
+<<goto "MainMenu">>
+
+:: Cafe [nobr]
+<<goto "MainMenu">>
