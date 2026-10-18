@@ -3,15 +3,16 @@ setup.character = (() => {
     const choices = {
         gender: ['Male', 'Female'],
         genitals: ['Male', 'Female', 'Both'],
-        bodySize: ['Small', 'Medium', 'Large'],
-        breastSize: ['Small', 'Medium', 'Large'],
+        // Retained for old saves; fixed artwork has no shape distortion.
+        bodySize: ['Medium'],
+        breastSize: ['Medium'],
         eyeColor: ['Blue', 'Green', 'Brown'],
         hairColor: ['Blonde', 'Black', 'Brown', 'Orange', 'Gray'],
         hairLength: ['Shaved', 'Ear', 'Neck', 'Chest', 'Waist', 'Knee', 'Floor'],
         skinTone: ['Pale', 'Tan', 'Olive', 'Dark']
     };
     const defaults = () => ({
-        version: 5, age: 26, gender: 'Male', genitals: 'Male', bodySize: 'Medium',
+        version: 6, age: 26, gender: 'Male', genitals: 'Male', bodySize: 'Medium',
         clothing: setup.clothing.defaults(), eyeColor: 'Brown',
         hairColor: 'Black', hairLength: 'Ear', skinTone: 'Tan', breastSize: 'Medium',
         traits: [], skills: Object.fromEntries(setup.characterRules.skills.map(name => [name, 0]))

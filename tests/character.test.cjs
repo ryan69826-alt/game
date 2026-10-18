@@ -33,48 +33,17 @@ afterEach(async()=>{assert.deepEqual(page.errors,[]);await page.close();});
 const image=()=>page.locator('#character-canvas').evaluate(canvas=>canvas.toDataURL());
 const value=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.character));
 
-test('six body fits have distinct renders, fixed heads/hair, and connected necks',async()=>{
-    const images=new Set(), clothing=new Set();
-    const head=await page.locator('#head-layer').evaluate(canvas=>canvas.toDataURL());
-    const hair=await page.locator('#hair-layer').evaluate(canvas=>canvas.toDataURL());
-    for(const gender of ['Male','Female']) for(const size of ['Small','Medium','Large']) {
-        await page.getByLabel('Gender',{exact:true}).selectOption(gender);
-        await page.getByLabel('Body Size',{exact:true}).selectOption(size);
-        assert.equal((await value()).bodySize,size);
-        assert.equal(await page.locator('#preview-status').innerText(),'');
-        assert.equal(await page.locator('#head-layer').evaluate(canvas=>canvas.toDataURL()),head);
-        assert.equal(await page.locator('#hair-layer').evaluate(canvas=>canvas.toDataURL()),hair);
-        const connected=await page.locator('#character-canvas').evaluate(canvas=>{
-            const neckY=Number(canvas.dataset.neckY),neckX=Number(canvas.dataset.neckX);
-            const pixels=canvas.getContext('2d').getImageData(neckX-1,neckY-1,3,6).data;
-            return Array.from(pixels).filter((_,i)=>i%4===3).every(alpha=>alpha>180);
-        });
-        assert.ok(connected,`${gender} ${size} neck connects`);
-        images.add(await image());clothing.add(await page.locator('#clothing-layer').evaluate(canvas=>canvas.toDataURL()));
-        assert.equal(await page.locator('#character-canvas').getAttribute('data-clothing-fit'),`${gender}-${size}`);
-    }
-    assert.equal(images.size,6);assert.equal(clothing.size,6);
-    assert.equal(await page.getByRole('slider').count(),0);
-    assert.equal(await page.getByLabel('Body Fat',{exact:true}).count(),0);
-    assert.equal(await page.getByLabel('Muscle Mass',{exact:true}).count(),0);
-});
-
-test('gender changes body model; female breast size is visible, independent, and retained',async()=>{
+test('fixed bases replace size controls and preserve the original male artwork',async()=>{
+    assert.equal(await page.getByLabel('Body Size',{exact:true}).count(),0);
+    assert.equal(await page.getByLabel('Breast Size',{exact:true}).count(),0);
     const male=await image();
-    assert.equal(await page.getByLabel('Breast Size',{exact:true}).isVisible(),false);
     await page.getByLabel('Gender',{exact:true}).selectOption('Female');
-    assert.equal(await page.getByLabel('Breast Size',{exact:true}).isVisible(),true);
-    const renders=new Set();
-    for(const size of ['Small','Medium','Large']) {
-        await page.getByLabel('Breast Size',{exact:true}).selectOption(size);
-        const rendered=await image();renders.add(rendered);assert.notEqual(rendered,male);
-    }
-    assert.equal(renders.size,3);
+    assert.notEqual(await image(),male);
+    assert.equal(await page.locator('#character-canvas').getAttribute('data-variation'),'Female-Fixed');
+    assert.equal(await page.locator('#preview-status').innerText(),'');
     await page.getByLabel('Gender',{exact:true}).selectOption('Male');
-    assert.equal(await image(),male);assert.equal(await page.getByLabel('Breast Size',{exact:true}).isVisible(),false);
-    await page.getByLabel('Gender',{exact:true}).selectOption('Female');
-    assert.equal(await page.getByLabel('Breast Size',{exact:true}).inputValue(),'Large');
-    assert.equal((await value()).genitals,'Male','body model never changes genital choice');
+    assert.equal(await image(),male);
+    assert.equal((await value()).genitals,'Male');
 });
 
 test('every eye color, hair color, hair length, and skin tone changes the pixels',async()=>{
@@ -84,17 +53,18 @@ test('every eye color, hair color, hair length, and skin tone changes the pixels
         'Hair Length':['Shaved','Ear','Neck','Chest','Waist','Knee','Floor'],
         'Skin Tone':['Pale','Tan','Olive','Dark']
     };
-    for(const [label,choices] of Object.entries(fields)) {
+    for(const gender of ['Male','Female']) for(const [label,choices] of Object.entries(fields)) {
+        await page.getByLabel('Gender',{exact:true}).selectOption(gender);
         const images=new Set();
         for(const choice of choices) {await page.getByLabel(label,{exact:true}).selectOption(choice);images.add(await image());}
-        assert.equal(images.size,choices.length,`${label} has distinct visual choices`);
+        assert.equal(images.size,choices.length,`${gender} ${label} has distinct visual choices`);
     }
 });
 
-test('each clothing layer toggles independently for every fit without changing the body',async()=>{
-    for(const gender of ['Male','Female']) for(const size of ['Small','Medium','Large']) {
+test('each clothing layer toggles independently on both fixed bases without changing the body',async()=>{
+    for(const gender of ['Male','Female']) for(const size of ['Medium']) {
         await page.getByLabel('Gender',{exact:true}).selectOption(gender);
-        await page.getByLabel('Body Size',{exact:true}).selectOption(size);
+        assert.equal(await page.getByLabel('Body Size',{exact:true}).count(),0);
         const body=await page.locator('#body-layer').evaluate(canvas=>canvas.toDataURL());
         for(const slot of ['top','bottoms','shoes','storage']) await page.locator(`#clothing-${slot}`).selectOption('none');
         const naked=await image();
@@ -108,9 +78,9 @@ test('each clothing layer toggles independently for every fit without changing t
     }
 });
 
-test('head has adult proportions across body sizes',async()=>{
-    for(const key of ['Small','Large']) {
-        await page.getByLabel('Body Size',{exact:true}).selectOption(key);
+test('both fixed bases have proportional heads',async()=>{
+    for(const key of ['Male','Female']) {
+        await page.getByLabel('Gender',{exact:true}).selectOption(key);
         const proportions=await page.evaluate(()=>{
             function height(id) {
                 const canvas=document.getElementById(id),ctx=canvas.getContext('2d');
@@ -127,8 +97,8 @@ test('head has adult proportions across body sizes',async()=>{
 
 test('the three longest hairstyles preserve the rendered eyes, nose, and mouth',async()=>{
     await page.getByLabel('Eye Color',{exact:true}).selectOption('Blue');
-    for(const key of ['Small','Large']) {
-        await page.getByLabel('Body Size',{exact:true}).selectOption(key);
+    for(const key of ['Male','Female']) {
+        await page.getByLabel('Gender',{exact:true}).selectOption(key);
         for(const skin of ['Pale','Dark']) for(const color of ['Blonde','Black']) for(const length of ['Waist','Knee','Floor']) {
             await page.getByLabel('Skin Tone',{exact:true}).selectOption(skin);
             await page.getByLabel('Hair Color',{exact:true}).selectOption(color);
@@ -161,10 +131,10 @@ test('the three longest hairstyles preserve the rendered eyes, nose, and mouth',
     }
 });
 
-test('long hair keeps its left curtain continuous and inside the canvas across body sizes',async()=>{
+test('long hair keeps its left curtain continuous and inside the canvas on both fixed bases',async()=>{
     await page.getByLabel('Hair Color',{exact:true}).selectOption('Blonde');
-    for(const key of ['Small','Large']) {
-        await page.getByLabel('Body Size',{exact:true}).selectOption(key);
+    for(const key of ['Male','Female']) {
+        await page.getByLabel('Gender',{exact:true}).selectOption(key);
         for(const length of ['Chest','Waist','Knee','Floor']) {
             await page.getByLabel('Hair Length',{exact:true}).selectOption(length);
             const hair=await page.evaluate(()=>{
@@ -198,7 +168,7 @@ test('independent identity and appearance survive menu, reload, and disk save ro
     await page.getByRole('spinbutton',{name:'XP allocated to Lockpicking',exact:true}).press('Tab');
     await page.getByRole('spinbutton',{name:'XP allocated to Stealth',exact:true}).fill('100');
     await page.getByRole('spinbutton',{name:'XP allocated to Stealth',exact:true}).press('Tab');
-    for(const [label,choice] of Object.entries({'Gender':'Female','Genitals':'Both','Body Size':'Large','Breast Size':'Large','Eye Color':'Green','Hair Color':'Gray','Hair Length':'Floor','Skin Tone':'Dark'})) {
+    for(const [label,choice] of Object.entries({'Gender':'Female','Genitals':'Both','Eye Color':'Green','Hair Color':'Gray','Hair Length':'Floor','Skin Tone':'Dark'})) {
         await page.getByLabel(label,{exact:true}).selectOption(choice);
     }
     await page.locator('#clothing-storage').selectOption('backpack');
@@ -226,7 +196,7 @@ test('old saves without character data open safely; malformed fields normalize',
     await page.evaluate(()=>{SugarCube.State.variables.character={gender:'Unknown',genitals:'Both',heightInches:900,bodyFat:'Fat'};SugarCube.Engine.play('CharacterCreation');});
     await page.waitForSelector('#character-gender');const character=await value();
     assert.equal(character.gender,'Male');assert.equal(character.genitals,'Both');assert.equal(character.bodySize,'Medium');assert.equal(character.heightInches,undefined);assert.equal(character.bodyFat,undefined);assert.deepEqual(character.clothing,{top:'shirt',bottoms:'pants',shoes:'shoes',storage:'none',handheld:'none'});
-    assert.equal(character.breastSize,'Medium');assert.equal(character.version,5);
+    assert.equal(character.breastSize,'Medium');assert.equal(character.version,6);
     assert.deepEqual(character.traits,[]);assert.ok(Object.values(character.skills).every(xp=>xp===0));
 });
 
@@ -301,9 +271,9 @@ test('creator fits narrow screens and large-text preference without horizontal s
         await page.setViewportSize({width,height:844});
         await page.evaluate(()=>document.documentElement.classList.add('large-text'));
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        assert.equal(await page.locator('#character-controls select:visible').count(),12);
+        assert.equal(await page.locator('#character-controls select:visible').count(),11);
         await page.getByLabel('Gender',{exact:true}).selectOption('Female');
-        assert.equal(await page.locator('#character-controls select:visible').count(),13);
+        assert.equal(await page.locator('#character-controls select:visible').count(),11);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         await page.getByLabel('Gender',{exact:true}).selectOption('Male');
         await page.getByRole('link',{name:'Save & return to menu'}).click();
@@ -314,7 +284,6 @@ test('creator fits narrow screens and large-text preference without horizontal s
 
 test('character and stats are read-only dialogs over the unchanged Apartments screen',async()=>{
     await page.getByLabel('Gender',{exact:true}).selectOption('Female');
-    await page.getByLabel('Breast Size',{exact:true}).selectOption('Large');
     await page.getByLabel('Hair Length',{exact:true}).selectOption('Floor');
     await page.getByRole('checkbox',{name:'Nerd',exact:true}).check();
     const input=page.getByRole('spinbutton',{name:'XP allocated to Lockpicking',exact:true});
@@ -330,7 +299,7 @@ test('character and stats are read-only dialogs over the unchanged Apartments sc
     await trigger.click();
     const dialog=page.getByRole('dialog',{name:'Character',exact:true});
     await dialog.waitFor({state:'visible'});
-    assert.match(await dialog.locator('#character-details').textContent(),/Breast sizeLarge/);
+    assert.match(await dialog.locator('#character-details').textContent(),/Base modelBodysuit base/);
     assert.equal(await dialog.locator('#character-traits').textContent(),'Nerd');
     assert.equal(await dialog.locator('input,select,textarea,[contenteditable="true"],a').count(),0,'no editing controls or links');
     assert.equal(await page.getByRole('link',{name:'Edit character',exact:true}).count(),0);
@@ -964,8 +933,8 @@ test('legacy clothing and oversized old pocket contents migrate without hidden s
 });
 
 test('detailed sprite rendering uses crisp opaque pixels at native preview resolution',async()=>{
-    for(const gender of ['Male','Female']) for(const size of ['Small','Medium','Large']) {
-        await page.getByLabel('Gender',{exact:true}).selectOption(gender);await page.getByLabel('Body Size',{exact:true}).selectOption(size);
+    for(const gender of ['Male','Female']) for(const size of ['Medium']) {
+        await page.getByLabel('Gender',{exact:true}).selectOption(gender);assert.equal(await page.getByLabel('Body Size',{exact:true}).count(),0);
         const result=await page.locator('#character-canvas').evaluate(canvas=>{
             const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
             let soft=0;for(let i=3;i<pixels.length;i+=4) if(pixels[i]!==0 && pixels[i]!==255) soft++;
@@ -975,35 +944,12 @@ test('detailed sprite rendering uses crisp opaque pixels at native preview resol
     }
 });
 
-test('breast size changes chest pixels while shoulders, head, waist and limbs outside the chest stay fixed',async()=>{
-    await page.getByLabel('Gender',{exact:true}).selectOption('Female');
-    for(const size of ['Small','Medium','Large']) {
-        await page.getByLabel('Body Size',{exact:true}).selectOption(size);
-        for(const top of ['shirt','none']) {
-            await page.locator('#clothing-top').selectOption(top);
-            await page.getByLabel('Breast Size',{exact:true}).selectOption('Medium');
-            await page.evaluate(()=>{
-                const canvas=document.getElementById('character-canvas');
-                window.__testChestBaseline={pixels:canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data,
-                    head:document.getElementById('head-layer').toDataURL()};
-            });
-            for(const breast of ['Small','Large']) {
-                await page.getByLabel('Breast Size',{exact:true}).selectOption(breast);
-                const result=await page.evaluate(()=>{
-                    const canvas=document.getElementById('character-canvas'),reference=window.__testChestBaseline;
-                    const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
-                    const neckX=Number(canvas.dataset.neckX),neckY=Number(canvas.dataset.neckY);let changes=0,outside=0;
-                    for(let i=0;i<pixels.length;i+=4) if([0,1,2,3].some(channel=>pixels[i+channel]!==reference.pixels[i+channel])) {
-                        const x=i/4%canvas.width,y=Math.floor(i/4/canvas.width);changes++;
-                        if(y<neckY+28 || y>=neckY+80 || x<neckX-36 || x>=neckX+64) outside++;
-                    }
-                    return {changes,outside,headSame:document.getElementById('head-layer').toDataURL()===reference.head};
-                });
-                assert.ok(result.headSame);assert.equal(result.outside,0,`${size} ${top} ${breast}: shoulders and body outside the chest stay fixed`);
-                assert.ok(result.changes>40,`${size} ${top} ${breast}: visible chest volume changes`);
-            }
-        }
-    }
+test('legacy female size fields normalize to the fixed base without affecting equipment or skills',async()=>{
+    const result=await page.evaluate(()=>SugarCube.setup.character.normalize({gender:'Female',bodySize:'Large',breastSize:'Small',
+        clothing:{top:'none',bottoms:'pants',shoes:'none',storage:'backpack',handheld:'none'},skills:{Focus:150},traits:['Nerd']}));
+    assert.equal(result.version,6);assert.equal(result.bodySize,'Medium');assert.equal(result.breastSize,'Medium');
+    assert.equal(result.clothing.storage,'backpack');assert.equal(result.clothing.top,'none');
+    assert.equal(result.skills.Focus,150);assert.deepEqual(result.traits,['Nerd']);
 });
 
 test('cars park nose-in toward bay ends and expose trunks to the driving aisles',async()=>{
@@ -1051,21 +997,19 @@ test('parked car headlights and taillights render in the same direction used by 
     for(const lamp of lamps) {assert.deepEqual(lamp.front,[233,227,186,255]);assert.deepEqual(lamp.rear,[182,106,97,255]);}
 });
 
-test('breast sizes increase actual chest coverage and front projection on each female body',async()=>{
+test('female shirt and pants are separate assets with no cross-garment pixels',async()=>{
     await page.getByLabel('Gender',{exact:true}).selectOption('Female');
-    for(const body of ['Small','Medium','Large']) {
-        await page.getByLabel('Body Size',{exact:true}).selectOption(body);const samples=[];
-        for(const breast of ['Small','Medium','Large']) {
-            await page.getByLabel('Breast Size',{exact:true}).selectOption(breast);
-            samples.push(await page.evaluate(()=>{
-                const view=document.getElementById('character-canvas'),canvas=document.getElementById('clothing-layer');
-                const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
-                const nx=Number(view.dataset.neckX),ny=Number(view.dataset.neckY);let area=0,front=0;
-                for(let y=ny+24;y<ny+62;y++) for(let x=nx-25;x<nx+62;x++) if(pixels[(y*canvas.width+x)*4+3]) {area++;front=Math.max(front,x);}
-                return {area,front};
-            }));
-        }
-        assert.ok(samples[0].area<samples[1].area && samples[1].area<samples[2].area,`${body}: breast volume increases`);
-        assert.ok(samples[0].front<samples[1].front && samples[1].front<samples[2].front,`${body}: breast contour projects farther forward`);
-    }
+    for(const slot of ['top','bottoms','shoes','storage']) await page.locator(`#clothing-${slot}`).selectOption('none');
+    const base=await page.locator('#body-layer').evaluate(canvas=>canvas.toDataURL());
+    const bounds=async()=>page.locator('#clothing-layer').evaluate(canvas=>{
+        const data=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+        let min=canvas.height,max=0,count=0;
+        for(let y=0;y<canvas.height;y++) for(let x=0;x<canvas.width;x++) if(data[(y*canvas.width+x)*4+3]) {min=Math.min(min,y);max=Math.max(max,y);count++;}
+        return {min,max,count};
+    });
+    await page.locator('#clothing-top').selectOption('shirt');const shirt=await bounds();
+    assert.ok(shirt.count>500);assert.ok(shirt.min>90 && shirt.max<210,'shirt contains no waistband or legs');
+    await page.locator('#clothing-top').selectOption('none');await page.locator('#clothing-bottoms').selectOption('pants');
+    const pants=await bounds();assert.ok(pants.count>1000);assert.ok(pants.min>180 && pants.max>350,'pants contain no shirt');
+    assert.equal(await page.locator('#body-layer').evaluate(canvas=>canvas.toDataURL()),base);
 });

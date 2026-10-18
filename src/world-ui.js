@@ -3,7 +3,7 @@ $(document).on(':passagedisplay', () => {
     if (!document.querySelector('.world-sidebar')) return;
     const character = State.variables.character;
     setup.characterDisplay.mount(character);
-    document.querySelector('[data-character-summary]').textContent = `${character.gender} · ${character.bodySize} body`;
+    document.querySelector('[data-character-summary]').textContent = `${character.gender} · Fixed base model`;
     for (const link of document.querySelectorAll('.sidebar-nav a')) {
         if (link.dataset.passage === State.passage) link.setAttribute('aria-current', 'page');
     }
@@ -15,7 +15,7 @@ setup.worldWindows = (() => {
         const details = root.querySelector('#character-details');
         if (details) {
             const fields = {Age: character.age, Gender: character.gender, Genitals: character.genitals,
-                'Body size': character.bodySize, Clothing: setup.clothing.summary(character), ...(character.gender === 'Female' ? {'Breast size': character.breastSize} : {}),
+                'Base model': character.gender === 'Female' ? 'Bodysuit base' : 'Original male', Clothing: setup.clothing.summary(character),
                 'Eye color': character.eyeColor, 'Hair color': character.hairColor, 'Hair length': character.hairLength, 'Skin tone': character.skinTone};
             for (const [name, value] of Object.entries(fields)) {
                 const term = document.createElement('dt');term.textContent = name;

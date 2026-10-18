@@ -6,16 +6,10 @@ $(document).on(':passagedisplay', () => {
     const preview=setup.characterDisplay.mount(character);
     const groups=[
         ['Identity',[['gender','Gender'],['genitals','Genitals']]],
-        ['Body',[['bodySize','Body Size'],['breastSize','Breast Size']]],
         ['Appearance',[['eyeColor','Eye Color'],['hairColor','Hair Color'],['hairLength','Hair Length'],['skinTone','Skin Tone']]]
     ];
     function update() {
-        const breast=document.getElementById('character-breastSize');
-        if(breast) {
-            breast.disabled=character.gender!=='Female';
-            breast.closest('.character-field').hidden=character.gender!=='Female';
-        }
-        document.getElementById('build-description').textContent=`${character.gender} · ${character.bodySize} body`;
+        document.getElementById('build-description').textContent=`${character.gender} · Fixed base model`;
         document.getElementById('appearance-description').textContent=setup.clothing.summary(character);
         preview.refresh();
     }

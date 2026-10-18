@@ -23,7 +23,7 @@ setup.clothing = (() => {
         return result;
     }
     const equipped = character => slots.map(slot => character.clothing[slot]).filter(id => id !== 'none');
-    const summary = character => equipped(character).map(id => definitions[id].name).join(', ') || 'Underwear only';
+    const summary = character => equipped(character).map(id => definitions[id].name).join(', ') || 'Base outfit only';
     const storage = character => equipped(character).flatMap(id => definitions[id].pockets);
     return {slots, labels, choices, definitions, defaults, normalize, equipped, summary, storage};
 })();

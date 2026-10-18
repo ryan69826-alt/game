@@ -1,4 +1,4 @@
-/* Layered runtime renderer: six fitted bodies + separate clothing + aligned hair.
+/* Layered runtime renderer: fixed bases + separate clothing + aligned hair.
  * Head, body, clothing, and hair are independent canvases. Body fit and
  * equipment never reposition the shared head or change the foot baseline.
  * Atlases and canvas objects are never stored in SugarCube's save data.
@@ -200,6 +200,23 @@ setup.characterPreview = (() => {
         hairContext.drawImage(mask,0,0);hairContext.restore();
     }
     function draw(sources, layers, canvas, character) {
+        if(character.gender==='Female') {
+            const model=setup.characterFemale.draw(sources,layers,canvas,character,SKIN[character.skinTone],EYES[character.eyeColor]);
+            const {contexts,neckX,neckY,headTop,eye,faceWidth}=model;
+            let bounds={left:0,right:0,end:0};
+            if(character.hairLength!=='Shaved') {
+                const longHair=['Chest','Waist','Knee','Floor'].includes(character.hairLength);
+                const hair=hairLayer(sources[longHair?'long-hair-atlas':'hair-atlas'],character.hairLength,character.hairColor,longHair);
+                bounds=drawHair(contexts.hair,hair.canvas,hair,eye,faceWidth,neckY,386,character.hairLength);
+                keepFaceVisible(contexts.hair,layers.head,model.head,model.headLeft,headTop,model.scale);
+            }
+            const ctx=clearLayer(canvas);
+            for(const name of ['backpack','body','clothing','head','hair']) ctx.drawImage(layers[name],0,0);
+            Object.assign(canvas.dataset,{hairBounds:JSON.stringify(bounds),headHeight:neckY-headTop,figureHeight:340,
+                variation:'Female-Fixed',clothingFit:'Female-Fixed',neckX,neckY});
+            canvas.setAttribute('aria-label',`Adult female bodysuit base, ${character.skinTone.toLowerCase()} skin, ${character.eyeColor.toLowerCase()} eyes, ${character.hairColor.toLowerCase()} ${character.hairLength.toLowerCase()} hair.`);
+            return;
+        }
         const head=headPart(sources['head-reference']);
         const backpackContext=clearLayer(layers.backpack),bodyContext=clearLayer(layers.body),clothingContext=clearLayer(layers.clothing),headContext=clearLayer(layers.head),hairContext=clearLayer(layers.hair);
         const baseline=386,height=320;
@@ -207,7 +224,7 @@ setup.characterPreview = (() => {
         const headHeight=Math.round(head.canvas.height*headScale),headTop=baseline-height;
         const neckX=144,headLeft=Math.round(neckX-head.neckX*headScale);
         const neckY=headTop+headHeight-4;
-        const model=setup.characterBody.draw(bodyContext,clothingContext,character,neckY,SKIN[character.skinTone],sources['paper-dolls'],baseline,neckX,backpackContext,sources['female-dolls']);
+        const model=setup.characterBody.draw(bodyContext,clothingContext,character,neckY,SKIN[character.skinTone],sources['paper-dolls'],baseline,neckX,backpackContext);
         // Cover the common neck joint with the exact shared skin palette.
         const upper=Math.max(4,Math.round(head.neckWidth*headScale/2));
         bodyContext.fillStyle=`rgb(${SKIN[character.skinTone].join(',')})`;
@@ -230,8 +247,7 @@ setup.characterPreview = (() => {
         // Soles occlude the bare toes; the underlying body remains independent.
         if(setup.clothing.equipped(character).includes('shoes')) ctx.clearRect(0,baseline-8,canvas.width,canvas.height-baseline+8);
         for(const layer of [layers.clothing,layers.head,layers.hair]) ctx.drawImage(layer,0,0);
-        const breast=character.gender==='Female'?`, ${character.breastSize.toLowerCase()} breast size`:'';
-        canvas.setAttribute('aria-label',`Adult ${character.gender.toLowerCase()} model, ${character.bodySize.toLowerCase()} body${breast}, ${character.skinTone.toLowerCase()} skin, ${character.eyeColor.toLowerCase()} eyes, ${character.hairColor.toLowerCase()} ${character.hairLength.toLowerCase()} hair.`);
+        canvas.setAttribute('aria-label',`Adult ${character.gender.toLowerCase()} model, fixed base, ${character.skinTone.toLowerCase()} skin, ${character.eyeColor.toLowerCase()} eyes, ${character.hairColor.toLowerCase()} ${character.hairLength.toLowerCase()} hair.`);
         canvas.dataset.variation=model;
         canvas.dataset.clothingFit=model;
         canvas.dataset.neckY=neckY;

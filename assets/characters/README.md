@@ -1,47 +1,35 @@
 # Character artwork
 
 Five independent 288×416 canvases compose the full-body preview: backpack, body,
-clothing, head, and hair. The same component is used in creation and the world sidebar.
-The head has one fixed neck anchor across all six fits. Native preview resolution,
-hard alpha, palette steps, and disabled smoothing keep pixels crisp.
+clothing, head, and hair. Creation and the sidebar share the renderer. Hard alpha
+and nearest-neighbor sampling keep edges crisp. No artwork objects enter save data.
 
-`paper-dolls.png` is an original AI-generated transparent atlas, using the older
-male/female atlases as a style reference. It has six columns (male small/medium/
-large, then female small/medium/large) and two rows: opaque underwear base bodies,
-then matching dressed figures. It restores shaded anatomy, hands, fabric folds,
-seams, pockets, boots and laces. Original output is retained in generated_images.
-The game has no image-service dependency at runtime.
+## Fixed female base
 
-`src/character-body.js` extracts each cell, removes soft edge alpha/fringes,
-quantizes its palette and attaches the selected body to the common head/feet.
-Color masks extract independent shirt, pants and shoe layers from the dressed
-row. A small neck trim avoids doubling up the head and body's neck. The breast
-selector adjusts only bounded chest patches on the base and shirt layers, keeping
-the shoulders, neck/head, waist and outer limbs fixed. It no longer scales whole
-upper-body rows. A separate
-pixel backpack sits behind the body, with its straps in front. Underwear is part of the base body,
-so deselecting outer garments does not reveal explicit anatomy.
+`female-base-layers.png` is a transparent four-cell horizontal sheet prepared from
+the user's reference with its white bodysuit intact. Cell 0 contains the whole adult
+character, including the original proportional head. Cells 1–3 contain only a teal
+shirt, navy pants, and dark shoes. No garment contains another garment's pixels.
+The original image-generation output is retained in `/workspace/generated_images`.
 
-`female-dolls.png` replaces the female columns with three slimmer hourglass fits
-in a three-column, two-row atlas (underwear bases, then matching outfits). All
-three have slender shoulders/arms/legs, flat abdomens, narrower waists, and rounded
-hips/bust; Large is fuller while retaining the lean silhouette. Male artwork is
-unchanged. Each source is cached with its atlas ID to keep their layers separate.
+`src/character-female.js` cleans matte fringes, recolors skin/eyes and draws each
+cell at its own documented base-coordinate anchor. Every garment fits the same
+fixed silhouette regardless of other equipment. The base's head/body split uses
+the same transform to preserve the neck. There is no breast or body distortion.
+Deselecting all equipment still shows the opaque bodysuit. A separate backpack
+renders behind the body with its strap in front.
 
-The approved older head/hair references remain active:
+## Unchanged male art and shared hair
 
-- `body-atlas.png`: its first cell supplies the canonical adult head. Other
-  full-body cells are historical references. Skin and eyes recolor at runtime.
-- `hair-atlas.png`: first three cells supply Shaved, Ear, and Neck hair.
-- `hair-layers.png`: complete Chest/Waist/Knee/Floor templates. Hair aligns by
-  eye/face anchors; only its lower curtain stretches. Face masking preserves
-  eyes, nose, mouth and jaw. Magenta masks and blue eye anchors stay in sources.
+`paper-dolls.png` retains its historical six-column/two-row layout. Only column 1
+(the original Medium male body/outfit) is active. `src/character-body.js` preserves
+its existing color-mask garment extraction and common head attachment.
+`body-atlas.png` supplies the existing male head. `hair-atlas.png` supplies short
+hair and `hair-layers.png` supplies Chest/Waist/Knee/Floor hair. Hair aligns by
+face anchors, stretches only below the neck, and is masked to preserve the face.
+The female base uses its own head and face anchors rather than the old male head.
 
-`adult-placeholder.png`, `male-bodies.png`, `female-small/medium/large.png` remain
-historical references. The active game does not load those body models. No image,
-canvas, geometry or DOM objects enter save data.
-
-The Python build embeds `asset:characters/*.png` references as data URLs, including
-the paper-doll atlas, for self-contained offline play. The preview watches source
-and assets. Replacement atlases must preserve documented cell ordering, poses,
-neck anchor points, skin palette, and clothing mask colors.
+Other body atlases remain historical references, including `female-dolls.png`.
+The build embeds active PNG assets into the standalone HTML; no image service is
+needed at runtime. Body-size and breast-size fields remain normalized to Medium
+only for save compatibility; neither has a creator control or alters the base.

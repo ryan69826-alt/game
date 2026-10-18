@@ -61,37 +61,9 @@ setup.characterBody = (() => {
         }
         ctx.putImageData(image,0,0);cache.set(key,canvas);return canvas;
     }
-    // Only the two breast volumes are adjusted. The bounded raster patch is
-    // below the shoulders and above the waist; no full-row body scaling occurs.
-    function adjustChest(context, character, neckX, neckY, shirt=false) {
-        const change={Small:-.9,Medium:0,Large:.95}[character.breastSize];
-        if(!change) return;
-        const left=neckX-36,top=neckY+28,width=100,height=shirt?44:52;
-        const offset=shirt?0:9;
-        const original=context.getImageData(left,top,width,height);
-        const output=new ImageData(new Uint8ClampedArray(original.data),width,height);
-        const volumes=[{x:neckX-7,y:neckY+35+offset,rx:20,ry:18,projection:-2},{x:neckX+22,y:neckY+37+offset,rx:34,ry:20,projection:8}];
-        for(let y=0;y<height;y++) for(let x=0;x<width;x++) {
-            let dx=0,dy=0,total=0,strongest=0;
-            for(const volume of volumes) {
-                const vx=left+x-volume.x,vy=top+y-volume.y;
-                const radius=(vx/volume.rx)**2+(vy/volume.ry)**2;
-                if(radius>=1) continue;
-                const weight=(1-radius)**2;dx+=(vx+volume.projection)*weight;dy+=vy*weight;total+=weight;strongest=Math.max(strongest,weight);
-            }
-            if(!total) continue;
-            strongest*=Math.min(1,y/6); // Fade in below the fixed shoulder line.
-            const sx=Math.max(0,Math.min(width-1,Math.round(x-change*dx/total*strongest)));
-            const sy=Math.max(0,Math.min(height-1,Math.round(y-change*dy/total*strongest)));
-            const from=(sy*width+sx)*4,to=(y*width+x)*4;
-            output.data.set(original.data.subarray(from,from+4),to);
-        }
-        context.putImageData(output,left,top);
-    }
-    function draw(body,clothes,character,neckY,skin,atlas,baseline,neckX,backpack,femaleAtlas) {
-        const female=character.gender==='Female';
-        const column=['Small','Medium','Large'].indexOf(character.bodySize), active=female?femaleAtlas:atlas;
-        const base=extract(active,column,0,female?3:6), dressed=extract(active,column,1,female?3:6), key=`${character.gender}-${character.bodySize}`;
+    function draw(body,clothes,character,neckY,skin,atlas,baseline,neckX,backpack) {
+        // The original medium male art stays unchanged. Female art uses its own renderer.
+        const base=extract(atlas,1,0), dressed=extract(atlas,1,1), key='Male-Medium';
         function paint(ctx,source,image) {
             const trim=Math.round(source.canvas.height*.045),sourceHeight=source.canvas.height-trim;
             const scale=(baseline-neckY)/sourceHeight;
@@ -120,7 +92,6 @@ setup.characterBody = (() => {
             }
             paint(clothes,dressed,layer(dressed,skin,garment));
         }
-        if(female) {adjustChest(body,character,neckX,neckY);adjustChest(clothes,character,neckX,neckY,true);}
         if(worn.includes('backpack')) {
             for(let y=0;y<58;y++) {
                 const x=neckX-23-Math.round(y*.15);

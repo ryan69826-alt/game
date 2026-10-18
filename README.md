@@ -9,18 +9,19 @@ no story, NPC schedules, time simulation, or trait modifiers have been added.
 
 The menu has Character Creation (Continue after starting), Options, and
 Import/Export Saves. The creator has independent gender/genital selections,
-Small/Medium/Large body sizes for each gender, female breast size, three eye
-colors, five hair colors, seven hair lengths, and four skin tones. Height,
-body-fat and muscle controls have been replaced. The six body fits use a shared fixed head. All three female fits use slimmer
-shoulders/limbs, a narrow hourglass waist, and more defined hips and bust. Breast
-size adjusts only the chest volumes, independently of shoulders, neck and waist.
+three eye colors, five hair colors, seven hair lengths, and four skin tones.
+Body size and breast size controls are removed. Each gender uses one fixed base;
+old saves normalize shape fields to Medium without losing equipment, traits or XP.
+The male artwork is the existing medium model. The female base is prepared from
+user-provided pixel art, retaining its original bodysuit, head and proportions.
 
 Clothing dropdowns follow Appearance: Top, Bottoms, Shoes, Wearable Storage, and
 Handheld. Current choices are None or a generic shirt/pants/shoes/backpack; Handheld
-has None until handheld equipment is added. Clothing renders separately from the
-body using the matching six-fit detailed paper-doll atlas. Underwear stays opaque
-when outer clothing is removed. Head/hair use the approved PNG references; all
-layers use hard alpha and nearest-neighbor rendering at 288×416 for crisp pixels. See [artwork details](assets/characters/README.md).
+has None until handheld equipment is added. The female shirt, pants and shoes are
+independent garment-only assets, aligned directly to the base rather than extracted
+from a dressed character. Deselecting garments leaves the bodysuit visible. Male
+underwear stays opaque. Hair remains a separate layer. All layers use hard alpha
+and nearest-neighbor rendering at 288×416. See [artwork details](assets/characters/README.md).
 
 There are 15 independent starting-trait checkboxes and 18 skills. Traits are saved
 but have no modifiers until those effects are defined. Skills start at level 0
@@ -130,11 +131,11 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
 ## Source and saves
 
 - `story.twee`, `world.twee`: menu, creator, world, sidebar and window markup.
-- `character-data.js`: version-5 serializable schema, defaults and migrations.
+- `character-data.js`: version-6 serializable schema, defaults and migrations.
 - `character-rules.js`, `character-creation-build.js`: traits, XP and allocation UI.
 - `character-ui.js`, `character-display.js`: creator controls/shared preview lifecycle.
-- `character-body.js`, `character-preview.js`, `clothing.js`: body fits, independent
-  equipment art, head/hair, equipment and capacity definitions.
+- `character-female.js`, `character-body.js`, `character-preview.js`, `clothing.js`:
+  fixed female/male bases, independent equipment art, head/hair and capacity definitions.
 - `inventory.js`, `inventory-ui.js`, `inventory-drag.js`: packing, access, transfers,
   pointer dragging, cancellation/cleanup and block windows.
 - `world-map-data.js`, `world-movement.js`, `world-map-ui.js`: terrain, movement,
@@ -168,17 +169,17 @@ npm test
 ```
 
 Tests build their own copy, serve it on loopback port 8765, and exercise the real
-SugarCube browser runtime. Coverage includes six distinct body/clothing fits,
-fixed head/hair and connected necks, independent clothing layers, breast sizes,
+SugarCube browser runtime. Coverage includes two fixed body models,
+proportional heads and visible faces, independent clothing layers, old-save normalization,
 all visual choices, long-hair face/curtain regressions, creator migration,
 traits/XP, responsive layouts, read-only sheets, map geometry/collision,
-movement/held-direction pacing, interaction reach/actions, nose-in parking/headlight orientation, directional car access, localized breast-size changes,
+movement/held-direction pacing, interaction reach/actions, nose-in parking/headlight orientation, directional car access, garment-only layer bounds,
 block packing/failed transfers, separate single-block pockets, dropdown categories,
 pointer tracking/drop/cancel behavior, legacy item migration, crisp sprite edges,
 no invisible storage, empty-trunk persistence,
 reloads, and portable save round trips. CI runs the same suite before Pages deploys.
 
-For review: try all six fits and clothing dropdowns in a fresh creator, enter
+For review: try both base models and clothing dropdowns in a fresh creator, enter
 Apartments, open sidebar Inventory, walk to a car's side/back and press E, and
 transfer the differently sized placeholder items between pockets, backpack and
 trunk. Stop here for feedback before adding another feature.
