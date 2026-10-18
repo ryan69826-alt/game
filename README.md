@@ -37,7 +37,10 @@ and local camera rectangle. Only Apartments is available for now.
 
 Use arrow keys, WASD, on-screen direction buttons, or click an adjacent square.
 Each successful cardinal step costs one turn; walls, cars, trees, area boundaries,
-and nonadjacent clicks cost none. Holding a key does not repeat turns. Doors are
+and nonadjacent clicks cost none. Hold a direction key or an on-screen button to
+repeat steps every 200 milliseconds after the initial step. Release stops movement;
+obstacles, dialogs, window blur, tab hiding, and navigation also stop a held input.
+The compact movement panel sits above the location description. Doors are
 walkable thresholds; building interiors are not implemented. Open dialogs pause
 movement. Coordinates shown to players start at 1. Movement position and turn count
 survive reloads, menu/Continue, and disk saves. No time or NPC simulation runs yet.
@@ -176,7 +179,7 @@ npm test
 ```
 
 Alternatively set `CHROMIUM_EXECUTABLE_PATH` to an existing Chromium binary.
-Tests build and serve their own copy on loopback port 8765. Twenty-two checks cover all
+Tests build and serve their own copy on loopback port 8765. Twenty-four checks cover all
 64 body renders with pixel-identical heads/hair and connected necks, gender and
 breast-size switching, all other visual choices, keyboard height control,
 menu/reload persistence, disk save/load, legacy save defaults, and narrow screens.
@@ -203,3 +206,7 @@ portable saves. Map geometry and rendering stay outside saves; `$world` stores
 only version, area ID, position, and movement turn count. Each accepted step creates
 a SugarCube moment without rebuilding the page; the existing ten-moment history
 limit keeps session history bounded.
+
+Hold-input checks use a controlled browser clock to verify repeat timing, release
+without an extra click step, keyboard repeat suppression, pointer cancellation,
+window blur, dialogs, blocked moves, and cleanup when leaving the location.

@@ -28,11 +28,12 @@
 <main class="world-content location-layout" aria-labelledby="location-title">
 <div class="location-story">
 <header class="world-heading"><p class="eyebrow">URBAN AREA · RESIDENTIAL</p><h1 id="location-title">Apartments</h1><p class="world-subtitle">A small corner of the city.</p></header>
-<section class="location-description" aria-label="Location description"><p>Four apartment buildings face a small central park. Paths link their entrances, with a parking lot to the southwest and two roads meeting along the southern edge.</p><p id="position-description"></p></section>
 <section class="movement-panel" aria-labelledby="movement-title">
+<div class="movement-info">
 <h2 id="movement-title">Move around</h2>
-<p id="movement-help">Move one square per turn with arrow keys, WASD, the buttons, or an adjacent square on the map.</p>
+<p id="movement-help">Hold arrows, WASD, or a button. One square per turn.</p>
 <div class="movement-readout"><span id="movement-position"></span><span>Turn <output id="movement-turn">0</output></span></div>
+</div>
 <div class="movement-pad" role="group" aria-label="Movement controls">
 <button type="button" data-move="north" aria-label="Move north">↑</button>
 <button type="button" data-move="west" aria-label="Move west">←</button>
@@ -42,6 +43,8 @@
 </div>
 <p id="movement-status" role="status" aria-live="polite"></p>
 </section>
+<section class="location-description" aria-label="Location description"><p>Four apartment buildings face a small central park. Paths link their entrances, with a parking lot to the southwest and two roads meeting along the southern edge.</p><p id="position-description"></p></section>
+
 <div class="location-footer"><span class="location-dot" aria-hidden="true"></span> Current location <strong>Apartments</strong></div>
 </div>
 <div class="map-stack">

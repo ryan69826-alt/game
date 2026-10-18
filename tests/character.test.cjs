@@ -543,3 +543,62 @@ test('movement position and turn round-trip through disk saves',async()=>{
     await chooser.setFiles(save);await page.waitForSelector('#local-map[data-player-x]');
     assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),expected);
 });
+
+test('held keys move at a controlled pace and stop on release, blur, dialogs, and obstacles',async()=>{
+    await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const world=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
+    const initial=await world();
+    await page.keyboard.down('ArrowRight');assert.equal((await world()).turn,1);
+    await page.clock.runFor(199);assert.equal((await world()).turn,1);
+    await page.clock.runFor(1);assert.equal((await world()).turn,2);
+    // Native keyboard repeats cannot speed up the game's own timer.
+    await page.keyboard.down('ArrowRight');assert.equal((await world()).turn,2);
+    await page.clock.runFor(400);assert.equal((await world()).turn,4);
+    await page.keyboard.up('ArrowRight');
+    const released=await world();assert.equal(released.x,initial.x+4);
+    await page.clock.runFor(800);assert.deepEqual(await world(),released);
+    await page.keyboard.down('s');
+    await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
+    const blurred=await world();await page.clock.runFor(600);assert.deepEqual(await world(),blurred);
+    await page.keyboard.up('s');
+    await page.keyboard.down('s');
+    await page.getByRole('button',{name:'Character',exact:true}).click();
+    const paused=await world();await page.clock.runFor(600);assert.deepEqual(await world(),paused);
+    await page.keyboard.up('s');await page.keyboard.press('Escape');
+    await page.evaluate(()=>{
+        SugarCube.State.variables.world={version:1,mapId:'apartments',x:30,y:16,turn:0};
+        SugarCube.Engine.play('Apartments');
+    });
+    await page.waitForSelector('#local-map[data-player-y="16"]');
+    await page.keyboard.down('w');await page.clock.runFor(1000);await page.keyboard.up('w');
+    assert.equal((await world()).turn,1);assert.equal((await world()).y,15);
+    assert.match(await page.locator('#movement-status').textContent(),/blocks the way/);
+});
+
+test('holding a direction button repeats without an extra release step and cleans up on navigation',async()=>{
+    await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const world=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
+    const east=page.getByRole('button',{name:'Move east',exact:true});
+    const bounds=await east.boundingBox();await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
+    await page.mouse.down();assert.equal((await world()).turn,1);
+    await page.clock.runFor(600);assert.equal((await world()).turn,4);
+    await page.mouse.up();const released=await world();
+    await page.clock.runFor(600);assert.deepEqual(await world(),released,'release does not add a click step');
+    const south=page.getByRole('button',{name:'Move south',exact:true});
+    await south.evaluate(button=>button.addEventListener('pointerdown',event=>{button.dataset.testPointer=event.pointerId;},{once:true}));
+    const southBounds=await south.boundingBox();await page.mouse.move(southBounds.x+southBounds.width/2,southBounds.y+southBounds.height/2);
+    await page.mouse.down();
+    await south.dispatchEvent('pointercancel',{pointerId:Number(await south.getAttribute('data-test-pointer'))});
+    await page.mouse.up();
+    const cancelled=await world();await page.clock.runFor(600);assert.deepEqual(await world(),cancelled);
+    await page.keyboard.down('s');
+    await page.getByRole('link',{name:'Main menu',exact:true}).click();
+    const left=await world();await page.clock.runFor(600);assert.deepEqual(await world(),left);
+    await page.keyboard.up('s');
+    await page.getByRole('link',{name:'Continue',exact:true}).click();
+    await page.keyboard.press('s');assert.equal((await world()).turn,left.turn+1,'no stale or duplicated repeat listeners');
+});

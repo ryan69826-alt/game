@@ -102,20 +102,67 @@
             frame = requestAnimationFrame(tick);
         }
         function step(dx, dy) {
+            if (Dialog.isOpen()) return false;
             const result = setup.worldMovement.move(dx, dy);
-            document.getElementById('movement-status').textContent = result.reason;
+            const status = document.getElementById('movement-status');
+            if (status.textContent !== result.reason) status.textContent = result.reason;
             refresh(result.moved);
+            return result.moved;
         }
         const directions = {north: [0, -1], east: [1, 0], south: [0, 1], west: [-1, 0]};
-        for (const button of document.querySelectorAll('[data-move]')) button.addEventListener('click', () => step(...directions[button.dataset.move]));
+        const repeatDelay = 200;
+        let held = null, repeatTimer = 0;
+        function stopHold() {
+            clearTimeout(repeatTimer);
+            const previous = held;held = null;
+            if (previous?.button?.hasPointerCapture(previous.key)) previous.button.releasePointerCapture(previous.key);
+        }
+        function repeatStep() {
+            if (!held || !local.isConnected || document.hidden || Dialog.isOpen() || !step(...directions[held.direction])) {
+                stopHold();return;
+            }
+            repeatTimer = setTimeout(repeatStep, repeatDelay);
+        }
+        function startHold(direction, source, key, button = null) {
+            stopHold();
+            held = {direction, source, key, button};
+            if (!step(...directions[direction])) {stopHold();return;}
+            repeatTimer = setTimeout(repeatStep, repeatDelay);
+        }
+        for (const button of document.querySelectorAll('[data-move]')) {
+            button.addEventListener('pointerdown', event => {
+                if (event.button !== 0 || Dialog.isOpen()) return;
+                event.preventDefault();button.focus({preventScroll: true});
+                startHold(button.dataset.move, 'pointer', event.pointerId, button);
+                if (held) button.setPointerCapture(event.pointerId);
+            });
+            function release(event) {
+                if (held?.source === 'pointer' && held.key === event.pointerId) stopHold();
+            }
+            for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, release);
+            button.addEventListener('contextmenu', event => event.preventDefault());
+            // Keyboard/screen-reader activation still makes one step. Pointer
+            // clicks are already handled on pointerdown, so never step twice.
+            button.addEventListener('click', event => {if (event.detail === 0) step(...directions[button.dataset.move]);});
+        }
         const keys = {ArrowUp: 'north', ArrowRight: 'east', ArrowDown: 'south', ArrowLeft: 'west', w: 'north', d: 'east', s: 'south', a: 'west'};
         function keydown(event) {
             if (Dialog.isOpen() || event.ctrlKey || event.altKey || event.metaKey || event.target.closest('input,select,textarea,[contenteditable="true"]')) return;
             const direction = keys[event.key] || keys[event.key.toLowerCase()];
             if (!direction) return;
-            event.preventDefault();if (!event.repeat) step(...directions[direction]);
+            event.preventDefault();
+            const key = event.code || event.key.toLowerCase();
+            if (!event.repeat && !(held?.source === 'keyboard' && held.key === key)) startHold(direction, 'keyboard', key);
         }
+        function keyup(event) {
+            if (held?.source === 'keyboard' && held.key === (event.code || event.key.toLowerCase())) stopHold();
+        }
+        function visibilityChange() {if (document.hidden) stopHold();}
         document.addEventListener('keydown', keydown);
+        document.addEventListener('keyup', keyup);
+        document.addEventListener('visibilitychange', visibilityChange);
+        window.addEventListener('blur', stopHold);
+        $(document).on(':dialogopening.worldMovement', stopHold);
         local.addEventListener('click', event => {
             if (Dialog.isOpen()) return;
             const rect = local.getBoundingClientRect(), world = State.variables.world;
@@ -124,6 +171,11 @@
             step(x - world.x, y - world.y);
         });
         refresh();
-        cleanup = () => {cancelAnimationFrame(frame);document.removeEventListener('keydown', keydown);};
+        cleanup = () => {
+            stopHold();cancelAnimationFrame(frame);
+            document.removeEventListener('keydown', keydown);document.removeEventListener('keyup', keyup);
+            document.removeEventListener('visibilitychange', visibilityChange);window.removeEventListener('blur', stopHold);
+            $(document).off(':dialogopening.worldMovement', stopHold);
+        };
     });
 })();
