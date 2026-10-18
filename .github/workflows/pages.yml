@@ -34,7 +34,9 @@ jobs:
           npm ci --no-audit --no-fund
           npx playwright install --with-deps chromium
       - name: Validate character creator
-        run: npm test
+        run: |
+          export CHROMIUM_EXECUTABLE_PATH="$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')"
+          npm test
       - name: Prepare standalone website
         run: |
           mkdir -p _site
