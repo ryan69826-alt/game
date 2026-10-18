@@ -24,27 +24,29 @@
 
 :: Apartments [nobr world]
 <<set $worldStarted = true>>
-<main class="world-content" aria-labelledby="location-title">
+<main class="world-content location-layout" aria-labelledby="location-title">
+<div class="location-story">
 <header class="world-heading"><p class="eyebrow">URBAN AREA · RESIDENTIAL</p><h1 id="location-title">Apartments</h1><p class="world-subtitle">A small corner of the city.</p></header>
+<section class="location-description" aria-label="Location description"><p>You stand outside a row of apartment buildings. Balconies line the upper floors, and a sheltered entrance faces the pavement.</p><p>The hum of traffic drifts between the buildings. A delivery screen glows beside a bank of mailboxes.</p></section>
+<div class="location-footer"><span class="location-dot" aria-hidden="true"></span> Current location <strong>Apartments</strong></div>
+</div>
 <figure class="district-map">
-<svg viewBox="0 0 640 280" role="img" aria-labelledby="map-title map-description">
-<title id="map-title">Apartments area map</title><desc id="map-description">A single apartment block surrounded by city streets. Your current location is Apartments.</desc>
-<defs><pattern id="map-grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M 24 0 L 0 0 0 24" fill="none" stroke="#2b4140" stroke-width="0.5"/></pattern></defs>
-<rect width="640" height="280" fill="#142326"/><rect width="640" height="280" fill="url(#map-grid)"/>
-<path d="M 0 222 H 640 M 105 0 V 280 M 550 0 V 280" fill="none" stroke="#29423f" stroke-width="34"/>
-<path d="M 0 222 H 640 M 105 0 V 280 M 550 0 V 280" fill="none" stroke="#6e8f8155" stroke-width="1" stroke-dasharray="7 8"/>
-<path d="M180 48 H466 V171 H375 V99 H270 V171 H180 Z" fill="#36534a" stroke="#a8ddc8" stroke-width="2"/>
-<path d="M200 68 H446 M200 80 H446 M200 92 H250 M394 92 H446 M200 104 H250 M394 104 H446 M200 116 H250 M394 116 H446 M200 128 H250 M394 128 H446 M200 140 H250 M394 140 H446" stroke="#769c89" stroke-width="3" stroke-dasharray="12 10"/>
-<rect x="287" y="116" width="70" height="49" fill="#213d34" stroke="#567a65"/>
-<path d="M322 166 V204" stroke="#84b39b" stroke-width="2"/>
-<circle cx="322" cy="201" r="7" fill="#a8ddc8"/><circle cx="322" cy="201" r="12" fill="none" stroke="#a8ddc8" opacity=".4"/>
-<text x="322" y="261" text-anchor="middle" fill="#d4e9df" font-family="Arial, sans-serif" font-size="14" letter-spacing="3">APARTMENTS</text>
-<text x="602" y="32" text-anchor="middle" fill="#8da99e" font-family="Arial, sans-serif" font-size="12">N ↑</text>
+<svg viewBox="0 0 320 540" role="img" aria-labelledby="map-title map-description">
+<title id="map-title">Apartments area map</title><desc id="map-description">A vertical map of a single apartment block surrounded by city streets. Your current location is Apartments.</desc>
+<defs><pattern id="map-grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#2b4140" stroke-width="0.5"/></pattern></defs>
+<rect width="320" height="540" fill="#142326"/><rect width="320" height="540" fill="url(#map-grid)"/>
+<path d="M40 0 V540 M280 0 V540 M0 80 H320 M0 440 H320" fill="none" stroke="#29423f" stroke-width="26"/>
+<path d="M40 0 V540 M280 0 V540 M0 80 H320 M0 440 H320" fill="none" stroke="#6e8f8155" stroke-width="1" stroke-dasharray="7 8"/>
+<path d="M84 150 H236 V350 H187 V205 H133 V350 H84 Z" fill="#36534a" stroke="#a8ddc8" stroke-width="2"/>
+<path d="M96 166 H224 M96 180 H224 M96 194 H120 M200 194 H224 M96 214 H120 M200 214 H224 M96 234 H120 M200 234 H224 M96 254 H120 M200 254 H224 M96 274 H120 M200 274 H224 M96 294 H120 M200 294 H224 M96 314 H120 M200 314 H224 M96 334 H120 M200 334 H224" stroke="#769c89" stroke-width="3" stroke-dasharray="8 6"/>
+<rect x="143" y="244" width="34" height="69" fill="#213d34" stroke="#567a65"/>
+<path d="M160 314 V390" stroke="#84b39b" stroke-width="2"/>
+<circle cx="160" cy="384" r="6" fill="#a8ddc8"/><circle cx="160" cy="384" r="12" fill="none" stroke="#a8ddc8" opacity=".4"/>
+<text x="160" y="414" text-anchor="middle" fill="#d4e9df" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">APARTMENTS</text>
+<text x="280" y="34" text-anchor="middle" fill="#8da99e" font-family="Arial, sans-serif" font-size="12">N ↑</text>
 </svg>
 <figcaption><span class="location-dot" aria-hidden="true"></span> You are here <span>Apartments</span></figcaption>
 </figure>
-<section class="location-description" aria-label="Location description"><p>You stand outside a row of apartment buildings. Balconies line the upper floors, and a sheltered entrance faces the pavement.</p><p>The hum of traffic drifts between the buildings. A delivery screen glows beside a bank of mailboxes.</p></section>
-<div class="location-footer"><span class="location-dot" aria-hidden="true"></span> Current location <strong>Apartments</strong></div>
 </main>
 
 :: CharacterSheet [nobr]

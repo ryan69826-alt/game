@@ -23,7 +23,9 @@ or ±10 XP buttons; the last increment uses the remaining pool. Reset refunds al
 skill XP. No combinations of traits are restricted yet.
 All protagonists are adults (age 26 in this prototype).
 Use **Start at Apartments** in the creator to enter the first urban location.
-Apartments has a simple area map and generic exterior description. A persistent
+Apartments has a vertical area map on the right (40% of the main area) and a
+description column on the left (60%). On narrow screens, the map stacks below
+the description so both remain readable. A persistent
 left sidebar displays the exact customized full-body character, a location link,
 and Character/Stats buttons. Both buttons open read-only windows over the unchanged
 Apartments screen. Character shows the saved identity, appearance, and traits;
