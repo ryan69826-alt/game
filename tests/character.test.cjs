@@ -873,7 +873,9 @@ test('inventory fits narrow screens and large text and blocks movement while ope
     await page.keyboard.press('ArrowDown');assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),expected);
     for(const width of [1440,700,390,320]) {
         await page.setViewportSize({width,height:844});await page.evaluate(()=>document.documentElement.classList.add('large-text'));
-        assert.ok(await dialog.evaluate(node=>node.scrollWidth<=node.clientWidth),`dialog has no horizontal overflow at ${width}`);
+        const layout=await dialog.evaluate(node=>({client:node.clientWidth,scroll:node.scrollWidth,
+            overflow:Array.from(node.querySelectorAll('*')).filter(child=>child.scrollWidth>child.clientWidth+1).map(child=>({tag:child.tagName,cls:child.className,client:child.clientWidth,scroll:child.scrollWidth}))}));
+        assert.ok(layout.scroll<=layout.client,`dialog has no horizontal overflow at ${width}: ${JSON.stringify(layout)}`);
         const grid=await dialog.locator('.inventory-grid').first().boundingBox();const bounds=await dialog.boundingBox();
         assert.ok(grid.x>=bounds.x && grid.x+grid.width<=bounds.x+bounds.width+1,`trunk grid stays inside dialog at ${width}`);
     }

@@ -89,11 +89,12 @@ html:has(#ui-dialog-body.character-window) #ui-overlay{background:#050c10;opacit
 #interaction-result:empty{display:none}
 
 /* Storage cells remain keyboard buttons, including on touch screens. */
-#ui-dialog-body.inventory-window { max-width: 920px; }
-.inventory-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 24px; }
-.inventory-column { min-width: 0; }
+#ui-dialog-body.inventory-window { transition: none; box-sizing: border-box; width: min(680px,calc(100vw - 24px)); max-width: calc(100vw - 24px); min-width: 0; scrollbar-gutter: stable; }
+.inventory-layout { transition: none; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; min-width: 0; }
+@media(max-width:700px) { .inventory-layout { grid-template-columns: minmax(0,1fr); } }
+.inventory-column { min-width: 0; transition: none; }
 .inventory-column h2 { font-size: 1rem; color: var(--accent); }
-.inventory-container { margin: 0 0 22px; }
+.inventory-container { min-width: 0; margin: 0 0 22px; }
 .inventory-container h3 { font-size: .85rem; margin: 12px 0 4px; }
 .storage-count { font-size: .7rem; color: #a6b3c3; margin: 0 0 8px; }
 .inventory-grid { --columns: 4; display: grid; width: min(100%, calc(var(--columns) * 45px - 3px)); grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); grid-auto-rows: 42px; gap: 3px; }
@@ -111,7 +112,7 @@ html:has(#ui-dialog-body.character-window) #ui-overlay{background:#050c10;opacit
 .inventory-drag-ghost { transition: none !important; animation: none !important; position: fixed; z-index: 200000; pointer-events: none; margin: 0; box-sizing: border-box; background: #283647; border: 2px solid #df9989; border-radius: 3px; color: var(--item-color); font-size: 10px; white-space: nowrap; padding: 2px; }
 .inventory-drag-ghost[data-valid="true"] { border-color: #9ae3bb; }
 
-.pocket-group { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+.pocket-group { transition: none; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
 .pockets-heading { font-size: .85rem; margin-bottom: 6px; }
 .pocket-group .inventory-container h3 { font-size: .65rem; font-weight: normal; text-transform: capitalize; min-height: 2.5em; margin-top: 0; }
 .pocket-group .storage-count { font-size: .6rem; white-space: nowrap; }
