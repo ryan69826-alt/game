@@ -30,6 +30,12 @@ costs another 100, then 200, doubling through level 10. Entries are cumulative
 (150 XP = level 2). Number fields and ±10 buttons allocate/refund XP; Reset refunds
 all. The last increment uses the remaining pool. No trait combinations are restricted.
 
+Skills share the same six categories in creation and the Stats window: Physical
+(Athleticism, Endurance, Agility, Swimming, Dancing), Combat (Combat, Ranged), Covert
+(Stealth, Lockpicking), Practical (Tending, Housekeeping, Medical, Crafting), Social
+(Charm, Deception, Intimidation), and Mental (Perception, Focus). Category definitions
+live in `character-rules.js`; grouping does not change save keys, XP or progression.
+
 Start at Apartments locks creation. The sidebar shows the same full-body sprite.
 Character and Stats are read-only windows over the map; Inventory is also a
 window. Escape, close button, or backdrop closes them. Character creation cannot

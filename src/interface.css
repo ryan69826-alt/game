@@ -85,6 +85,9 @@ body[data-tags~="creation"] #story{align-items:start}
 .skill-budget{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
 #skill-budget{font-size:.85rem;color:var(--accent);font-variant-numeric:tabular-nums}
 .skill-budget button{font-size:.7rem;padding:7px 10px}
+.skill-category{min-width:0;margin-top:24px}
+.skill-category-title{margin:0 0 14px;padding-bottom:9px;border-bottom:1px solid #416352;color:var(--accent);font-size:.85rem;font-weight:400;letter-spacing:.06em}
+.skill-category .skill-row:last-child{border-bottom:0}
 .skill-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;padding:13px 0;border-bottom:1px solid var(--line)}
 .skill-heading{display:flex;flex-direction:column;justify-content:center;min-width:0}
 .skill-heading label{font-size:.85rem;color:var(--text);overflow-wrap:anywhere}

@@ -28,14 +28,21 @@ setup.worldWindows = (() => {
             }
         }
         const skills = root.querySelector('#world-skills');
-        if (skills) for (const name of setup.characterRules.skills) {
-            const status = setup.characterRules.progress(character.skills[name]);
-            const row = document.createElement('div');row.className = 'world-skill';row.dataset.skill = name;
-            const label = document.createElement('h3');label.textContent = name;
-            const level = document.createElement('span');level.className = 'world-skill-level';level.textContent = `Level ${status.level} / 10`;
-            const bar = document.createElement('progress');bar.max = status.nextCost || 1;bar.value = status.nextCost ? status.xp : 1;bar.setAttribute('aria-label', `${name} progress to next level`);
-            const xp = document.createElement('span');xp.className = 'world-skill-xp';xp.textContent = status.nextCost ? `${status.xp} / ${status.nextCost} XP toward level ${status.level + 1}` : 'Maximum level';
-            row.append(label, level, bar, xp);skills.append(row);
+        if (skills) for (const category of setup.characterRules.skillCategories) {
+            const group=document.createElement('section');group.className='skill-category';group.dataset.category=category.id;
+            const title=document.createElement('h3');title.className='skill-category-title';title.id=`stats-skills-${category.id}`;title.textContent=category.name;
+            group.setAttribute('aria-labelledby',title.id);
+            const grid=document.createElement('div');grid.className='skill-category-grid';
+            group.append(title,grid);skills.append(group);
+            for (const name of category.skills) {
+                const status = setup.characterRules.progress(character.skills[name]);
+                const row = document.createElement('div');row.className = 'world-skill';row.dataset.skill = name;
+                const label = document.createElement('h4');label.textContent = name;
+                const level = document.createElement('span');level.className = 'world-skill-level';level.textContent = `Level ${status.level} / 10`;
+                const bar = document.createElement('progress');bar.max = status.nextCost || 1;bar.value = status.nextCost ? status.xp : 1;bar.setAttribute('aria-label', `${name} progress to next level`);
+                const xp = document.createElement('span');xp.className = 'world-skill-xp';xp.textContent = status.nextCost ? `${status.xp} / ${status.nextCost} XP toward level ${status.level + 1}` : 'Maximum level';
+                row.append(label, level, bar, xp);grid.append(row);
+            }
         }
     }
     function open(name) {

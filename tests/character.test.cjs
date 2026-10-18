@@ -312,6 +312,17 @@ test('character and stats are read-only dialogs over the unchanged Apartments sc
     await nav.getByRole('button',{name:'Stats',exact:true}).click();
     const stats=page.getByRole('dialog',{name:'Stats',exact:true});await stats.waitFor({state:'visible'});
     assert.equal(await stats.locator('.world-skill').count(),18);
+    const groups=await stats.locator('.skill-category').evaluateAll(nodes=>nodes.map(node=>({
+        title:node.querySelector('h3').textContent,skills:Array.from(node.querySelectorAll('[data-skill]'),row=>row.dataset.skill)
+    })));
+    assert.deepEqual(groups,[
+        {title:'Physical',skills:['Athleticism','Endurance','Agility','Swimming','Dancing']},
+        {title:'Combat',skills:['Combat','Ranged']},
+        {title:'Covert',skills:['Stealth','Lockpicking']},
+        {title:'Practical',skills:['Tending','Housekeeping','Medical','Crafting']},
+        {title:'Social',skills:['Charm','Deception','Intimidation']},
+        {title:'Mental',skills:['Perception','Focus']}
+    ]);
     const lock=stats.locator('.world-skill[data-skill="Lockpicking"]');
     assert.equal(await lock.locator('.world-skill-level').textContent(),'Level 2 / 10');
     assert.equal(await lock.locator('.world-skill-xp').textContent(),'0 / 200 XP toward level 3');
