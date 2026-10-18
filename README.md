@@ -25,7 +25,19 @@ All protagonists are adults (age 26 in this prototype).
 Use **Start at Apartments** in the creator to enter the first urban location.
 Apartments has a vertical area map on the right (40% of the main area) and a
 description column on the left (60%). On narrow screens, the map stacks below
-the description so both remain readable. A persistent
+the description so both remain readable. Apartments is a 50×50 square grid with
+four buildings facing a small park, a parking lot, a road across the south edge,
+and a second road running north from that road. The scrolling local map follows
+the player; the world map below shows the complete current area, player position,
+and local camera rectangle. Only Apartments is available for now.
+
+Use arrow keys, WASD, on-screen direction buttons, or click an adjacent square.
+Each successful cardinal step costs one turn; walls, cars, trees, area boundaries,
+and nonadjacent clicks cost none. Holding a key does not repeat turns. Doors are
+walkable thresholds; building interiors are not implemented. Open dialogs pause
+movement. Coordinates shown to players start at 1. Movement position and turn count
+survive reloads, menu/Continue, and disk saves. No time or NPC simulation runs yet.
+A persistent
 left sidebar displays the exact customized full-body character, a location link,
 and Character/Stats buttons. Both buttons open read-only windows over the unchanged
 Apartments screen. Character shows the saved identity, appearance, and traits;
@@ -81,7 +93,10 @@ the main menu, except the old Apartment passage which now redirects to Apartment
 
 - `src/story.twee`: Twine metadata, menu, creator, and shared artwork markup.
 - `src/world.twee`: Apartments, Character, Stats, and the shared sidebar.
-- `src/world-ui.js`: read-only world character and skill views.
+- `src/world-ui.js`: read-only character and skill windows.
+- `src/world-map-data.js`: location definitions, grid dimensions, terrain, and entrances.
+- `src/world-movement.js`: position validation, collision rules, and turn/session commits.
+- `src/world-map-ui.js`: map rendering, scrolling camera, input, and movement feedback.
 - `src/world.css`: responsive world layout with a left sidebar.
 - `src/character-display.js`: shared artwork loading/rendering lifecycle.
 - `src/character-data.js`: versioned serializable character schema and validation.
@@ -157,7 +172,7 @@ npm test
 ```
 
 Alternatively set `CHROMIUM_EXECUTABLE_PATH` to an existing Chromium binary.
-Tests build and serve their own copy on loopback port 8765. Eighteen checks cover all
+Tests build and serve their own copy on loopback port 8765. Twenty-two checks cover all
 64 body renders with pixel-identical heads/hair and connected necks, gender and
 breast-size switching, all other visual choices, keyboard height control,
 menu/reload persistence, disk save/load, legacy save defaults, and narrow screens.
@@ -176,3 +191,11 @@ XP display, reloads, disk saves, and old passage compatibility. Sidebar and wind
 layouts are checked at 1440, 700, 390, and 320 pixels with larger text enabled.
 To review manually, enter Apartments,
 open and close both sidebar windows, then use Saves or Main menu.
+
+Movement checks cover the two roads, connected routes to all four inward-facing
+entrances, obstacles and bounds, button/keyboard/map input, camera updates,
+dialog pauses, legacy defaults, and position/turn persistence through reload and
+portable saves. Map geometry and rendering stay outside saves; `$world` stores
+only version, area ID, position, and movement turn count. Each accepted step creates
+a SugarCube moment without rebuilding the page; the existing ten-moment history
+limit keeps session history bounded.

@@ -424,3 +424,104 @@ test('old Character/Stats saves return to Apartments and creation stays closed a
         assert.deepEqual(await value(),expected);
     }
 });
+
+test('Apartments has a connected 50 by 50 grid with two roads, parking, park, and four inward entrances',async()=>{
+    const layout=await page.evaluate(()=>{
+        const map=SugarCube.setup.worldMaps.apartments;
+        const seen=new Set(),queue=[map.spawn];
+        for(let i=0;i<queue.length;i++) {
+            const {x,y}=queue[i],key=`${x},${y}`;
+            if(seen.has(key) || !map.tileAt(x,y).walkable) continue;
+            seen.add(key);for(const [dx,dy] of [[0,1],[1,0],[0,-1],[-1,0]]) queue.push({x:x+dx,y:y+dy});
+        }
+        const towardPark={north:[0,-1],south:[0,1],east:[1,0],west:[-1,0]};
+        return {width:map.width,height:map.height,
+            horizontal:Array.from({length:50},(_,x)=>map.tileAt(x,46).kind),
+            vertical:Array.from({length:46},(_,y)=>map.tileAt(6,y).kind),
+            parking:map.tileAt(13,35).kind,park:map.tileAt(28,22).kind,
+            entrances:map.buildings.map(building=>{
+                const {x,y}=building.door,[dx,dy]=towardPark[building.facing];
+                return {reached:seen.has(`${x},${y}`),door:map.tileAt(x,y).kind,
+                    outward:map.tileAt(x+dx,y+dy).walkable,inward:map.tileAt(x-dx,y-dy).walkable};
+            })};
+    });
+    assert.equal(layout.width,50);assert.equal(layout.height,50);
+    assert.ok(layout.horizontal.every(kind=>kind==='road'));assert.ok(layout.vertical.every(kind=>kind==='road'));
+    assert.equal(layout.parking,'parking');assert.equal(layout.park,'park');assert.equal(layout.entrances.length,4);
+    for(const entrance of layout.entrances) assert.deepEqual(entrance,{reached:true,door:'entrance',outward:true,inward:false});
+});
+
+test('movement buttons, keyboard, and adjacent map clicks spend one turn, scroll, and persist on reload',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.waitForSelector('#local-map[data-player-x]');
+    const world=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
+    const initial=await world(),local=page.locator('#local-map'),overview=page.locator('#world-map');
+    const original=await local.evaluate(canvas=>canvas.toDataURL());
+    const originalOverview=await overview.evaluate(canvas=>canvas.toDataURL());
+    await page.keyboard.press('ArrowRight');
+    await page.waitForFunction(()=>document.querySelector('#local-map').dataset.animating==='false');
+    assert.deepEqual(await world(),{...initial,x:initial.x+1,turn:1});
+    assert.notEqual(await local.evaluate(canvas=>canvas.toDataURL()),original);
+    assert.notEqual(await overview.evaluate(canvas=>canvas.toDataURL()),originalOverview);
+    assert.equal(Number(await local.getAttribute('data-camera-x')),initial.x+1-12);
+    await page.getByRole('button',{name:'Move north',exact:true}).click();
+    await page.keyboard.press('a');
+    await page.waitForFunction(()=>document.querySelector('#local-map').dataset.animating==='false');
+    assert.deepEqual(await world(),{...initial,y:initial.y-1,turn:3});
+    const target=await local.evaluate(canvas=>{
+        const r=canvas.getBoundingClientRect(),world=SugarCube.State.variables.world;
+        return {x:(world.x-Number(canvas.dataset.cameraX)+1.5)/25*r.width,
+            y:(world.y-Number(canvas.dataset.cameraY)+.5)/35*r.height};
+    });
+    await local.click({position:target});
+    assert.equal((await world()).turn,4);
+    const expected=await world();
+    await page.reload();await page.waitForSelector('#local-map[data-player-x]');
+    assert.deepEqual(await world(),expected,'the last step survives reload without leaving the location');
+    await page.getByRole('button',{name:'Character',exact:true}).click();
+    await page.keyboard.press('ArrowRight');await page.keyboard.press('w');
+    assert.deepEqual(await world(),expected,'movement is paused while a dialog is open');
+    await page.keyboard.press('Escape');
+    await page.getByRole('link',{name:'Main menu',exact:true}).click();
+    await page.getByRole('link',{name:'Continue',exact:true}).click();
+    assert.deepEqual(await world(),expected);
+    const mapBox=await local.boundingBox(),worldBox=await overview.boundingBox();
+    assert.ok(worldBox.y>=mapBox.y+mapBox.height,'world map sits below local map');
+});
+
+test('walls, parked cars, trees, map bounds, and distant clicks do not spend turns',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    for(const [x,y,dx,dy] of [[30,15,0,-1],[12,35,0,-1],[27,21,0,-1],[0,0,-1,0],[49,49,1,0]]) {
+        const result=await page.evaluate(({x,y,dx,dy})=>{
+            SugarCube.State.variables.world={mapId:'apartments',x,y,turn:7};
+            const result=SugarCube.setup.worldMovement.move(dx,dy);
+            return {result,world:structuredClone(SugarCube.State.variables.world)};
+        },{x,y,dx,dy});
+        assert.equal(result.result.moved,false);assert.equal(result.world.turn,7);assert.equal(result.world.x,x);assert.equal(result.world.y,y);
+    }
+    await page.evaluate(()=>{delete SugarCube.State.variables.world;SugarCube.Engine.play('Apartments');});
+    await page.waitForSelector('#local-map[data-player-x]');
+    await page.locator('#local-map').click({position:{x:10,y:10}});
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.turn),0);
+    assert.match(await page.locator('#movement-status').textContent(),/adjacent square/);
+    const results=await page.evaluate(()=>{
+        const cases=[undefined,{mapId:'constructor',x:NaN,y:50,turn:-1},{mapId:'apartments',x:30,y:10,turn:4}];
+        return cases.map(value=>{SugarCube.State.variables.world=value;return structuredClone(SugarCube.setup.worldMovement.ensure());});
+    });
+    for(const result of results) {assert.equal(result.x,30);assert.equal(result.y,23);assert.equal(result.mapId,'apartments');}
+    assert.equal(results[2].turn,4);
+});
+
+test('movement position and turn round-trip through disk saves',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.getByRole('button',{name:'Move north',exact:true}).click();
+    const expected=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
+    await page.getByRole('button',{name:'Saves',exact:true}).click();
+    const [download]=await Promise.all([page.waitForEvent('download'),page.getByText('Save…',{exact:true}).click()]);
+    const save=join(temp,'movement.save');await download.saveAs(save);await page.locator('#ui-dialog-close').click();
+    await page.getByRole('button',{name:'Move east',exact:true}).click();
+    await page.getByRole('button',{name:'Saves',exact:true}).click();
+    const [chooser]=await Promise.all([page.waitForEvent('filechooser'),page.getByText('Load…',{exact:true}).click()]);
+    await chooser.setFiles(save);await page.waitForSelector('#local-map[data-player-x]');
+    assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),expected);
+});

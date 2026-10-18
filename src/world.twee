@@ -24,29 +24,39 @@
 
 :: Apartments [nobr world]
 <<set $worldStarted = true>>
+<<run setup.worldMovement.ensure()>>
 <main class="world-content location-layout" aria-labelledby="location-title">
 <div class="location-story">
 <header class="world-heading"><p class="eyebrow">URBAN AREA · RESIDENTIAL</p><h1 id="location-title">Apartments</h1><p class="world-subtitle">A small corner of the city.</p></header>
-<section class="location-description" aria-label="Location description"><p>You stand outside a row of apartment buildings. Balconies line the upper floors, and a sheltered entrance faces the pavement.</p><p>The hum of traffic drifts between the buildings. A delivery screen glows beside a bank of mailboxes.</p></section>
+<section class="location-description" aria-label="Location description"><p>Four apartment buildings face a small central park. Paths link their entrances, with a parking lot to the southwest and two roads meeting along the southern edge.</p><p id="position-description"></p></section>
+<section class="movement-panel" aria-labelledby="movement-title">
+<h2 id="movement-title">Move around</h2>
+<p id="movement-help">Move one square per turn with arrow keys, WASD, the buttons, or an adjacent square on the map.</p>
+<div class="movement-readout"><span id="movement-position"></span><span>Turn <output id="movement-turn">0</output></span></div>
+<div class="movement-pad" role="group" aria-label="Movement controls">
+<button type="button" data-move="north" aria-label="Move north">↑</button>
+<button type="button" data-move="west" aria-label="Move west">←</button>
+<span aria-hidden="true">◈</span>
+<button type="button" data-move="east" aria-label="Move east">→</button>
+<button type="button" data-move="south" aria-label="Move south">↓</button>
+</div>
+<p id="movement-status" role="status" aria-live="polite"></p>
+</section>
 <div class="location-footer"><span class="location-dot" aria-hidden="true"></span> Current location <strong>Apartments</strong></div>
 </div>
+<div class="map-stack">
 <figure class="district-map">
-<svg viewBox="0 0 320 540" role="img" aria-labelledby="map-title map-description">
-<title id="map-title">Apartments area map</title><desc id="map-description">A vertical map of a single apartment block surrounded by city streets. Your current location is Apartments.</desc>
-<defs><pattern id="map-grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#2b4140" stroke-width="0.5"/></pattern></defs>
-<rect width="320" height="540" fill="#142326"/><rect width="320" height="540" fill="url(#map-grid)"/>
-<path d="M40 0 V540 M280 0 V540 M0 80 H320 M0 440 H320" fill="none" stroke="#29423f" stroke-width="26"/>
-<path d="M40 0 V540 M280 0 V540 M0 80 H320 M0 440 H320" fill="none" stroke="#6e8f8155" stroke-width="1" stroke-dasharray="7 8"/>
-<path d="M84 150 H236 V350 H187 V205 H133 V350 H84 Z" fill="#36534a" stroke="#a8ddc8" stroke-width="2"/>
-<path d="M96 166 H224 M96 180 H224 M96 194 H120 M200 194 H224 M96 214 H120 M200 214 H224 M96 234 H120 M200 234 H224 M96 254 H120 M200 254 H224 M96 274 H120 M200 274 H224 M96 294 H120 M200 294 H224 M96 314 H120 M200 314 H224 M96 334 H120 M200 334 H224" stroke="#769c89" stroke-width="3" stroke-dasharray="8 6"/>
-<rect x="143" y="244" width="34" height="69" fill="#213d34" stroke="#567a65"/>
-<path d="M160 314 V390" stroke="#84b39b" stroke-width="2"/>
-<circle cx="160" cy="384" r="6" fill="#a8ddc8"/><circle cx="160" cy="384" r="12" fill="none" stroke="#a8ddc8" opacity=".4"/>
-<text x="160" y="414" text-anchor="middle" fill="#d4e9df" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">APARTMENTS</text>
-<text x="280" y="34" text-anchor="middle" fill="#8da99e" font-family="Arial, sans-serif" font-size="12">N ↑</text>
-</svg>
-<figcaption><span class="location-dot" aria-hidden="true"></span> You are here <span>Apartments</span></figcaption>
+<div class="map-heading"><span>LOCAL MAP</span><span>APARTMENTS · 50 × 50</span></div>
+<canvas id="local-map" width="400" height="560" role="img" tabindex="0" aria-label="Apartments area map" aria-describedby="movement-help"></canvas>
+<figcaption><span class="location-dot" aria-hidden="true"></span> You <span>Scrolls as you move</span></figcaption>
+<div class="map-legend"><span><i class="legend-door"></i>Entrance</span><span><i class="legend-park"></i>Park</span><span><i class="legend-road"></i>Road</span></div>
 </figure>
+<figure class="world-map-panel">
+<div class="map-heading"><span>WORLD MAP</span><span>1 AREA</span></div>
+<canvas id="world-map" width="300" height="300" role="img" aria-label="World map showing Apartments and your position"></canvas>
+<figcaption><span class="location-dot" aria-hidden="true"></span> Apartments <span>Current area</span></figcaption>
+</figure>
+</div>
 </main>
 
 :: CharacterSheet [nobr]
