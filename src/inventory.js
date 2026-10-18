@@ -5,25 +5,76 @@ setup.inventory = (() => {
         tools: {name: 'Tool kit', width: 2, height: 2, color: '#d6aa70'},
         cloth: {name: 'Cleaning cloth', width: 1, height: 1, color: '#b4bfba'}
     };
+    function fitsItems(container, item, x, y, placements, ignoreId) {
+        const size = items[item.type];
+        if (!size || !Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 ||
+            x + size.width > container.columns || y + size.height > container.rows) return false;
+        return !placements.some(other => {
+            if (other.id === ignoreId) return false;
+            const otherSize = items[other.type];
+            return otherSize && x < other.x + otherSize.width && x + size.width > other.x &&
+                y < other.y + otherSize.height && y + size.height > other.y;
+        });
+    }
+    function firstFit(container, item, placements) {
+        for (let y = 0; y < container.rows; y++) for (let x = 0; x < container.columns; x++) {
+            if (fitsItems(container, item, x, y, placements)) return {...item, x, y};
+        }
+        return null;
+    }
+    function migrate(old) {
+        const containers = Object.fromEntries(Object.entries(old.containers).map(([id,list]) => [id,list.map(item => ({...item}))]));
+        const worn = setup.clothing.storage(State.variables.character);
+        const carried = Object.entries(containers).filter(([id]) => id.startsWith('worn:')).flatMap(([,list]) => list);
+        for (const id of Object.keys(containers)) if (id.startsWith('worn:')) delete containers[id];
+        for (const pocket of worn) containers[pocket.id] = [];
+        const notices = [];
+        for (const item of carried) {
+            let placed = false;
+            for (const pocket of worn) {
+                const fit = firstFit(pocket,item,containers[pocket.id]);
+                if (fit) {containers[pocket.id].push(fit);placed = true;break;}
+            }
+            if (placed) continue;
+            // Old items originated in trunks. Return overflow to reachable world
+            // containers rather than retaining an invisible legacy carrying bag.
+            const trunks = Object.keys(containers).filter(id => id.startsWith('trunk:'));
+            const source = item.id.slice(0,item.id.lastIndexOf(':'));
+            trunks.sort((a,b) => Number(b === source)-Number(a === source));
+            for (const id of trunks) {
+                const container = {columns:6,rows:4}, fit = firstFit(container,item,containers[id]);
+                if (!fit) continue;
+                containers[id].push(fit);notices.push(`${items[item.type].name} → ${id.replace('trunk:apartments:parked-car-','Parked car ')} trunk`);
+                placed = true;break;
+            }
+            if (!placed) {
+                // Compact an existing trunk if old placements fragmented its space.
+                for (const id of trunks) {
+                    const packed = [], list = [...containers[id],item].sort((a,b) => items[b.type].width*items[b.type].height-items[a.type].width*items[a.type].height);
+                    for (const entry of list) {
+                        const fit = firstFit({columns:6,rows:4},entry,packed);
+                        if (!fit) break;
+                        packed.push(fit);
+                    }
+                    if (packed.length !== list.length) continue;
+                    containers[id] = packed;notices.push(`${items[item.type].name} → ${id.replace('trunk:apartments:parked-car-','Parked car ')} trunk`);placed = true;break;
+                }
+            }
+            if (!placed) throw new Error('Pocket migration could not preserve all items. The original save is unchanged.');
+        }
+        return {version:2,containers,notices};
+    }
     function ensure() {
         let inventory = State.variables.inventory;
-        if (!inventory || inventory.version !== 1 || !inventory.containers || typeof inventory.containers !== 'object' || Array.isArray(inventory.containers)) {
-            inventory = State.variables.inventory = {version: 1, containers: {}};
-        }
-        for (const slot of setup.clothing.slots) {
-            const definition = setup.clothing.definitions[slot];
-            if (State.variables.character.clothing[slot] && definition.columns) {
-                const key = `worn:${slot}`;
-                if (!Object.hasOwn(inventory.containers, key)) inventory.containers[key] = [];
-            }
+        if (inventory?.version === 1) inventory = State.variables.inventory = migrate(inventory);
+        if (!inventory) inventory = State.variables.inventory = {version:2,containers:{},notices:[]};
+        for (const pocket of setup.clothing.storage(State.variables.character)) {
+            if (!Object.hasOwn(inventory.containers,pocket.id)) inventory.containers[pocket.id] = [];
         }
         return inventory;
     }
     function worn() {
-        ensure();
-        return setup.clothing.slots.filter(slot => State.variables.character.clothing[slot] && setup.clothing.definitions[slot].columns)
-            .map(slot => ({id: `worn:${slot}`, name: `${setup.clothing.definitions[slot].name}${slot === 'backpack' ? '' : ' pockets'}`,
-                columns: setup.clothing.definitions[slot].columns, rows: setup.clothing.definitions[slot].rows}));
+        ensure();return setup.clothing.storage(State.variables.character);
     }
     function trunk(objectId) {
         const world = State.variables.world;
@@ -50,15 +101,7 @@ setup.inventory = (() => {
         return ensure().containers[container.id] || [];
     }
     function fits(container, item, x, y, ignoreId) {
-        const definition = items[item.type];
-        if (!definition || !Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 ||
-            x + definition.width > container.columns || y + definition.height > container.rows) return false;
-        return !placements(container).some(other => {
-            if (other.id === ignoreId) return false;
-            const size = items[other.type];
-            return size && x < other.x + size.width && x + definition.width > other.x &&
-                y < other.y + size.height && y + definition.height > other.y;
-        });
+        return fitsItems(container,item,x,y,placements(container),ignoreId);
     }
     function transfer(fromId, toId, itemId, x, y, trunkId) {
         const accessible = worn();

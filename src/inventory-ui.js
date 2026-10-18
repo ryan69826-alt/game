@@ -7,19 +7,24 @@ setup.inventoryUI = (() => {
         inventory.ensure();
         Dialog.setup(trunkId ? 'Trunk & inventory' : 'Inventory', 'character-window inventory-window');
         const root = Dialog.body();
-        let selected = null, message = 'Select an item, then choose a free square in its destination. Items cannot overlap or rotate.';
+        let selected = null, message = 'Drag an item to a free space. You can also select an item and then a destination square. Items cannot overlap or rotate.';
+        const drag = setup.inventoryDrag.mount(root,trunkId,result => {message=result.message;if(result.ok) selected=null;render();});
         function render() {
             root.replaceChildren();
             const status = document.createElement('p');status.id = 'inventory-status';status.className = 'world-note';
             status.setAttribute('role', 'status');status.textContent = message;root.append(status);
+            if(inventory.ensure().notices?.length) {
+                const notice=document.createElement('p');notice.className='world-note inventory-migration';
+                notice.textContent='Pocket layout updated. Items that no longer fit were returned to trunks: '+inventory.ensure().notices.join('; ');root.append(notice);
+            }
             const layout = document.createElement('div');layout.className = 'inventory-layout';root.append(layout);
             function drawContainer(container, parent) {
                 const section = document.createElement('section');section.className = 'inventory-container';section.dataset.container = container.id;
-                const title = document.createElement('h3');title.textContent = container.name;
+                const title = document.createElement('h3');title.textContent = container.id.startsWith('worn:pants:') ? container.name.replace('Pants · ','').replace(' pocket','') : container.name;
                 const placements = inventory.placements(container);
                 const used = placements.reduce((sum, item) => sum + inventory.items[item.type].width * inventory.items[item.type].height, 0);
-                const count = document.createElement('p');count.className = 'storage-count';count.textContent = `${used} / ${container.columns * container.rows} blocks`;
-                const grid = document.createElement('div');grid.className = 'inventory-grid';grid.style.setProperty('--columns', container.columns);
+                const count = document.createElement('p');count.className = 'storage-count';count.textContent = container.columns===1 && container.rows===1 ? `${used}/1` : `${used} / ${container.columns * container.rows} blocks`;count.title=`${used} of ${container.columns*container.rows} blocks used`;
+                const grid = document.createElement('div');grid.className = 'inventory-grid';grid.dataset.storageId=container.id;grid.dataset.columns=container.columns;grid.dataset.rows=container.rows;grid.style.setProperty('--columns', container.columns);
                 grid.setAttribute('role', 'group');grid.setAttribute('aria-label', container.name);
                 for (let y = 0; y < container.rows; y++) for (let x = 0; x < container.columns; x++) {
                     if (placements.some(item => {
@@ -31,6 +36,7 @@ setup.inventoryUI = (() => {
                     cell.setAttribute('aria-label', `Empty block ${x + 1}, ${y + 1} in ${container.name}`);
                     cell.textContent = '·';
                     cell.addEventListener('click', () => {
+                        if(drag.ignoreClick()) return;
                         if (!selected) {message = 'Select an item first.';status.textContent = message;return;}
                         const result = inventory.transfer(selected.container, container.id, selected.id, x, y, trunkId);
                         message = result.message;if (result.ok) selected = null;
@@ -42,9 +48,10 @@ setup.inventoryUI = (() => {
                     button.className = 'inventory-item';button.dataset.item = item.id;
                     button.style.gridColumn = `${item.x + 1} / span ${definition.width}`;button.style.gridRow = `${item.y + 1} / span ${definition.height}`;
                     button.style.setProperty('--item-color', definition.color);
-                    button.textContent = definition.name;button.setAttribute('aria-label', `${definition.name}, ${definition.width} by ${definition.height} blocks, ${container.name}`);
+                    button.textContent = {water:'Water',tools:'Tools',cloth:'Cloth'}[item.type] || definition.name;button.title=definition.name;button.setAttribute('aria-label', `${definition.name}, ${definition.width} by ${definition.height} blocks, ${container.name}`);
                     button.setAttribute('aria-pressed', String(selected?.id === item.id));
                     button.addEventListener('click', () => {
+                        if(drag.ignoreClick()) return;
                         selected = selected?.id === item.id ? null : {container: container.id, id: item.id};
                         message = selected ? `${definition.name} selected (${definition.width} × ${definition.height}). Choose a destination square.` : 'Selection cleared.';
                         render();Array.from(root.querySelectorAll('[data-item]')).find(node => node.dataset.item === item.id)?.focus();
@@ -60,9 +67,19 @@ setup.inventoryUI = (() => {
             const player = document.createElement('div');player.className = 'inventory-column';layout.append(player);
             const heading = document.createElement('h2');heading.textContent = 'Worn storage';player.append(heading);
             const equipped = document.createElement('p');equipped.className = 'world-note';
-            equipped.textContent = 'Wearing: ' + (setup.clothing.slots.filter(slot => State.variables.character.clothing[slot]).map(slot => setup.clothing.definitions[slot].name).join(', ') || 'underwear only');player.append(equipped);
+            equipped.textContent = 'Wearing: ' + setup.clothing.summary(State.variables.character);player.append(equipped);
             const worn = inventory.worn();
-            for (const container of worn) drawContainer(container, player);
+            for (const container of worn.filter(container=>!container.id.startsWith('worn:pants:'))) {
+                if(container.id==='worn:backpack') continue;
+                drawContainer(container,player);
+            }
+            const pockets=worn.filter(container=>container.id.startsWith('worn:pants:'));
+            if(pockets.length) {
+                const title=document.createElement('h3');title.className='pockets-heading';title.textContent='Pants pockets';
+                const group=document.createElement('div');group.className='pocket-group';player.append(title,group);
+                for(const pocket of pockets) drawContainer(pocket,group);
+            }
+            for(const container of worn.filter(container=>container.id==='worn:backpack')) drawContainer(container,player);
             if (!worn.length) {
                 const empty = document.createElement('p');empty.className = 'world-note';empty.textContent = 'No carrying space. You have no pockets or bags equipped.';player.append(empty);
             }

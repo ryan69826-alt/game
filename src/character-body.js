@@ -1,65 +1,113 @@
-/* Pixel geometry, not baked-in outfits. Six fits drive independent body and
- * clothing models. The common neck/head never moves between fits. */
+/* Detailed paper-doll atlas. Body and three garments are independent cached
+ * pixel layers. Color masks extract the clothes; the underwear base stays whole. */
 setup.characterBody = (() => {
-    function draw(bodyContext, clothingContext, character, neckY, skin) {
-        const key = `${character.gender}-${character.bodySize}`;
-        const fit = setup.clothing.fits[key];
-        const female = character.gender === 'Female';
-        const {shoulder: s, waist: w, hip: h, arm: a, leg: l} = fit;
-        const bust = female ? {Small: 2, Medium: 4, Large: 6}[character.breastSize] : 0;
-        // Work at half resolution so all contours are true two-pixel steps.
-        const body = Object.assign(document.createElement('canvas'), {width: 72, height: 104});
-        const clothes = Object.assign(document.createElement('canvas'), {width: 72, height: 104});
-        const b = body.getContext('2d'), c = clothes.getContext('2d');
-        const shade = factor => `rgb(${skin.map(value => Math.round(value * factor)).join(',')})`;
-        function polygon(ctx, points, fill, outline = '#342f35') {
-            ctx.beginPath();points.forEach(([x,y], i) => ctx[i ? 'lineTo' : 'moveTo'](Math.round((72+x)/2)+.5, Math.round((neckY+y)/2)+.5));
-            ctx.closePath();ctx.fillStyle = fill;ctx.fill();ctx.strokeStyle = outline;ctx.lineWidth = 1;ctx.stroke();
+    const cache = new Map();
+    const make = (w,h) => Object.assign(document.createElement('canvas'),{width:w,height:h});
+    const skinPixel = (r,g,b) => r > 65 && r > g*1.18 && g > b*1.12;
+    const opaque = (r,g,b,a) => a > 210 && !(r > g*2.8 && r > b*2.8);
+    function extract(atlas,column,row) {
+        const key = `${column}:${row}`;
+        if (cache.has(key)) return cache.get(key);
+        const width = Math.floor(atlas.naturalWidth/6), split = Math.round(atlas.naturalHeight*.5);
+        const sy = row ? split : 0, height = row ? atlas.naturalHeight-split : split;
+        const canvas = make(width,height), ctx = canvas.getContext('2d',{willReadFrequently:true});
+        ctx.drawImage(atlas,column*atlas.naturalWidth/6,sy,width,height,0,0,width,height);
+        const image = ctx.getImageData(0,0,width,height), data = image.data;
+        let left=width,right=0,top=height,bottom=0;
+        for(let y=0;y<height;y++) for(let x=0;x<width;x++) {
+            const i=(y*width+x)*4;
+            if(!opaque(...data.slice(i,i+4))) {data[i+3]=0;continue;}
+            // Hard alpha and a limited palette prevent blurry edge pixels.
+            data[i+3]=255;for(let c=0;c<3;c++) data[i+c]=Math.round(data[i+c]/8)*8;
+            left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
         }
-        const feet = 193 - neckY;
-        const hipY = Math.round(feet * .52), kneeY = Math.round(feet * .78);
-        const torso = [[-5,0],[5,0],[7,5],[s,10],[s+bust,24],[s+bust-2,30],[w,42],[h,hipY],[-h,hipY],[-w,42],[-s+2,26],[-s,10],[-7,5]];
-        const leftArm = [[-s,11],[-s-a,19],[-s-a-2,48],[-s-a,62],[-s-a+4,62],[-s-a+5,49],[-s+3,24]];
-        const rightArm = [[s-1,12],[s+a,22],[s+a+2,47],[s+a+1,61],[s+a-3,62],[s+a-5,47],[s-4,27]];
-        const leftLeg = [[-h,hipY-3],[-1,hipY],[-3,kneeY],[-5,feet-5],[-l-7,feet-5],[-l-6,kneeY],[-h-1,hipY+8]];
-        const rightLeg = [[0,hipY],[h,hipY-3],[h+1,hipY+8],[l+4,kneeY],[l+5,feet-5],[1,feet-5],[0,kneeY]];
-        polygon(b,leftArm,shade(.84));polygon(b,rightArm,shade(1));
-        polygon(b,leftLeg,shade(.85));polygon(b,rightLeg,shade(1));polygon(b,torso,shade(1));
-        // Opaque base underwear remains when clothes are deselected.
-        polygon(b,[[-h+1,hipY-9],[h-1,hipY-9],[h,hipY+3],[5,hipY+10],[-5,hipY+10],[-h,hipY+3]],'#494455');
-        if (female) polygon(b,[[-s+1,20],[s+bust-1,20],[s+bust-2,31],[-s+3,31]],'#494455');
-        else {
-            polygon(b,[[-s+4,19],[-2,21],[-2,26],[-s+6,25]],shade(.88),shade(.88));
-            polygon(b,[[1,21],[s-2,18],[s-3,26],[1,26]],shade(.91),shade(.91));
+        ctx.putImageData(image,0,0);
+        const cropped=make(right-left+1,bottom-top+1);cropped.getContext('2d').drawImage(canvas,-left,-top);
+        const pixels=cropped.getContext('2d').getImageData(0,0,cropped.width,cropped.height);
+        let sum=0,count=0;
+        for(let y=0;y<Math.min(10,cropped.height);y++) for(let x=0;x<cropped.width;x++) {
+            const i=(y*cropped.width+x)*4;
+            if(pixels.data[i+3] && skinPixel(...pixels.data.slice(i,i+3))) {sum+=x;count++;}
         }
-        polygon(b,[[-l-7,feet-6],[-5,feet-6],[-1,feet],[-l-9,feet]],shade(.9));
-        polygon(b,[[1,feet-6],[l+5,feet-6],[l+10,feet],[0,feet]],shade(1));
-        const worn = character.clothing;
-        if (worn.backpack) {
-            polygon(c,[[-s-7,12],[-s+1,10],[-s+6,48],[-s-8,47],[-s-10,36]],'#4e6e65');
-            polygon(c,[[-s-8,28],[-s-1,28],[-s,42],[-s-8,42]],'#37544e');
+        const result={id:key,canvas:cropped,pixels,neck:count?sum/count:cropped.width/2};cache.set(key,result);return result;
+    }
+    function layer(source, skin, garment) {
+        const key = `${source.id}:${skin.join(',')}:${garment || 'base'}`;
+        if(cache.has(key)) return cache.get(key);
+        const canvas=make(source.canvas.width,source.canvas.height),ctx=canvas.getContext('2d');
+        const image=new ImageData(new Uint8ClampedArray(source.pixels.data),canvas.width,canvas.height);
+        const data=image.data;
+        for(let y=0;y<canvas.height;y++) for(let x=0;x<canvas.width;x++) {
+            const i=(y*canvas.width+x)*4;if(!data[i+3]) continue;
+            const [r,g,b]=data.slice(i,i+3),warm=skinPixel(r,g,b);
+            if(garment) {
+                const fraction=y/canvas.height;
+                const inBand=garment==='shirt'?fraction<.40:garment==='pants'?fraction>=.40 && fraction<.82:fraction>=.82;
+                if(warm || !inBand) {data[i+3]=0;continue;}
+                // Arm outlines are body pixels, not dangling shirt sleeves.
+                if((garment==='shirt' || garment==='pants') && !(garment==='shirt' ? g>r*1.10 && b>r*1.12 : b>r*1.08 && b>=g)) {
+                    let cloth=false;
+                    for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++) {
+                        const nx=x+dx,ny=y+dy;if(nx<0 || nx>=canvas.width || ny<0 || ny>=canvas.height) continue;
+                        const p=(ny*canvas.width+nx)*4,s=source.pixels.data;
+                        if(s[p+3] && (garment==='shirt' ? s[p+1]>s[p]*1.10 && s[p+2]>s[p]*1.12 : s[p+2]>s[p]*1.08 && s[p+2]>=s[p+1])) cloth=true;
+                    }
+                    if(!cloth) data[i+3]=0;
+                }
+            } else if(warm) {
+                const shade=Math.max(.45,Math.min(1.25,(r*.3+g*.59+b*.11)/145));
+                skin.forEach((value,c)=>data[i+c]=Math.round(value*shade/8)*8);
+            }
         }
-        if (worn.shirt) {
-            polygon(c,[[-s,10],[-s-a,17],[-s-a,28],[-s+1,30],[-s+4,21]],'#657d99');
-            polygon(c,[[s-1,11],[s+a,18],[s+a,30],[s-3,30],[s-5,20]],'#819bb8');
-            polygon(c,torso.slice(0,7).concat([[w+2,48],[-w-2,48],[-w,42],[-s+2,26],[-s,10],[-7,5]]),'#7891ad');
-            polygon(c,[[-6,3],[5,3],[7,7],[1,11],[-5,8]],'#526b87');
-            // Offset seam gives the same three-quarter direction as the head.
-            polygon(c,[[-w+2,31],[-w+4,32],[-w+4,45],[-w+2,45]],'#657d99','#657d99');
+        ctx.putImageData(image,0,0);cache.set(key,canvas);return canvas;
+    }
+    function draw(body,clothes,character,neckY,skin,atlas,baseline,neckX,backpack) {
+        const sizes=['Small','Medium','Large'],column=(character.gender==='Female'?3:0)+sizes.indexOf(character.bodySize);
+        const base=extract(atlas,column,0), dressed=extract(atlas,column,1), key=`${character.gender}-${character.bodySize}`;
+        function paint(ctx,source,image,bust=false) {
+            const trim=Math.round(source.canvas.height*.045),sourceHeight=source.canvas.height-trim;
+            const scale=(baseline-neckY)/sourceHeight;
+            ctx.imageSmoothingEnabled=false;
+            const change=character.gender==='Female' && bust ? {Small:-.06,Medium:0,Large:.08}[character.breastSize] : 0;
+            if(change) {
+                for(let y=0;y<baseline-neckY;y++) {
+                    const sy=trim+Math.floor(y/scale),t=(sy/source.canvas.height-.06)/.28;
+                    const factor=1+change*(t>0 && t<1?Math.sin(t*Math.PI):0);
+                    ctx.drawImage(image,0,sy,image.width,1,Math.round(neckX-source.neck*scale*factor),neckY+y,Math.round(image.width*scale*factor),1);
+                }
+            } else ctx.drawImage(image,0,trim,image.width,sourceHeight,Math.round(neckX-source.neck*scale),neckY,Math.round(source.canvas.width*scale),baseline-neckY);
         }
-        if (worn.pants) {
-            polygon(c,leftLeg,'#344252');polygon(c,rightLeg,'#435369');
-            polygon(c,[[-w-2,46],[w+2,46],[h,hipY],[h,hipY+5],[2,hipY+9],[-h,hipY+5],[-h,hipY]],'#435369');
-            polygon(c,[[-w-2,46],[w+2,46],[w+3,50],[-w-3,50]],'#2b3440');
-            polygon(c,[[w-3,51],[w+1,52],[w,58],[w-4,58]],'#344252','#344252');
+        const worn=setup.clothing.equipped(character);
+        // Backpack sits behind the torso and uses crisp integer rectangles.
+        if(worn.includes('backpack')) {
+            const scale=(baseline-neckY)/base.canvas.height,left=Math.round(neckX-base.neck*scale)-10;
+            const y=neckY+24;
+            backpack.fillStyle='#1b2825';backpack.fillRect(left+4,y,25,98);backpack.fillRect(left,y+8,32,82);
+            backpack.fillStyle='#3c5147';backpack.fillRect(left+3,y+8,26,82);backpack.fillRect(left+6,y+3,18,94);
+            backpack.fillStyle='#587060';backpack.fillRect(left+5,y+10,5,73);
+            backpack.fillStyle='#293c33';backpack.fillRect(left+12,y+12,15,42);backpack.fillRect(left+5,y+60,22,28);
+            backpack.fillStyle='#6c7c64';backpack.fillRect(left+6,y+60,20,2);backpack.fillRect(left+25,y+12,2,40);
+            backpack.fillStyle='#b2aa85';backpack.fillRect(left+20,y+61,3,5);backpack.fillRect(left+25,y+34,3,5);
+            backpack.fillStyle='#1b2825';backpack.fillRect(left+10,y-4,12,4);
+
         }
-        if (worn.shoes) {
-            polygon(c,[[-l-7,feet-7],[-5,feet-7],[-1,feet],[-l-9,feet]],'#30343d');
-            polygon(c,[[1,feet-7],[l+5,feet-7],[l+10,feet],[0,feet]],'#3c424d');
+        paint(body,base,layer(base,skin),true);
+        for(const garment of ['shirt','pants','shoes']) if(worn.includes(garment)) {
+            if(garment==='shoes') {
+                clothes.save();clothes.translate(-2,1);paint(clothes,dressed,layer(dressed,skin,garment));clothes.restore();
+                clothes.save();clothes.translate(2,1);paint(clothes,dressed,layer(dressed,skin,garment));clothes.restore();
+            }
+            paint(clothes,dressed,layer(dressed,skin,garment),garment==='shirt');
         }
-        if (worn.backpack) polygon(c,[[-s+1,8],[-s+4,8],[-s+1,36],[-s-2,35]],'#395b51');
-        bodyContext.imageSmoothingEnabled = clothingContext.imageSmoothingEnabled = false;
-        bodyContext.drawImage(body,0,0,144,208);clothingContext.drawImage(clothes,0,0,144,208);
+        if(worn.includes('backpack')) {
+            for(let y=0;y<58;y++) {
+                const x=neckX-23-Math.round(y*.15);
+                clothes.fillStyle='#26372d';clothes.fillRect(x,neckY+9+y,6,1);
+                clothes.fillStyle='#627661';clothes.fillRect(x+1,neckY+9+y,3,1);
+            }
+            clothes.fillStyle='#aca484';clothes.fillRect(neckX-29,neckY+47,7,7);
+            clothes.fillStyle='#324638';clothes.fillRect(neckX-27,neckY+48,3,4);
+        }
         return key;
     }
     return {draw};

@@ -64,7 +64,7 @@ body[data-tags~="creation"] #passages{max-width:960px}
 .range-limits{display:flex;justify-content:space-between;color:var(--muted);font-size:.65rem}
 .character-actions{margin-top:10px}
 .creation-screen .character-preview{position:sticky;top:24px}
-#character-canvas{display:block;width:100%;max-width:300px;height:auto;image-rendering:pixelated}
+#character-canvas{display:block;width:100%;max-width:288px;height:auto;image-rendering:pixelated}
 .preview-note{font-size:.65rem;color:var(--muted);line-height:1.6;margin:14px 0 0}
 .preview-status{font-size:.7rem;color:var(--accent);margin:10px 0 0}
 .preview-status:empty{display:none}

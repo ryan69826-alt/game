@@ -7,7 +7,7 @@ setup.characterPreview = (() => {
     const SKIN = {Pale: [231,190,165], Tan: [183,119,75], Olive: [166,145,95], Dark: [99,61,45]};
     const HAIR = {Blonde: [210,176,97], Black: [37,31,35], Brown: [89,55,36], Orange: [190,94,35], Gray: [151,153,160]};
     const EYES = {Blue: [83,155,220], Green: [92,165,104], Brown: [113,72,40]};
-    const HEAD_SCALE = .84;
+    const HEAD_SCALE = .79;
     const cache = new Map();
     const hairCache = new Map();
     const hairRowSplits = new Map();
@@ -45,7 +45,8 @@ setup.characterPreview = (() => {
         const skin=SKIN[character.skinTone], eye=EYES[character.eyeColor];
         for(let i=0; i<pixels.data.length; i+=4) {
             const [r,g,b,a]=pixels.data.slice(i,i+4);
-            if(a<80) continue;
+            if(a<180) {pixels.data[i+3]=0;continue;}
+            pixels.data[i+3]=255;
             if(skinPixel(r,g,b)) {
                 const shade=Math.max(.48,Math.min(1.22,(r*.3+g*.59+b*.11)/130));
                 skin.forEach((v,k)=>pixels.data[i+k]=Math.round(v*shade));
@@ -106,7 +107,8 @@ setup.characterPreview = (() => {
         const rgb=HAIR[color];let bottom=0,left=cell.width,right=0,top=cell.height;
         for(let i=0;i<pixels.data.length;i+=4) {
             const [r,g,b,a]=pixels.data.slice(i,i+4);
-            if(a>110 && hairPixel(r,g,b)) {
+            if(a>180 && hairPixel(r,g,b)) {
+                pixels.data[i+3]=255;
                 const y=Math.floor(i/4/cell.width),x=i/4%cell.width;
                 bottom=Math.max(bottom,y);top=Math.min(top,y);left=Math.min(left,x);right=Math.max(right,x);
                 const shade=Math.max(.4,Math.min(1.4,(r*.3+g*.59+b*.11)/115));
@@ -199,15 +201,15 @@ setup.characterPreview = (() => {
     }
     function draw(sources, layers, canvas, character) {
         const head=headPart(sources['head-reference']);
-        const bodyContext=clearLayer(layers.body),clothingContext=clearLayer(layers.clothing),headContext=clearLayer(layers.head),hairContext=clearLayer(layers.hair);
-        const baseline=193,height=140;
+        const backpackContext=clearLayer(layers.backpack),bodyContext=clearLayer(layers.body),clothingContext=clearLayer(layers.clothing),headContext=clearLayer(layers.head),hairContext=clearLayer(layers.hair);
+        const baseline=386,height=320;
         const headScale=height/head.fullHeight*HEAD_SCALE,headWidth=Math.round(head.canvas.width*headScale);
         const headHeight=Math.round(head.canvas.height*headScale),headTop=baseline-height;
-        const neckX=72,headLeft=Math.round(neckX-head.neckX*headScale);
-        const neckY=headTop+headHeight-2;
-        const model=setup.characterBody.draw(bodyContext,clothingContext,character,neckY,SKIN[character.skinTone]);
+        const neckX=144,headLeft=Math.round(neckX-head.neckX*headScale);
+        const neckY=headTop+headHeight-4;
+        const model=setup.characterBody.draw(bodyContext,clothingContext,character,neckY,SKIN[character.skinTone],sources['paper-dolls'],baseline,neckX,backpackContext);
         // Cover the common neck joint with the exact shared skin palette.
-        const upper=Math.max(4,Math.round(head.neckWidth*headScale)/2);
+        const upper=Math.max(4,Math.round(head.neckWidth*headScale/2));
         bodyContext.fillStyle=`rgb(${SKIN[character.skinTone].join(',')})`;
         bodyContext.fillRect(neckX-upper,neckY,upper*2,4);
         headContext.drawImage(tintedBody(head,character,true),headLeft,headTop,headWidth,headHeight);
@@ -224,7 +226,10 @@ setup.characterPreview = (() => {
         canvas.dataset.headHeight=headHeight;
         canvas.dataset.figureHeight=height;
         const ctx=clearLayer(canvas);
-        for(const layer of [layers.body,layers.clothing,layers.head,layers.hair]) ctx.drawImage(layer,0,0);
+        ctx.drawImage(layers.backpack,0,0);ctx.drawImage(layers.body,0,0);
+        // Soles occlude the bare toes; the underlying body remains independent.
+        if(setup.clothing.equipped(character).includes('shoes')) ctx.clearRect(0,baseline-8,canvas.width,canvas.height-baseline+8);
+        for(const layer of [layers.clothing,layers.head,layers.hair]) ctx.drawImage(layer,0,0);
         const breast=character.gender==='Female'?`, ${character.breastSize.toLowerCase()} breast size`:'';
         canvas.setAttribute('aria-label',`Adult ${character.gender.toLowerCase()} model, ${character.bodySize.toLowerCase()} body${breast}, ${character.skinTone.toLowerCase()} skin, ${character.eyeColor.toLowerCase()} eyes, ${character.hairColor.toLowerCase()} ${character.hairLength.toLowerCase()} hair.`);
         canvas.dataset.variation=model;

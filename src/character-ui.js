@@ -16,7 +16,7 @@ $(document).on(':passagedisplay', () => {
             breast.closest('.character-field').hidden=character.gender!=='Female';
         }
         document.getElementById('build-description').textContent=`${character.gender} · ${character.bodySize} body`;
-        document.getElementById('appearance-description').textContent=Object.entries(character.clothing).filter(([, worn]) => worn).map(([slot]) => setup.clothing.definitions[slot].name).join(' · ') || 'Underwear only';
+        document.getElementById('appearance-description').textContent=setup.clothing.summary(character);
         preview.refresh();
     }
     for(const [title,items] of groups) {
@@ -36,16 +36,22 @@ $(document).on(':passagedisplay', () => {
     }
     const clothing = document.createElement('fieldset');clothing.className = 'customization-group';
     const legend = document.createElement('legend');legend.textContent = 'Clothing';clothing.append(legend);
-    const grid = document.createElement('div');grid.className = 'clothing-choices';
+    const grid = document.createElement('div');grid.className = 'control-grid';
     for (const slot of setup.clothing.slots) {
-        const definition = setup.clothing.definitions[slot];
-        const label = document.createElement('label'), input = document.createElement('input');
-        input.type = 'checkbox';input.id = `clothing-${slot}`;input.checked = character.clothing[slot];
-        input.addEventListener('change', () => {character.clothing[slot] = input.checked;update();});
-        label.append(input, ` ${definition.name} · ${definition.columns * definition.rows} blocks`);grid.append(label);
+        const row = document.createElement('div');row.className = 'character-field';
+        const label = document.createElement('label'), input = document.createElement('select');
+        input.id = `clothing-${slot}`;input.name = slot;label.htmlFor = input.id;label.textContent = setup.clothing.labels[slot];
+        for (const id of setup.clothing.choices[slot]) {
+            const definition = setup.clothing.definitions[id];
+            const blocks = definition.pockets.reduce((sum,pocket) => sum + pocket.columns*pocket.rows,0);
+            input.append(new Option(`${definition.name}${blocks ? ` · ${blocks} block${blocks === 1 ? '' : 's'}` : ''}`, id));
+        }
+        input.value = character.clothing[slot];
+        input.addEventListener('change', () => {character.clothing[slot] = input.value;update();});
+        row.append(label,input);grid.append(row);
     }
     const note = document.createElement('p');note.className = 'world-note';
-    note.textContent = 'Only worn pockets and bags provide storage. Underwear and shoes have no storage.';
+    note.textContent = 'Shirt: one single-block pocket. Pants: four separate single-block pockets. Backpack: 16 blocks. No handheld items are available yet.';
     clothing.append(grid, note);root.append(clothing);
     setup.characterCreationBuild.mount(root, character);
     update();

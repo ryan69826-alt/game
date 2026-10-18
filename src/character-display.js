@@ -4,7 +4,7 @@ setup.characterDisplay = (() => {
         const canvas = document.getElementById('character-canvas');
         const images = Array.from(document.querySelectorAll('.character-source'));
         const sources = Object.fromEntries(images.map(image => [image.id, image]));
-        const layers = Object.fromEntries(['body', 'clothing', 'head', 'hair'].map(name => [name, document.getElementById(`${name}-layer`)]));
+        const layers = Object.fromEntries(['backpack', 'body', 'clothing', 'head', 'hair'].map(name => [name, document.getElementById(`${name}-layer`)]));
         const status = document.getElementById('preview-status');
         function refresh() {
             if (!canvas.isConnected) return;

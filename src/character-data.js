@@ -11,7 +11,7 @@ setup.character = (() => {
         skinTone: ['Pale', 'Tan', 'Olive', 'Dark']
     };
     const defaults = () => ({
-        version: 4, age: 26, gender: 'Male', genitals: 'Male', bodySize: 'Medium',
+        version: 5, age: 26, gender: 'Male', genitals: 'Male', bodySize: 'Medium',
         clothing: setup.clothing.defaults(), eyeColor: 'Brown',
         hairColor: 'Black', hairLength: 'Ear', skinTone: 'Tan', breastSize: 'Medium',
         traits: [], skills: Object.fromEntries(setup.characterRules.skills.map(name => [name, 0]))
@@ -22,11 +22,7 @@ setup.character = (() => {
             for (const [key, allowed] of Object.entries(choices)) {
                 if (allowed.includes(value[key])) result[key] = value[key];
             }
-            // Old composition/height choices migrate to the medium fit. Never
-            // overwrite valid new equipment selections (including all false).
-            for (const slot of setup.clothing.slots) {
-                if (typeof value.clothing?.[slot] === 'boolean') result.clothing[slot] = value.clothing[slot];
-            }
+            result.clothing = setup.clothing.normalize(value.clothing);
             const rules = setup.characterRules;
             if (Array.isArray(value.traits)) {
                 result.traits = rules.traits.filter(name => value.traits.includes(name));

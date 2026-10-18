@@ -96,13 +96,13 @@ test('each clothing layer toggles independently for every fit without changing t
         await page.getByLabel('Gender',{exact:true}).selectOption(gender);
         await page.getByLabel('Body Size',{exact:true}).selectOption(size);
         const body=await page.locator('#body-layer').evaluate(canvas=>canvas.toDataURL());
-        for(const slot of ['shirt','pants','shoes','backpack']) await page.locator(`#clothing-${slot}`).uncheck();
+        for(const slot of ['top','bottoms','shoes','storage']) await page.locator(`#clothing-${slot}`).selectOption('none');
         const naked=await image();
-        for(const slot of ['shirt','pants','shoes','backpack']) {
-            await page.locator(`#clothing-${slot}`).check();
+        for(const slot of ['top','bottoms','shoes','storage']) {
+            await page.locator(`#clothing-${slot}`).selectOption(({top:'shirt',bottoms:'pants',shoes:'shoes',storage:'backpack'})[slot]);
             assert.notEqual(await image(),naked,`${gender} ${size} ${slot} is visible`);
             assert.equal(await page.locator('#body-layer').evaluate(canvas=>canvas.toDataURL()),body);
-            await page.locator(`#clothing-${slot}`).uncheck();
+            await page.locator(`#clothing-${slot}`).selectOption('none');
             assert.equal(await image(),naked);
         }
     }
@@ -179,13 +179,13 @@ test('long hair keeps its left curtain continuous and inside the canvas across b
                 const gaps=[];
                 for(let y=headBottom+1;y<bottom-6;y++) {
                     let visible=false;
-                    for(let x=0;x<72;x++) if(pixels[(y*canvas.width+x)*4+3]>150) visible=true;
+                    for(let x=0;x<144;x++) if(pixels[(y*canvas.width+x)*4+3]>150) visible=true;
                     if(!visible) gaps.push(y);
                 }
                 return {left,right,gaps,bottom};
             });
             assert.deepEqual(hair.gaps,[],`${length} has no left-side gaps at ${key}`);
-            assert.ok(hair.left>2 && hair.right<141,'the complete hair silhouette fits inside the stage');
+            assert.ok(hair.left>2 && hair.right<285,'the complete hair silhouette fits inside the stage');
             assert.equal(await page.locator('#preview-status').innerText(),'');
         }
     }
@@ -201,7 +201,7 @@ test('independent identity and appearance survive menu, reload, and disk save ro
     for(const [label,choice] of Object.entries({'Gender':'Female','Genitals':'Both','Body Size':'Large','Breast Size':'Large','Eye Color':'Green','Hair Color':'Gray','Hair Length':'Floor','Skin Tone':'Dark'})) {
         await page.getByLabel(label,{exact:true}).selectOption(choice);
     }
-    await page.locator('#clothing-backpack').check();
+    await page.locator('#clothing-storage').selectOption('backpack');
     const expected=await value();assert.equal(expected.age,26);
     await page.getByRole('link',{name:'Save & return to menu'}).click();
     await page.reload();await page.waitForSelector('.main-menu');assert.deepEqual(await value(),expected);
@@ -225,14 +225,14 @@ test('old saves without character data open safely; malformed fields normalize',
     await page.waitForSelector('#character-gender');assert.equal((await value()).bodySize,'Medium');
     await page.evaluate(()=>{SugarCube.State.variables.character={gender:'Unknown',genitals:'Both',heightInches:900,bodyFat:'Fat'};SugarCube.Engine.play('CharacterCreation');});
     await page.waitForSelector('#character-gender');const character=await value();
-    assert.equal(character.gender,'Male');assert.equal(character.genitals,'Both');assert.equal(character.bodySize,'Medium');assert.equal(character.heightInches,undefined);assert.equal(character.bodyFat,undefined);assert.deepEqual(character.clothing,{shirt:true,pants:true,shoes:true,backpack:false});
-    assert.equal(character.breastSize,'Medium');assert.equal(character.version,4);
+    assert.equal(character.gender,'Male');assert.equal(character.genitals,'Both');assert.equal(character.bodySize,'Medium');assert.equal(character.heightInches,undefined);assert.equal(character.bodyFat,undefined);assert.deepEqual(character.clothing,{top:'shirt',bottoms:'pants',shoes:'shoes',storage:'none',handheld:'none'});
+    assert.equal(character.breastSize,'Medium');assert.equal(character.version,5);
     assert.deepEqual(character.traits,[]);assert.ok(Object.values(character.skills).every(xp=>xp===0));
 });
 
 test('all requested traits toggle independently without inventing stat effects',async()=>{
     const names=['Nerd','Athlete','Delinquent','Promiscuous','Exhibitionist','Deviant','Beautiful','Lustful','Masochist','Sadist','Polyamorous','Nudist','Insane','Ugly','Innocent'];
-    assert.equal(await page.getByRole('checkbox').count(),19);
+    assert.equal(await page.getByRole('checkbox').count(),15);
     for(const name of names) await page.getByRole('checkbox',{name,exact:true}).check();
     assert.deepEqual((await value()).traits,names);
     await page.getByRole('checkbox',{name:'Nerd',exact:true}).uncheck();
@@ -301,9 +301,9 @@ test('creator fits narrow screens and large-text preference without horizontal s
         await page.setViewportSize({width,height:844});
         await page.evaluate(()=>document.documentElement.classList.add('large-text'));
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        assert.equal(await page.locator('#character-controls select:visible').count(),7);
+        assert.equal(await page.locator('#character-controls select:visible').count(),12);
         await page.getByLabel('Gender',{exact:true}).selectOption('Female');
-        assert.equal(await page.locator('#character-controls select:visible').count(),8);
+        assert.equal(await page.locator('#character-controls select:visible').count(),13);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         await page.getByLabel('Gender',{exact:true}).selectOption('Male');
         await page.getByRole('link',{name:'Save & return to menu'}).click();
@@ -765,7 +765,7 @@ test('car edges restrict side actions, rear trunk access, front access, and diag
 });
 
 test('no equipment means no invisible storage; shoes add none and a backpack adds sixteen blocks',async()=>{
-    for(const slot of ['shirt','pants','shoes','backpack']) await page.locator(`#clothing-${slot}`).uncheck();
+    for(const slot of ['top','bottoms','shoes','storage']) await page.locator(`#clothing-${slot}`).selectOption('none');
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     const location=await page.locator('.world-content').elementHandle();
     const history=await page.evaluate(()=>SugarCube.State.length);
@@ -779,8 +779,8 @@ test('no equipment means no invisible storage; shoes add none and a backpack add
     await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
     const capacities=await page.evaluate(()=>{
         const setup=SugarCube.setup, character=SugarCube.State.variables.character;
-        character.clothing.shoes=true;const shoes=setup.inventory.worn();
-        character.clothing.backpack=true;const backpack=setup.inventory.worn();
+        character.clothing.shoes='shoes';const shoes=setup.inventory.worn();
+        character.clothing.storage='backpack';const backpack=setup.inventory.worn();
         return {shoes,backpack};
     });
     assert.deepEqual(capacities.shoes,[]);assert.equal(capacities.backpack.length,1);
@@ -788,7 +788,7 @@ test('no equipment means no invisible storage; shoes add none and a backpack add
 });
 
 test('trunk blocks support UI transfers, reject insufficient space, and persist without restocking',async()=>{
-    await page.locator('#clothing-backpack').check();
+    await page.locator('#clothing-storage').selectOption('backpack');
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await page.evaluate(()=>{SugarCube.State.variables.world.x=12;SugarCube.State.variables.world.y=30;SugarCube.Engine.play('Apartments');});
     await page.waitForSelector('#local-map[data-player-y="30"]');
@@ -800,16 +800,18 @@ test('trunk blocks support UI transfers, reject insufficient space, and persist 
     await actions.getByRole('button',{name:'Open trunk',exact:true}).click();
     const dialog=page.getByRole('dialog',{name:'Trunk & inventory',exact:true});await dialog.waitFor({state:'visible'});
     const trunk=dialog.locator('[data-container="trunk:apartments:parked-car-1"]');
-    const shirt=dialog.locator('[data-container="worn:shirt"]'), pants=dialog.locator('[data-container="worn:pants"]'), backpack=dialog.locator('[data-container="worn:backpack"]');
+    const shirt=dialog.locator('[data-container="worn:shirt"]'), pants=dialog.locator('[data-container="worn:pants:1"]'), backpack=dialog.locator('[data-container="worn:backpack"]');
     assert.equal(await trunk.locator('.inventory-item').count(),3);
     await trunk.getByRole('button',{name:/Tool kit,/}).click();
     await shirt.locator('[data-x="0"][data-y="0"]').click();
     assert.match(await dialog.locator('#inventory-status').textContent(),/Not enough adjoining/);
     assert.equal(await trunk.locator('.inventory-item').count(),3);
     await pants.locator('[data-x="0"][data-y="0"]').click();
-    assert.equal(await pants.locator('.storage-count').textContent(),'4 / 4 blocks');
-    await trunk.getByRole('button',{name:/Water bottle,/}).click();
+    assert.match(await dialog.locator('#inventory-status').textContent(),/Not enough adjoining/);
     await backpack.locator('[data-x="0"][data-y="0"]').click();
+    assert.equal(await backpack.locator('.storage-count').textContent(),'4 / 16 blocks');
+    await trunk.getByRole('button',{name:/Water bottle,/}).click();
+    await backpack.locator('[data-x="2"][data-y="0"]').click();
     await trunk.getByRole('button',{name:/Cleaning cloth,/}).click();
     await shirt.locator('[data-x="0"][data-y="0"]').click();
     assert.equal(await trunk.locator('.inventory-item').count(),0);
@@ -820,7 +822,7 @@ test('trunk blocks support UI transfers, reject insufficient space, and persist 
     await page.keyboard.press('e');await actions.getByRole('button',{name:'Open trunk',exact:true}).click();await dialog.waitFor({state:'visible'});
     assert.equal(await trunk.locator('.inventory-item').count(),0,'an emptied trunk never restocks');
     assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.inventory)),expected);
-    await pants.getByRole('button',{name:/Tool kit,/}).click();
+    await backpack.getByRole('button',{name:/Tool kit,/}).click();
     await trunk.locator('[data-x="2"][data-y="1"]').click();
     assert.equal(await trunk.locator('.inventory-item').count(),1,'items can be returned to the trunk');
     await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
@@ -854,14 +856,14 @@ test('packing rejects overlap, overflow, fractional positions, remote trunks and
         ];
         const unchanged=before===JSON.stringify(State.variables.inventory);
         State.variables.world.x=13;State.variables.world.y=29;
-        const remote=inv.transfer(container.id,'worn:pants',item.id,0,0,'parked-car-1');
+        const remote=inv.transfer(container.id,'worn:pants:1',item.id,0,0,'parked-car-1');
         return {attempts,unchanged,remote,finalUnchanged:before===JSON.stringify(State.variables.inventory)};
     });
     assert.ok(results.attempts.every(result=>!result.ok));assert.ok(results.unchanged);assert.equal(results.remote.ok,false);assert.ok(results.finalUnchanged);
 });
 
 test('inventory fits narrow screens and large text and blocks movement while open',async()=>{
-    await page.locator('#clothing-backpack').check();
+    await page.locator('#clothing-storage').selectOption('backpack');
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await page.evaluate(()=>{SugarCube.State.variables.world.x=12;SugarCube.State.variables.world.y=30;SugarCube.Engine.play('Apartments');});
     await page.waitForSelector('#local-map[data-player-y="30"]');
@@ -874,5 +876,89 @@ test('inventory fits narrow screens and large text and blocks movement while ope
         assert.ok(await dialog.evaluate(node=>node.scrollWidth<=node.clientWidth),`dialog has no horizontal overflow at ${width}`);
         const grid=await dialog.locator('.inventory-grid').first().boundingBox();const bounds=await dialog.boundingBox();
         assert.ok(grid.x>=bounds.x && grid.x+grid.width<=bounds.x+bounds.width+1,`trunk grid stays inside dialog at ${width}`);
+    }
+});
+
+test('five clothing dropdown categories grant one shirt pocket and four independent pants pockets',async()=>{
+    const categories={top:'Top',bottoms:'Bottoms',shoes:'Shoes',storage:'Wearable Storage',handheld:'Handheld'};
+    for(const [slot,label] of Object.entries(categories)) assert.equal(await page.getByRole('combobox',{name:label,exact:true}).getAttribute('id'),`clothing-${slot}`);
+    assert.equal(await page.locator('#character-controls input[type="checkbox"]').count(),15,'clothing adds no checkboxes');
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.getByRole('button',{name:'Inventory',exact:true}).click();
+    const pockets=await page.evaluate(()=>SugarCube.setup.inventory.worn());
+    assert.equal(pockets.length,5);assert.ok(pockets.every(pocket=>pocket.columns===1 && pocket.rows===1));
+    assert.equal(new Set(pockets.map(pocket=>pocket.id)).size,5);
+    assert.equal(await page.locator('.pocket-group .inventory-grid').count(),4);
+    const result=await page.evaluate(()=>{
+        const inv=SugarCube.setup.inventory;
+        return inv.fits(inv.worn().find(pocket=>pocket.id==='worn:pants:1'),{type:'tools'},0,0);
+    });assert.equal(result,false,'four separate pockets never combine into a 2 by 2 space');
+});
+
+test('pointer drag follows the mouse, drops into storage, and preserves items on invalid/outside drops',async()=>{
+    await page.locator('#clothing-storage').selectOption('backpack');
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=12;SugarCube.State.variables.world.y=30;SugarCube.Engine.play('Apartments');});
+    await page.waitForSelector('#local-map[data-player-y="30"]');await page.keyboard.press('e');await page.getByRole('button',{name:'Open trunk',exact:true}).click();
+    const dialog=page.getByRole('dialog',{name:'Trunk & inventory',exact:true});await dialog.waitFor({state:'visible'});
+    const trunk=dialog.locator('[data-container="trunk:apartments:parked-car-1"]'),bag=dialog.locator('[data-container="worn:backpack"]');
+    const tool=trunk.getByRole('button',{name:/Tool kit,/});const start=await tool.boundingBox();
+    await page.mouse.move(start.x+6,start.y+6);await page.mouse.down();await page.mouse.move(start.x+46,start.y+26,{steps:3});
+    const ghost=page.locator('.inventory-drag-ghost');await ghost.waitFor({state:'visible'});
+    const floating=await ghost.boundingBox();assert.ok(Math.abs(floating.x-(start.x+40))<1 && Math.abs(floating.y-(start.y+20))<1,'item stays at the grabbed mouse offset');
+    const target=await bag.locator('[data-x="0"][data-y="0"]').boundingBox();
+    await page.mouse.move(target.x+6,target.y+6,{steps:5});assert.equal(await ghost.getAttribute('data-valid'),'true');await page.mouse.up();
+    assert.equal(await ghost.count(),0);assert.equal(await bag.locator('.inventory-item').count(),1);assert.equal(await trunk.locator('.inventory-item').count(),2);
+    const before=await page.evaluate(()=>JSON.stringify(SugarCube.State.variables.inventory));
+    const moved=await bag.getByRole('button',{name:/Tool kit,/}).boundingBox(),pocket=await dialog.locator('[data-container="worn:pants:1"] .inventory-cell').boundingBox();
+    await page.mouse.move(moved.x+6,moved.y+6);await page.mouse.down();await page.mouse.move(pocket.x+6,pocket.y+6,{steps:5});
+    assert.equal(await ghost.getAttribute('data-valid'),'false');await page.mouse.up();
+    assert.equal(await page.evaluate(()=>JSON.stringify(SugarCube.State.variables.inventory)),before);
+    assert.match(await dialog.locator('#inventory-status').textContent(),/Not enough adjoining/);
+    const still=await bag.getByRole('button',{name:/Tool kit,/}).boundingBox();
+    await page.mouse.move(still.x+6,still.y+6);await page.mouse.down();await page.mouse.move(5,5,{steps:5});await page.mouse.up();
+    assert.equal(await page.evaluate(()=>JSON.stringify(SugarCube.State.variables.inventory)),before);assert.equal(await ghost.count(),0);
+    const cloth=trunk.getByRole('button',{name:/Cleaning cloth,/});assert.equal(await cloth.textContent(),'Cloth');assert.equal(await cloth.getAttribute('title'),'Cleaning cloth');
+    assert.equal(await cloth.evaluate(node=>getComputedStyle(node).whiteSpace),'nowrap');
+    const again=await bag.getByRole('button',{name:/Tool kit,/}).boundingBox();
+    await page.mouse.move(again.x+6,again.y+6);await page.mouse.down();await page.mouse.move(again.x+25,again.y+25);await ghost.waitFor({state:'visible'});
+    await page.keyboard.press('Escape');await page.mouse.up();assert.equal(await ghost.count(),0);
+    assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('inventory-dragging')),false);
+    assert.equal(await page.evaluate(()=>JSON.stringify(SugarCube.State.variables.inventory)),before);
+});
+
+test('legacy clothing and oversized old pocket contents migrate without hidden storage or lost items',async()=>{
+    await page.evaluate(()=>{
+        const {State,setup}=SugarCube;
+        State.variables.character.clothing={shirt:true,pants:true,shoes:true,backpack:false};
+        State.variables.character.version=4;
+        State.variables.inventory={version:1,containers:{
+            'worn:shirt':[{id:'trunk:apartments:parked-car-1:cloth',type:'cloth',x:1,y:0}],
+            'worn:pants':[{id:'trunk:apartments:parked-car-1:tools',type:'tools',x:0,y:0}],
+            'trunk:apartments:parked-car-1':[{id:'trunk:apartments:parked-car-1:water',type:'water',x:0,y:0}]
+        }};
+        setup.character.ensure();
+    });
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.getByRole('button',{name:'Inventory',exact:true}).click();
+    assert.match(await page.locator('.inventory-migration').textContent(),/Tool kit → Parked car 1 trunk/);
+    const migrated=await page.evaluate(()=>structuredClone(SugarCube.State.variables.inventory));
+    assert.equal(migrated.version,2);assert.equal(migrated.containers['worn:pants'],undefined);
+    const items=Object.values(migrated.containers).flat();assert.equal(items.length,3);assert.equal(new Set(items.map(item=>item.id)).size,3);
+    assert.equal(migrated.containers['worn:shirt'].length,1);assert.equal(migrated.containers['trunk:apartments:parked-car-1'].length,2);
+    await page.keyboard.press('Escape');await page.getByRole('button',{name:'Move south',exact:true}).click();await page.reload();await page.waitForSelector('#local-map');
+    await page.getByRole('button',{name:'Inventory',exact:true}).click();
+    assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.inventory)),migrated);
+});
+
+test('detailed sprite rendering uses crisp opaque pixels at native preview resolution',async()=>{
+    for(const gender of ['Male','Female']) for(const size of ['Small','Medium','Large']) {
+        await page.getByLabel('Gender',{exact:true}).selectOption(gender);await page.getByLabel('Body Size',{exact:true}).selectOption(size);
+        const result=await page.locator('#character-canvas').evaluate(canvas=>{
+            const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+            let soft=0;for(let i=3;i<pixels.length;i+=4) if(pixels[i]!==0 && pixels[i]!==255) soft++;
+            return {width:canvas.width,height:canvas.height,soft,smoothing:canvas.getContext('2d').imageSmoothingEnabled};
+        });
+        assert.deepEqual(result,{width:288,height:416,soft:0,smoothing:false},`${gender} ${size} has no blurred alpha edges`);
     }
 });
