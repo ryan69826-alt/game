@@ -1,0 +1,64 @@
+:: PassageHeader [nobr]
+<<if tags().includes("world")>>
+<<run setup.character.ensure()>>
+<<include "WorldSidebar">>
+<</if>>
+
+:: WorldSidebar [nobr]
+<aside class="world-sidebar" aria-label="Character sidebar">
+<a class="sidebar-brand" data-passage="Apartments" aria-label="Neon Meridian — Apartments">◈ <span>NEON MERIDIAN</span></a>
+<p class="sidebar-eyebrow">YOUR CHARACTER</p>
+<div class="sidebar-character"><<include "CharacterArtwork">></div>
+<p class="sidebar-identity"><span data-character-summary></span><span class="sidebar-age">Age 26</span></p>
+<p id="preview-status" class="preview-status" role="status" aria-live="polite"></p>
+<nav class="sidebar-nav" aria-label="Game pages">
+[[Apartments|Apartments]]
+[[Character|Character]]
+[[Stats|Stats]]
+</nav>
+<div class="sidebar-utilities">
+<<link "Saves">><<run UI.saves()>><</link>>
+[[Main menu|MainMenu]]
+</div>
+</aside>
+
+:: Apartments [nobr world]
+<<set $worldStarted = true>>
+<main class="world-content" aria-labelledby="location-title">
+<header class="world-heading"><p class="eyebrow">URBAN AREA · RESIDENTIAL</p><h1 id="location-title">Apartments</h1><p class="world-subtitle">A small corner of the city.</p></header>
+<figure class="district-map">
+<svg viewBox="0 0 640 280" role="img" aria-labelledby="map-title map-description">
+<title id="map-title">Apartments area map</title><desc id="map-description">A single apartment block surrounded by city streets. Your current location is Apartments.</desc>
+<defs><pattern id="map-grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M 24 0 L 0 0 0 24" fill="none" stroke="#2b4140" stroke-width="0.5"/></pattern></defs>
+<rect width="640" height="280" fill="#142326"/><rect width="640" height="280" fill="url(#map-grid)"/>
+<path d="M 0 222 H 640 M 105 0 V 280 M 550 0 V 280" fill="none" stroke="#29423f" stroke-width="34"/>
+<path d="M 0 222 H 640 M 105 0 V 280 M 550 0 V 280" fill="none" stroke="#6e8f8155" stroke-width="1" stroke-dasharray="7 8"/>
+<path d="M180 48 H466 V171 H375 V99 H270 V171 H180 Z" fill="#36534a" stroke="#a8ddc8" stroke-width="2"/>
+<path d="M200 68 H446 M200 80 H446 M200 92 H250 M394 92 H446 M200 104 H250 M394 104 H446 M200 116 H250 M394 116 H446 M200 128 H250 M394 128 H446 M200 140 H250 M394 140 H446" stroke="#769c89" stroke-width="3" stroke-dasharray="12 10"/>
+<rect x="287" y="116" width="70" height="49" fill="#213d34" stroke="#567a65"/>
+<path d="M322 166 V204" stroke="#84b39b" stroke-width="2"/>
+<circle cx="322" cy="201" r="7" fill="#a8ddc8"/><circle cx="322" cy="201" r="12" fill="none" stroke="#a8ddc8" opacity=".4"/>
+<text x="322" y="261" text-anchor="middle" fill="#d4e9df" font-family="Arial, sans-serif" font-size="14" letter-spacing="3">APARTMENTS</text>
+<text x="602" y="32" text-anchor="middle" fill="#8da99e" font-family="Arial, sans-serif" font-size="12">N ↑</text>
+</svg>
+<figcaption><span class="location-dot" aria-hidden="true"></span> You are here <span>Apartments</span></figcaption>
+</figure>
+<section class="location-description" aria-label="Location description"><p>You stand outside a row of apartment buildings. Balconies line the upper floors, and a sheltered entrance faces the pavement.</p><p>The hum of traffic drifts between the buildings. A delivery screen glows beside a bank of mailboxes.</p></section>
+<div class="location-footer"><span class="location-dot" aria-hidden="true"></span> Current location <strong>Apartments</strong></div>
+</main>
+
+:: Character [nobr world]
+<main class="world-content" aria-labelledby="character-title">
+<header class="world-heading"><p class="eyebrow">YOUR CHARACTER</p><h1 id="character-title">Character</h1><p class="world-subtitle">Identity, appearance, and starting traits.</p></header>
+<section class="world-panel" aria-labelledby="identity-title"><h2 id="identity-title">Identity & appearance</h2><dl id="character-details" class="character-details"></dl></section>
+<section class="world-panel" aria-labelledby="traits-title"><h2 id="traits-title">Starting traits</h2><ul id="character-traits" class="trait-tags"></ul></section>
+<nav class="world-actions" aria-label="Character page actions">[[Return to Apartments|Apartments]][[Edit character|CharacterCreation]]</nav>
+</main>
+
+:: Stats [nobr world]
+<main class="world-content" aria-labelledby="stats-title">
+<header class="world-heading"><p class="eyebrow">YOUR CHARACTER</p><h1 id="stats-title">Stats</h1><p class="world-subtitle">Skills and experience.</p></header>
+<section class="world-panel" aria-labelledby="skills-title"><h2 id="skills-title">Skills</h2><p class="world-note">Levels range from 0 (untrained) to 10. XP shown is progress toward the next level.</p><div id="world-skills" class="world-skills"></div></section>
+<p class="world-note">Additional character stats and trait effects have not been defined yet.</p>
+<nav class="world-actions" aria-label="Stats page actions">[[Return to Apartments|Apartments]]</nav>
+</main>

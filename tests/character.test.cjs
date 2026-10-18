@@ -327,3 +327,74 @@ test('creator fits narrow screens and large-text preference without horizontal s
         await page.getByRole('link',{name:'Character Creation',exact:true}).click();
     }
 });
+
+test('creator enters Apartments with the exact character, and sidebar pages preserve the build',async()=>{
+    await page.getByLabel('Gender',{exact:true}).selectOption('Female');
+    await page.getByLabel('Breast Size',{exact:true}).selectOption('Large');
+    await page.getByLabel('Hair Length',{exact:true}).selectOption('Floor');
+    await page.getByRole('checkbox',{name:'Nerd',exact:true}).check();
+    const input=page.getByRole('spinbutton',{name:'XP allocated to Lockpicking',exact:true});
+    await input.fill('150');await input.press('Tab');
+    const expected=await value(),sprite=await image();
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.waitForFunction(()=>document.querySelector('#character-canvas')?.hasAttribute('data-variation'));
+    assert.equal(await page.getByRole('heading',{name:'Apartments',exact:true}).count(),1);
+    assert.equal(await page.getByRole('img',{name:'Apartments area map'}).count(),1);
+    assert.equal(await image(),sprite,'sidebar uses the exact creator render');
+    assert.deepEqual(await value(),expected);
+    const nav=page.getByRole('navigation',{name:'Game pages'});
+    assert.equal(await nav.getByRole('link',{name:'Apartments',exact:true}).getAttribute('aria-current'),'page');
+    await nav.getByRole('link',{name:'Character',exact:true}).click();
+    await page.waitForSelector('#character-details dd');
+    assert.match(await page.locator('#character-details').textContent(),/Breast sizeLarge/);
+    assert.equal(await page.locator('#character-traits').textContent(),'Nerd');
+    await page.waitForFunction(()=>document.querySelector('#character-canvas')?.hasAttribute('data-variation'));
+    assert.equal(await image(),sprite);
+    await nav.getByRole('link',{name:'Stats',exact:true}).click();
+    assert.equal(await page.locator('.world-skill').count(),18);
+    const lock=page.locator('.world-skill[data-skill="Lockpicking"]');
+    assert.equal(await lock.locator('.world-skill-level').textContent(),'Level 2 / 10');
+    assert.equal(await lock.locator('.world-skill-xp').textContent(),'0 / 200 XP toward level 3');
+    await page.getByRole('link',{name:'Return to Apartments',exact:true}).click();
+    assert.deepEqual(await value(),expected,'read-only world pages never change the build');
+    await page.getByRole('link',{name:'Main menu',exact:true}).click();
+    assert.equal(await page.locator('.world-sidebar').count(),0);
+    await page.getByRole('link',{name:'Continue',exact:true}).click();
+    await nav.getByRole('link',{name:'Character',exact:true}).click();
+    await page.getByRole('link',{name:'Edit character',exact:true}).click();
+    assert.deepEqual(await value(),expected);assert.equal(await page.locator('.world-sidebar').count(),0);
+});
+
+test('world passage and character survive reload and disk save/load',async()=>{
+    await page.getByRole('checkbox',{name:'Athlete',exact:true}).check();
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.getByRole('navigation',{name:'Game pages'}).getByRole('link',{name:'Stats',exact:true}).click();
+    const expected=await value();
+    await page.reload();await page.waitForSelector('#world-skills .world-skill');
+    assert.deepEqual(await value(),expected);
+    await page.getByRole('button',{name:'Saves',exact:true}).click();
+    const [download]=await Promise.all([page.waitForEvent('download'),page.getByText('Save…',{exact:true}).click()]);
+    const save=join(temp,'world.save');await download.saveAs(save);await page.locator('#ui-dialog-close').click();
+    await page.getByRole('link',{name:'Main menu',exact:true}).click();
+    await page.locator('.main-menu a').filter({hasText:'Import/Export Saves'}).click();
+    const [chooser]=await Promise.all([page.waitForEvent('filechooser'),page.getByText('Load…',{exact:true}).click()]);
+    await chooser.setFiles(save);await page.waitForSelector('#world-skills .world-skill');
+    assert.deepEqual(await value(),expected);
+    assert.equal(await page.getByRole('navigation',{name:'Game pages'}).getByRole('link',{name:'Stats',exact:true}).getAttribute('aria-current'),'page');
+});
+
+test('world sidebar stays left of usable content on desktop and narrow screens',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    for(const width of [1440,700,390,320]) {
+        await page.setViewportSize({width,height:844});
+        await page.evaluate(()=>document.documentElement.classList.add('large-text'));
+        for(const name of ['Apartments','Character','Stats']) {
+            await page.getByRole('navigation',{name:'Game pages'}).getByRole('link',{name,exact:true}).click();
+            await page.waitForFunction(()=>document.querySelector('#character-canvas')?.hasAttribute('data-variation'));
+            assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${name} fits ${width}px`);
+            const sidebar=await page.locator('.world-sidebar').boundingBox(),content=await page.locator('.world-content').boundingBox();
+            assert.ok(sidebar.x+sidebar.width<=content.x,'sidebar remains on the left without covering story content');
+            const sprite=await page.locator('#character-canvas').boundingBox();assert.ok(sprite.width>70 && sprite.height>100,'full character stays visible');
+        }
+    }
+});

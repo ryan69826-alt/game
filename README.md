@@ -4,7 +4,7 @@ For a click-to-play website, see [GitHub Pages deployment](DEPLOYMENT.md).
 
 A small browser RPG interface built with **Twine 2 / SugarCube 2.37.3**.
 The current prototype opens on a main menu with exactly three choices:
-Character Creation, Options, and Import/Export Saves. Character Creation has
+Character Creation (Continue after entering the world), Options, and Import/Export Saves. Character Creation has
 independent gender and genital choices, a 4–7 ft height slider in one-inch steps,
 four body-fat levels, four muscle levels, three eye colors, five hair colors,
 seven hair lengths, and four skin tones. Male and female select different body
@@ -21,7 +21,15 @@ Reaching level 1 costs 50 XP; each following level costs twice the previous cost
 is cumulative: 150 XP means level 2 with 0/200 toward level 3. Use the number fields
 or ±10 XP buttons; the last increment uses the remaining pool. Reset refunds all
 skill XP. No combinations of traits are restricted yet.
-All protagonists are adults (age 26 in this prototype). There is no world yet.
+All protagonists are adults (age 26 in this prototype).
+Use **Start at Apartments** in the creator to enter the first urban location.
+Apartments has a simple area map and generic exterior description. A persistent
+left sidebar displays the exact customized full-body character and links to
+Apartments, Character, and Stats. Character shows the saved identity, appearance,
+and traits, plus an edit link. Stats shows all 18 skill levels and XP progress;
+additional stats and trait effects remain undefined. No other locations, story,
+NPCs, or time simulation are implemented. Continue returns to Apartments.
+The sidebar's Saves link supports saving/loading from world pages.
 Options provides larger text and reduced motion. Save management uses
 SugarCube's built-in browser slots and disk import/export.
 
@@ -61,11 +69,15 @@ python3 scripts/project.py build
 Build also produces the named `dist/Neon-Meridian.html` entry.
 Open either HTML file directly in any modern browser. The menu adapts to
 narrow screens. Existing sessions from the earlier world preview redirect to
-the main menu; no previous world content is shown.
+the main menu, except the old Apartment passage which now redirects to Apartments.
 
 ## Source layout
 
-- `src/story.twee`: Twine metadata, main menu, character creation layout.
+- `src/story.twee`: Twine metadata, menu, creator, and shared artwork markup.
+- `src/world.twee`: Apartments, Character, Stats, and the shared sidebar.
+- `src/world-ui.js`: read-only world character and skill views.
+- `src/world.css`: responsive world layout with a left sidebar.
+- `src/character-display.js`: shared artwork loading/rendering lifecycle.
 - `src/character-data.js`: versioned serializable character schema and validation.
 - `src/character-ui.js`: accessible appearance inputs and live SugarCube state updates.
 - `src/character-rules.js`: trait/skill definitions, doubling XP thresholds and budget rules.
@@ -139,7 +151,7 @@ npm test
 ```
 
 Alternatively set `CHROMIUM_EXECUTABLE_PATH` to an existing Chromium binary.
-Tests build and serve their own copy on loopback port 8765. Fourteen checks cover all
+Tests build and serve their own copy on loopback port 8765. Seventeen checks cover all
 64 body renders with pixel-identical heads/hair and connected necks, gender and
 breast-size switching, all other visual choices, keyboard height control,
 menu/reload persistence, disk save/load, legacy save defaults, and narrow screens.
@@ -151,3 +163,9 @@ light/dark skin and hair, verifying that eyes, nose, and mouth retain their pixe
 Starting-build checks cover all trait selections, XP thresholds through level 10,
 allocation/refunds, overspending and invalid input, legacy normalization, and
 trait/skill persistence through menu, reload, and disk save/load.
+
+World checks enter Apartments with a customized build, compare sidebar pixels
+with the creator, verify Character/Stats navigation and XP, and round-trip world
+passages through reload and disk saves. Sidebar layout is checked at 1440, 700,
+390, and 320 pixels with larger text enabled. To review manually, enter Apartments,
+open both sidebar pages, return to the location, then use Saves or Main menu.

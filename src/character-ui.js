@@ -3,12 +3,7 @@ $(document).on(':passagedisplay', () => {
     const root=document.getElementById('character-controls');
     if(!root) return;
     const character=setup.character.ensure();
-    const canvas=document.getElementById('character-canvas');
-    const images=Array.from(document.querySelectorAll('.character-source'));
-    const sources=Object.fromEntries(images.map(image=>[image.id,image]));
-    const layers=Object.fromEntries(['body','head','hair'].map(name=>[name,document.getElementById(`${name}-layer`)]));
-    const status=document.getElementById('preview-status');
-    let ready=images.every(image=>image.complete && image.naturalWidth>0);
+    const preview=setup.characterDisplay.mount(character);
     const groups=[
         ['Identity',[['gender','Gender'],['genitals','Genitals']]],
         ['Body',[['heightInches','Height'],['bodyFat','Body Fat'],['muscleMass','Muscle Mass'],['breastSize','Breast Size']]],
@@ -22,10 +17,7 @@ $(document).on(':passagedisplay', () => {
         }
         document.getElementById('build-description').textContent=`${character.bodyFat} build · ${character.muscleMass} muscle`;
         document.getElementById('appearance-description').textContent=setup.character.heightLabel(character.heightInches);
-        if(ready) {
-            try { setup.characterPreview.draw(sources,layers,canvas,character); status.textContent=''; }
-            catch(error) { status.textContent='Preview could not render. Your selections are retained.';console.error(error); }
-        }
+        preview.refresh();
     }
     for(const [title,items] of groups) {
         const group=document.createElement('fieldset');group.className='customization-group';
@@ -58,11 +50,6 @@ $(document).on(':passagedisplay', () => {
         }
         root.append(group);
     }
-    for(const image of images) {
-        image.addEventListener('load',()=>{if(root.isConnected){ready=images.every(image=>image.complete && image.naturalWidth>0);update();}},{once:true});
-        image.addEventListener('error',()=>{status.textContent='Character artwork could not load. Your selections are retained.';},{once:true});
-    }
     setup.characterCreationBuild.mount(root, character);
-    if(!ready) status.textContent='Loading appearance…';
     update();
 });
