@@ -92,12 +92,17 @@ for future NPC/event systems; changes persist and do not cost time.
 Beds offer **Sit**, **Nap for 1 hour**, and **Sleep** with a 1–10 hour choice.
 Sitting takes no time. Rest advances the game clock and processes any rent due.
 Tiredness starts at 0, rises by 1 per 900 awake game seconds, and caps at 100.
-Fatigue is `floor(tiredness × 0.4) + exertion`, capped at 40; higher means worse.
-Each hour of sleep/nap recovers 10 tiredness and 4 fatigue and resets the awake
-counter on waking. Reaching 40 fatigue collapses the player for one game hour
-and stops held movement. No health damage, eviction or other penalty is invented.
-`setup.rest.exert(cost)` supplies fatigue costs for future actions; an action that
-would reach 40 fails and triggers collapse. Invalid costs/durations are rejected.
+Fatigue is `floor(tiredness × 0.4) + exertion`, capped at 100; tiredness alone
+contributes at most 40. Higher means worse. Sleep and unconsciousness reduce
+tiredness by 1 per five minutes (12 per hour), resetting the awake counter on
+waking. Fatigue from tiredness falls alongside it; exertion recovers by 4 per
+rest hour. Reaching 100 tiredness or 100 fatigue triggers collapse and stops held
+movement. The player remains unconscious until tiredness is at most 80: from
+100, this takes 100 minutes. A fatigue-only collapse below 80 tiredness has a
+minimum five-minute recovery. No health damage, eviction or other penalty is
+invented. `setup.rest.exert(cost)` supplies fatigue costs for future actions;
+an action that would reach 100 fails and triggers collapse. Invalid costs and
+durations are rejected.
 
 Parked Car 2's trunk contains one canned coffee as a test consumable. Carry it,
 select it in Inventory, and use **Drink coffee** to reduce tiredness by 10 without

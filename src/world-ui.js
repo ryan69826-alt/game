@@ -16,7 +16,7 @@ setup.worldWindows = (() => {
         if(vitals) {
             const player=setup.playerState.ensure();
             const rest=setup.rest.ensure();
-            for(const [name,value] of Object.entries({Health:`${player.health} / ${player.maxHealth}`,Money:setup.playerState.formatMoney(player.money),Tiredness:`${rest.tiredness} / 100`,Fatigue:`${setup.rest.fatigue(rest)} / 40`})) {
+            for(const [name,value] of Object.entries({Health:`${player.health} / ${player.maxHealth}`,Money:setup.playerState.formatMoney(player.money),Tiredness:`${rest.tiredness} / 100`,Fatigue:`${setup.rest.fatigue(rest)} / 100`})) {
                 const term=document.createElement('dt');term.textContent=name;
                 const description=document.createElement('dd');description.textContent=value;vitals.append(term,description);
             }

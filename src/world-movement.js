@@ -13,7 +13,7 @@ setup.worldMovement = (() => {
     }
     function move(dx, dy) {
         const world = ensure(), map = setup.worldMaps[world.mapId];
-        if(setup.rest.fatigue()>=40) {const outcome=setup.rest.collapse();setup.rest.commit();return {moved:false,collapsed:true,reason:outcome.message};}
+        if(setup.rest.fatigue()>=100||setup.rest.ensure().tiredness>=100) {const outcome=setup.rest.collapse();setup.rest.commit();return {moved:false,collapsed:true,reason:outcome.message};}
         if (!Number.isInteger(dx) || !Number.isInteger(dy) || Math.abs(dx) + Math.abs(dy) !== 1) return {moved: false, reason: 'Choose one adjacent square.'};
         const target = map.tileAt(world.x + dx, world.y + dy);
         if (!target.walkable) return {moved: false, reason: target.kind === 'boundary' ? `You have reached the edge of ${map.name}.` : `${target.label} blocks the way.`};

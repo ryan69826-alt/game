@@ -1410,12 +1410,12 @@ test('beds provide sit, one-hour nap, and 1–10 hour sleep; recovery, awake res
     assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),time);
     await dialog.getByRole('button',{name:'Nap for 1 hour',exact:true}).click();
     assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),time+3600);
-    assert.equal(await page.locator('#player-tiredness').textContent(),'70 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'28 / 40');
+    assert.equal(await page.locator('#player-tiredness').textContent(),'68 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'27 / 100');
     assert.match(await page.locator('#room-sounds').textContent(),/wake/);
     await dialog.getByRole('button',{name:'Sleep',exact:true}).click();assert.equal(await dialog.getByLabel('Sleep for',{exact:true}).locator('option').count(),10);
     await dialog.getByLabel('Sleep for',{exact:true}).selectOption('8');await dialog.getByRole('button',{name:'Sleep for 8 hours',exact:true}).click();
     assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),time+9*3600);
-    assert.equal(await page.locator('#player-tiredness').textContent(),'0 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'0 / 40');
+    assert.equal(await page.locator('#player-tiredness').textContent(),'0 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'0 / 100');
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.rest.awakeSeconds),0);
     const invalid=await page.evaluate(()=>[0,11,1.5].map(hours=>SugarCube.setup.rest.sleep('bed-1-2',hours).ok));assert.deepEqual(invalid,[false,false,false]);
     await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#player-time');assert.equal(await page.locator('#player-time').textContent(),'17:00:00');
@@ -1426,19 +1426,19 @@ test('beds provide sit, one-hour nap, and 1–10 hour sleep; recovery, awake res
     assert.ok(due.outcome.ok);assert.equal(due.after,due.before-600);
 });
 
-test('collapse at maximum fatigue advances one hour, recovers, stops held movement, and action costs can trigger it',async()=>{
+test('maximum tiredness or fatigue causes collapse, wakes at the recovery target, and stops held movement',async()=>{
     await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await page.evaluate(()=>{SugarCube.State.variables.rest={version:1,tiredness:99,exertion:0,awakeSeconds:899};});
     await page.keyboard.down('d');
-    const world=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));assert.equal(world.x,31);assert.equal(world.elapsedSeconds,3605);
-    assert.match(await page.locator('#movement-status').textContent(),/collapse/);assert.equal(await page.locator('#player-tiredness').textContent(),'90 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'36 / 40');
+    const world=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));assert.equal(world.x,31);assert.equal(world.elapsedSeconds,6005);
+    assert.match(await page.locator('#movement-status').textContent(),/collapse/);assert.equal(await page.locator('#player-tiredness').textContent(),'80 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'32 / 100');
     await page.clock.runFor(1200);assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),world);await page.keyboard.up('d');
     const action=await page.evaluate(()=>{
         const {setup,State}=SugarCube;State.variables.rest={version:1,tiredness:0,exertion:0,awakeSeconds:0};const before=setup.gameClock.now();
-        const result=setup.rest.exert(40);return {result,elapsed:setup.gameClock.now()-before,fatigue:setup.rest.fatigue()};
+        const result=setup.rest.exert(100);return {result,elapsed:setup.gameClock.now()-before,fatigue:setup.rest.fatigue()};
     });
-    assert.equal(action.result.ok,false);assert.ok(action.result.collapsed);assert.equal(action.elapsed,3600);assert.equal(action.fatigue,36);
+    assert.equal(action.result.ok,false);assert.ok(action.result.collapsed);assert.equal(action.elapsed,300);assert.ok(action.fatigue<100&&action.fatigue>99);
 });
 
 test('carried coffee is consumed once, lowers tiredness, and leaves the awake schedule and clock unchanged',async()=>{
@@ -1455,4 +1455,29 @@ test('carried coffee is consumed once, lowers tiredness, and leaves the awake sc
     assert.equal(await page.locator('#player-tiredness').textContent(),'40 / 100');assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),before);
     const after=await page.evaluate(id=>({repeat:SugarCube.setup.inventory.consume('worn:shirt',id),awake:SugarCube.State.variables.rest.awakeSeconds,count:Object.values(SugarCube.State.variables.inventory.containers).flat().filter(item=>item.id===id).length}),coffee.id);
     assert.equal(after.repeat.ok,false);assert.equal(after.awake,899);assert.equal(after.count,0);
+});
+
+test('fatigue caps at 100, tiredness contributes only 40, and collapse recovery ticks are exact',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;
+        const contribution=setup.rest.fatigue({tiredness:100,exertion:0});
+        const cap=setup.rest.fatigue({tiredness:100,exertion:100});
+        const recoveries=[];
+        for(let tiredness=81;tiredness<=100;tiredness++) {
+            State.variables.world.elapsedSeconds=0;
+            State.variables.rest={version:1,tiredness,exertion:100-Math.floor(tiredness*.4),awakeSeconds:900};
+            const result=setup.rest.collapse();
+            recoveries.push({start:tiredness,tiredness:State.variables.rest.tiredness,seconds:State.variables.world.elapsedSeconds,
+                clock:setup.gameClock.elapsed(),awake:State.variables.rest.awakeSeconds,collapsed:result.collapsed,fatigue:setup.rest.fatigue()});
+        }
+        State.variables.world.elapsedSeconds=0;State.variables.rest={version:1,tiredness:0,exertion:0,awakeSeconds:0};
+        setup.rest.changeTiredness(100);
+        return {contribution,cap,recoveries,tiredOnly:{seconds:State.variables.world.elapsedSeconds,tiredness:State.variables.rest.tiredness,fatigue:setup.rest.fatigue()}};
+    });
+    assert.equal(result.contribution,40);assert.equal(result.cap,100);
+    for(const row of result.recoveries) {
+        assert.equal(row.tiredness,80);assert.equal(row.seconds,(row.start-80)*300);assert.equal(row.clock,row.seconds);assert.equal(row.awake,0);assert.ok(row.collapsed&&row.fatigue<100);
+    }
+    assert.deepEqual(result.tiredOnly,{seconds:6000,tiredness:80,fatigue:32});
 });
