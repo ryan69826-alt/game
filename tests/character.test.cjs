@@ -2249,7 +2249,7 @@ test('D1 connects east of Apartments with five shops, a north parking lot and a 
     const result=await page.evaluate(()=>{const map=SugarCube.setup.worldMaps.d1,queue=[map.spawn],seen=new Set();
         for(let i=0;i<queue.length;i++){const p=queue[i],key=`${p.x},${p.y}`;if(seen.has(key)||!map.tileAt(p.x,p.y).walkable)continue;seen.add(key);for(const [dx,dy]of[[0,1],[1,0],[0,-1],[-1,0]])queue.push({x:p.x+dx,y:p.y+dy});}
         return {shops:map.shops.map(shop=>shop.name),north:map.shops.every(shop=>shop.y+shop.height<44)&&map.parking.y+map.parking.height<44,
-            south:map.platform.y>48&&map.train.y>48,reachable:map.shops.every(shop=>seen.has(`${shop.door.x},${shop.door.y+1}`))&&seen.has('45,69'),
+            south:map.platform.y>48&&map.train.y>48,reachable:map.shops.every(shop=>seen.has(`${shop.approach.x},${shop.approach.y}`))&&seen.has('45,69'),
             blocked:!map.tileAt(map.train.x,map.train.y).walkable&&!map.tileAt(15,72).walkable,
             crossingClear:map.cars.every(car=>car.x+car.width<=43||car.x>47),tunnels:map.tunnels.length};});
     assert.deepEqual(result.shops,['Discount store','Food stall','Laundry','Barbershop','Electronic repair store']);assert.equal(result.north,true);assert.equal(result.south,true);assert.equal(result.reachable,true);assert.equal(result.blocked,true);assert.equal(result.crossingClear,true);assert.equal(result.tunnels,2);
@@ -2260,12 +2260,12 @@ test('all D1 enclosed shops can be entered and exited while the food stall uses 
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     const shops=await page.evaluate(()=>SugarCube.setup.worldMaps.d1.shops);
     for(const shop of shops) {
-        await placeInWorld('d1',shop.door.x,shop.door.y+1);await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
+        await placeInWorld('d1',shop.approach.x,shop.approach.y);await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
         if(shop.stall){await dialog.getByRole('button',{name:'Inspect',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/Food purchases/);await page.keyboard.press('Escape');continue;}
         await dialog.getByRole('button',{name:'Open',exact:true}).click();await dialog.getByRole('button',{name:'Enter',exact:true}).click();await page.waitForSelector(`#local-map[data-map-id="${shop.id}"]`);
         assert.equal(await page.locator('#world-map').getAttribute('data-location-id'),'d1');assert.match(await page.locator('#room-sounds').textContent(),/Ceiling lights/);
-        await placeInWorld(shop.id,5,8);await page.keyboard.press('e');await dialog.getByRole('button',{name:'Exit',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="d1"]');
-        assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.y),shop.door.y+1);
+        await placeInWorld(shop.id,shop.exit.x-(shop.facing==='east'?1:0),shop.exit.y-(shop.facing==='south'?1:0));await page.keyboard.press('e');await dialog.getByRole('button',{name:'Exit',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="d1"]');
+        assert.deepEqual(await page.evaluate(()=>({x:SugarCube.State.variables.world.x,y:SugarCube.State.variables.world.y})),shop.approach);
     }
 });
 
@@ -2332,10 +2332,14 @@ test('housing and storage sidewalks align at the boundary and remain continuous 
 
 test('D1 compact parking has a clear road driveway and continuous outer sidewalks to the shops',async()=>{
     const result=await page.evaluate(()=>{const map=SugarCube.setup.worldMaps.d1;
-        return {size:map.parking.width*map.parking.height,againstRoad:map.parking.y+map.parking.height===map.roads.horizontal.y-1,driveway:Array.from({length:13},(_,i)=>map.tileAt(45,32+i).kind),
+        return {size:map.parking.width*map.parking.height,againstRoad:map.parking.y+map.parking.height===map.roads.horizontal.y-1,driveway:Array.from({length:12},(_,i)=>map.tileAt(45,33+i).kind),
             aisles:[42,48].every(x=>map.tileAt(x,38).kind==='parking'),
-            paths:[15,74].every(x=>Array.from({length:12},(_,i)=>map.tileAt(x,32+i)).every(tile=>tile.walkable&&tile.kind==='pavement')&&map.tileAt(x,31).kind==='path'),
-            cars:map.interactables.filter(o=>o.kind==='car').map(o=>o.id)};});
+            paths:[15,74].every(x=>Array.from({length:11},(_,i)=>map.tileAt(x,33+i)).every(tile=>tile.walkable&&tile.kind==='pavement')&&map.tileAt(x,31).kind==='path'),
+            cars:map.interactables.filter(o=>o.kind==='car').map(o=>o.id),
+            anchor:map.shops[0].facing==='east'&&map.shops[0].door.x===map.shops[0].x+map.shops[0].width-1&&map.shops[0].approach.x===map.parking.x-2,
+            connected:map.shops.slice(1).every((shop,i)=>shop.x===map.shops[i].x+map.shops[i].width&&shop.y===map.shops[i].y),
+            twoWide:[31,32].every(y=>map.tileAt(20,y).kind==='path')&&map.tileAt(20,30).kind==='building'&&map.tileAt(20,33).kind==='parking'};});
+    assert.equal(result.anchor,true);assert.equal(result.connected,true);assert.equal(result.twoWide,true);
     assert.equal(result.againstRoad,true);assert.ok(result.size<80*14*.6);assert.ok(result.driveway.every(kind=>kind==='road'));assert.equal(result.aisles,true);assert.equal(result.paths,true);
     assert.deepEqual(result.cars,Array.from({length:8},(_,i)=>`d1-car-${i+1}`));
 });

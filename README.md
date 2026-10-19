@@ -422,7 +422,9 @@ Region-edge connections live in each map's `exits` metadata and are resolved by 
 
 Walk east off Apartments to enter D1; walking west returns along the aligned road.
 A shopping center and compact parking lot sit immediately north of the roadside
-sidewalk, with no grass gap. A short central driveway connects the lot to the road. Sidewalks flank the lot from the road to the shop frontage.
+sidewalk, with no grass gap. A short central driveway connects the lot to the road. Two-tile sidewalks flank the lot and run along the connected shop frontage.
+The discount store anchors the west side, with its door facing east into the lot;
+the other four shops form an adjoining row along the north side.
 The shops are a discount store, food stall, laundry, barbershop and electronic
 repair store. Four shops have
 explorable interiors; the food stall is an outdoor counter. Shop services remain

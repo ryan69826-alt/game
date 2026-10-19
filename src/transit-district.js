@@ -3,9 +3,15 @@
 setup.transitDistrict=()=>{
     const width=90,height=90,inside=(x,y,r)=>x>=r.x&&x<r.x+r.width&&y>=r.y&&y<r.y+r.height;
     const names=['Discount store','Food stall','Laundry','Barbershop','Electronic repair store'];
-    const shops=names.map((name,i)=>({id:`d1-shop-${i+1}`,name,label:['DISCOUNT','FOOD','LAUNDRY','BARBER','REPAIRS'][i],x:5+i*17,y:i===1?22:18,width:12,height:i===1?6:10,door:{x:11+i*17,y:27},stall:i===1}));
+    const shops=names.map((name,i)=>{
+        const anchor=i===0,x=anchor?5:15+(i-1)*14,y=21,width=anchor?10:i===4?16:14,height=anchor?22:10;
+        const door=anchor?{x:x+width-1,y:37}:{x:x+Math.floor(width/2),y:y+height-1};
+        return {id:`d1-shop-${i+1}`,name,label:['DISCOUNT','FOOD','LAUNDRY','BARBER','REPAIRS'][i],x,y,width,height,door,stall:i===1,
+            facing:anchor?'east':'south',approach:anchor?{x:door.x+1,y:door.y}:{x:door.x,y:door.y+1},
+            spawn:anchor?{x:8,y:5}:{x:5,y:7},exit:anchor?{x:10,y:5}:{x:5,y:9}};
+    });
     const parking={x:17,y:33,width:56,height:10};
-    const driveway={x:43,y:32,width:5,height:12};
+    const driveway={x:43,y:33,width:5,height:11};
     const parkingBays=[33,41].flatMap(y=>Array.from({length:14},(_,i)=>({x:17+i*4,y,width:2,height:2,facing:y===33?'north':'south'}))).filter(bay=>bay.x+bay.width<=41||bay.x>=50);
     // Keep the existing eight car IDs and their saved inventories after resizing.
     const cars=parkingBays.filter((bay,i)=>i%3===0).map((bay,i)=>({...bay,color:['#7f939a','#9d8a78','#70867a'][i%3]}));
@@ -13,7 +19,7 @@ setup.transitDistrict=()=>{
         description:'A stationary electric train waits beside the platform. Tracks disappear into tunnels at both ends.',
         actions:[{id:'board',label:'Board train',result:()=>({transit:true})}]};
     const rail={x:5,y:70,width:80,height:5},platform={x:16,y:61,width:58,height:9},benches=[{x:20,y:64,width:4,height:1,label:'Platform bench',style:'seat'},{x:65,y:64,width:4,height:1,label:'Platform bench',style:'seat'}];
-    const interactables=[train,...shops.map(shop=>shop.stall?{id:shop.id,kind:'kiosk',name:shop.name,...shop.door,description:'A small food counter faces the shopping walkway.',actions:[{id:'inspect',label:'Inspect',result:'A food stall with a serving counter. Food purchases will be added later.'}]}:{id:shop.id,kind:'door',name:`${shop.name} entrance`,...shop.door,lockId:`${shop.id}:front`,lockLevel:1,destination:{mapId:shop.id,x:5,y:7},description:`The entrance to the ${shop.name.toLowerCase()}.`}),
+    const interactables=[train,...shops.map(shop=>shop.stall?{id:shop.id,kind:'kiosk',name:shop.name,...shop.door,description:'A small food counter faces the shopping walkway.',actions:[{id:'inspect',label:'Inspect',result:'A food stall with a serving counter. Food purchases will be added later.'}]}:{id:shop.id,kind:'door',name:`${shop.name} entrance`,...shop.door,lockId:`${shop.id}:front`,lockLevel:1,destination:{mapId:shop.id,...shop.spawn},description:`The entrance to the ${shop.name.toLowerCase()}.`}),
         ...cars.map((car,i)=>({...car,id:`d1-car-${i+1}`,kind:'car',name:`Shopping center car ${i+1}`,lockLevel:3,trunkLockLevel:2,description:'Parked nose-in beside the shopping center.'}))];
     function tileAt(x,y) {
         const tile=(kind,label,walkable=true)=>({kind,label,walkable});
@@ -28,8 +34,8 @@ setup.transitDistrict=()=>{
         if(inside(x,y,driveway))return tile('road','Shopping center driveway');
         if(y>=44&&y<=48)return tile('road','Transit district road');
         if(y===43||y===49)return tile('pavement','Roadside sidewalk');
-        if(y>=28&&y<=31&&x>=5&&x<=85)return tile('path','Shopping center walkway');
-        if((x>=15&&x<=16||x>=73&&x<=74)&&y>=32&&y<=42)return tile('pavement','Shopping center sidewalk');
+        if(y>=31&&y<=32&&x>=15&&x<=74)return tile('path','Shopping center walkway');
+        if((x>=15&&x<=16||x>=73&&x<=74)&&y>=33&&y<=42)return tile('pavement','Shopping center sidewalk');
         if(x>=43&&x<=47&&y>=50&&y<=60)return tile('path','Pedestrian station approach');
         if(inside(x,y,parking))return tile('parking','Shopping center parking lot');
         return tile('ground','Transit district grounds');
@@ -44,10 +50,10 @@ setup.transitDistrict=()=>{
     for(const shop of shops.filter(shop=>!shop.stall)) {
         const furniture=[{x:1,y:3,width:3,height:1,label:shop.name==='Barbershop'?'Barber chair':'Service counter',style:shop.name==='Barbershop'?'seat':'desk'},{x:8,y:2,width:1,height:3,label:shop.name==='Laundry'?'Washers':'Shelves',style:'cabinet'}];
         const service={id:`${shop.id}:service`,kind:'kiosk',name:`${shop.name} service counter`,x:2,y:3,description:`The ${shop.name.toLowerCase()} service area.`,actions:[{id:'inspect',label:'Inspect',result:'The shop layout is open to explore. Services will be added later.'}]};
-        setup.worldMaps[shop.id]={id:shop.id,worldArea:'d1',name:shop.name,width:11,height:10,spawn:{x:5,y:7},interior:true,eyebrow:'SHOPPING CENTER',subtitle:'Local shop',
+        setup.worldMaps[shop.id]={id:shop.id,worldArea:'d1',name:shop.name,width:11,height:10,spawn:shop.spawn,interior:true,eyebrow:'SHOPPING CENTER',subtitle:'Local shop',
             buildings:[],cars:[],parkingBays:[],furniture,ambientSound:'Ceiling lights hum over the quiet shop.',description:`A compact ${shop.name.toLowerCase()} with basic fittings and a service area.`,
-            interactables:[service,{id:`${shop.id}:exit`,kind:'door',name:'Exit to shopping center',x:5,y:9,exit:true,lockId:`${shop.id}:front`,lockLevel:1,destination:{mapId:'d1',x:shop.door.x,y:shop.door.y+1},description:'The door opens onto the shopping walkway.'}],
-            tileAt(x,y){if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=11||y>=10)return {kind:'boundary',label:'Edge of shop',walkable:false};if(x===5&&y===9)return {kind:'entrance',label:'Shop exit',walkable:true};if(x===0||y===0||x===10||y===9)return {kind:'wall',label:'Shop wall',walkable:false};const item=furniture.find(item=>inside(x,y,item));return item?{kind:'furniture',label:item.label,walkable:false}:{kind:'floor',label:shop.name,walkable:true};}};
+            interactables:[service,{id:`${shop.id}:exit`,kind:'door',name:'Exit to shopping center',...shop.exit,exit:true,lockId:`${shop.id}:front`,lockLevel:1,destination:{mapId:'d1',...shop.approach},description:'The door opens onto the shopping walkway.'}],
+            tileAt(x,y){if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=11||y>=10)return {kind:'boundary',label:'Edge of shop',walkable:false};if(x===shop.exit.x&&y===shop.exit.y)return {kind:'entrance',label:'Shop exit',walkable:true};if(x===0||y===0||x===10||y===9)return {kind:'wall',label:'Shop wall',walkable:false};const item=furniture.find(item=>inside(x,y,item));return item?{kind:'furniture',label:item.label,walkable:false}:{kind:'floor',label:shop.name,walkable:true};}};
     }
     setup.worldMaps.apartments.exits.east={mapId:'d1',offset:0};
 };
