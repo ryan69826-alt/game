@@ -86,7 +86,7 @@ setup.rest = (() => {
         if(!Number.isInteger(hours)||hours<1||hours>10) return {ok:false,message:'Choose 1–10 hours to sleep.'};
         const object=comfort();
         recover(hours,object?.unitId||null,object?300:450);commit();
-        return {ok:true,message:`You lie down ${object?'on '+object.name.toLowerCase():'on the ground'} and sleep for ${hours} hour${hours===1?'':'s'}. You wake at ${setup.gameClock.formatStamp(setup.gameClock.now())}.`};
+        return {ok:true,message:`You lie down ${object?'on '+object.name.toLowerCase():setup.vehicleCabin.current()?'in the car seat':'on the ground'} and sleep for ${hours} hour${hours===1?'':'s'}. You wake at ${setup.gameClock.formatStamp(setup.gameClock.now())}.`};
     }
     function passTime() {
         const result=exert(0,900);

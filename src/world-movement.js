@@ -13,6 +13,7 @@ setup.worldMovement = (() => {
     }
     function move(dx, dy, sprintRequested=false) {
         const world = ensure(), map = setup.worldMaps[world.mapId];
+        if(setup.vehicleCabin.current()) return {moved:false,reason:'Get out of the car before walking. Press E for vehicle actions.'};
         if(setup.rest.fatigue()>=100||setup.rest.ensure().tiredness>=100) {const outcome=setup.rest.collapse();setup.rest.commit();return {moved:false,collapsed:true,reason:outcome.message};}
         if (!Number.isInteger(dx) || !Number.isInteger(dy) || Math.abs(dx) + Math.abs(dy) !== 1) return {moved: false, reason: 'Choose one adjacent square.'};
         const target = map.tileAt(world.x + dx, world.y + dy);

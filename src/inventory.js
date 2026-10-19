@@ -80,6 +80,7 @@ setup.inventory = (() => {
         ensure();return setup.clothing.storage(State.variables.character);
     }
     function trunk(objectId) {
+        if(setup.vehicleCabin.current()) return null;
         const world = State.variables.world;
         const object = setup.worldMaps[world?.mapId]?.interactables.find(object => object.id === objectId && object.kind === 'car');
         if(!object||setup.vehicles.edge(object,world)!=='rear') return null;
@@ -106,9 +107,9 @@ setup.inventory = (() => {
         State.create(State.passage);
         return container;
     }
-    const external=objectId=>objectId==='housing-counter'?setup.housing.counter():trunk(objectId);
+    const external=objectId=>objectId==='housing-counter'?setup.housing.counter():objectId?.startsWith('cabin:')?setup.vehicleCabin.container(objectId.slice(6)):trunk(objectId);
     function openExternal(objectId) {
-        if(objectId!=='housing-counter') return openTrunk(objectId);
+        if(objectId!=='housing-counter'&&!objectId?.startsWith('cabin:')) return openTrunk(objectId);
         const container=external(objectId);if(!container) return null;
         ensure().containers[container.id] ||= [];State.create(State.passage);return container;
     }
@@ -122,7 +123,7 @@ setup.inventory = (() => {
         const accessible = worn();
         if (trunkId) {
             const rear = external(trunkId);
-            if (!rear) return {ok: false, message: 'That storage is out of reach. Return to the car trunk or receptionist.'};
+            if (!rear) return {ok: false, message: 'That storage is out of reach. Return to the vehicle storage or receptionist.'};
             accessible.push(rear);
         }
         const from = accessible.find(container => container.id === fromId), to = accessible.find(container => container.id === toId);

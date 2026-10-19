@@ -60,17 +60,20 @@
             ctx.drawImage(terrain, camera.x * tileSize, camera.y * tileSize, local.width, local.height, 0, 0, local.width, local.height);
             drawOpenDoors(ctx, 1, camera.x, camera.y);
             local.dataset.hiddenCells=setup.rooms.mask(ctx,map,world,camera);
-            marker(ctx, (world.x - camera.x + .5) * tileSize, (world.y - camera.y + .5) * tileSize, 5);
+            const seated=setup.vehicleCabin.current(),position=seated?{x:seated.car.x+(seated.car.width||1)/2-.5,y:seated.car.y+(seated.car.height||1)/2-.5}:world;
+            marker(ctx, (position.x - camera.x + .5) * tileSize, (position.y - camera.y + .5) * tileSize, 5);
+            local.dataset.vehicleId=seated?.car.id||'';
             setup.worldAtlas.draw(overview);
             local.dataset.playerX = world.x;local.dataset.playerY = world.y;
             local.dataset.mapId = map.id;
             local.dataset.cameraX = camera.x;local.dataset.cameraY = camera.y;
-            local.setAttribute('aria-label', `${map.name} area map. Your position: column ${world.x + 1}, row ${world.y + 1}.`);
+            local.setAttribute('aria-label',seated?`${map.name} area map. You are inside ${seated.car.name}.`:`${map.name} area map. Your position: column ${world.x + 1}, row ${world.y + 1}.`);
         }
         function refresh(animate = false) {
             const world = State.variables.world, target = cameraTarget();
-            document.getElementById('movement-position').textContent = `X ${world.x + 1} · Y ${world.y + 1}`;
-            document.getElementById('position-description').textContent = `You are at: ${map.tileAt(world.x, world.y).label.toLowerCase()}.`;
+            const cabin=setup.vehicleCabin.current();
+            document.getElementById('movement-position').textContent = cabin?'Parked · Engine off':`X ${world.x + 1} · Y ${world.y + 1}`;
+            document.getElementById('position-description').textContent = cabin?`You are inside: ${cabin.car.name.toLowerCase()}.`:`You are at: ${map.tileAt(world.x, world.y).label.toLowerCase()}.`;
             setup.interactionUI.refresh();
             setup.rooms.refresh();
             cancelAnimationFrame(frame);
@@ -184,6 +187,8 @@
         $(document).on(':dialogopening.worldMovement', stopHold);
         $(document).on(':restcollapse.worldMovement', stopHold);
         $(document).on(':interactionchange.worldMovement', draw);
+        function vehicleChange() {refresh();}
+        $(document).on(':vehiclechange.worldMovement',vehicleChange);
         local.addEventListener('click', event => {
             if (Dialog.isOpen()) return;
             const rect = local.getBoundingClientRect(), world = State.variables.world;
@@ -209,6 +214,7 @@
             $(document).off(':dialogopening.worldMovement', stopHold);
             $(document).off(':restcollapse.worldMovement', stopHold);
             $(document).off(':interactionchange.worldMovement', draw);
+            $(document).off(':vehiclechange.worldMovement',vehicleChange);
         };
     });
 })();

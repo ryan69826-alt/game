@@ -34,38 +34,54 @@ setup.rooms = (() => {
         }
         return hidden;
     }
-    const activities={quiet:'Only the steady ventilation and faint city traffic are audible.',
+    const activities={quiet:'Only a low ventilation hum is audible.',
         music:'Music plays nearby, its rhythm carrying through the room.',
         conversation:'Low voices and occasional laughter drift through the room.',
         plumbing:'Water runs through the pipes, followed by a faint metallic tick.',
         work:'Tools tap and scrape nearby, punctuated by brief pauses.'};
-    function setActivity(mapId,roomId,activity) {
+    function sourceFor(map,roomId,activity,sourceId) {
+        const source=map.interactables.find(object=>object.id===sourceId);
+        if(!source?.soundActivities?.includes(activity)||source.active===false) return null;
+        const room=current({mapId:map.id,x:source.x,y:source.y});
+        const sourceRoom=room.unit?room.unit.id+(room.bathroom?':bathroom':''):map.id==='housing-office'?'office':'hall';
+        return sourceRoom===roomId?source:null;
+    }
+    function setActivity(mapId,roomId,activity,sourceId=null) {
         const map=setup.worldMaps[mapId];
         if(!map||!Object.hasOwn(activities,activity)||!['hall','office',...(map.units||[]).flatMap(unit=>[unit.id,`${unit.id}:bathroom`])].includes(roomId)) return false;
-        State.variables.roomActivities={...State.variables.roomActivities,[`${mapId}:${roomId}`]:activity};
+        if(activity!=='quiet'&&!sourceFor(map,roomId,activity,sourceId)) return false;
+        State.variables.roomActivities={...State.variables.roomActivities,[`${mapId}:${roomId}`]:{activity,sourceId}};
         State.create(State.passage);$(document).trigger(':roomchange');return true;
     }
     function sounds(world=State.variables.world) {
+        const cabin=setup.vehicleCabin.current();
+        if(cabin) return setup.interactions.isOpen(cabin.car.id)?'The engine is off. A little air brushes past the open door.':'The engine is off. The closed cabin is quiet.';
         const {map,unit,bathroom}=current(world);if(!map) return '';
         const id=unit?unit.id+(bathroom?':bathroom':''):map.id==='housing-office'?'office':'hall';
         const activity=State.variables.roomActivities?.[`${map.id}:${id}`];
-        if(activity&&Object.hasOwn(activities,activity)) return activities[activity];
+        if(activity&&Object.hasOwn(activities,activity.activity)&&(activity.activity==='quiet'||sourceFor(map,id,activity.activity,activity.sourceId))) return activities[activity.activity];
         const rest=State.variables.rest;
         if(unit&&rest?.activity?.unitId===unit.id&&!bathroom) {
             if(rest.activity.kind==='sit') return 'The bed frame creaks as you settle onto the mattress. Ventilation hums in the background.';
-            if(rest.activity.kind==='wake') return 'Bedding rustles as you wake. Beyond it, the room is quiet except for ventilation and distant traffic.';
+            if(rest.activity.kind==='wake') return 'Bedding rustles as you wake. The room is quiet except for a low ventilation hum.';
         }
-        if(bathroom) return 'The extractor fan hums softly; a pipe occasionally ticks behind the wall.';
+        if(bathroom) return 'The extractor fan hums softly.';
         if(unit) return activities.quiet;
-        if(map.id==='housing-office') return 'Keys tap at the reception desk. Paper rustles beneath the hum of the ceiling lights.';
-        return map.interior?'Your footsteps echo along the hallway, accompanied by a low ventilation hum.':'Distant traffic rolls past, with leaves rustling in the central park.';
+        if(map.id==='housing-office') return 'The ceiling lights give off a faint electrical hum.';
+        if(map.interior) return 'A low ventilation hum carries through the quiet hallway.';
+        const trees=map.trees||[];
+        return trees.some(([x,y])=>Math.hypot(x-world.x,y-world.y)<=8)?'A breeze rustles leaves in the nearby park.':'A faint breeze brushes across the quiet grounds.';
     }
     function refresh() {
         const sound=document.getElementById('room-sounds');if(sound) sound.textContent=sounds();
-        const description=document.getElementById('location-description'),{map,unit,bathroom}=current();
+        const description=document.getElementById('location-description'),{map,unit,bathroom}=current(),cabin=setup.vehicleCabin.current();
+        if(cabin) {
+            if(description) description.textContent=`You are seated inside ${cabin.car.name.toLowerCase()}. The parked vehicle has cabin storage separate from its trunk. Its engine is off.`;
+            return;
+        }
         if(description&&map) description.textContent=bathroom?'A compact bathroom with a toilet, tiled floor, and extractor fan.':unit?
             'A compact studio with a bed, dining table, kitchenette, and a separate bathroom.':map.description;
     }
     return {inside,current,unitVisible,cellVisible,objectVisible,mask,sounds,setActivity,refresh};
 })();
-$(document).on(':passagedisplay :timechange :interactionchange :roomchange',()=>{if(document.querySelector('.world-sidebar')) setup.rooms.refresh();});
+$(document).on(':passagedisplay :timechange :interactionchange :roomchange :vehiclechange',()=>{if(document.querySelector('.world-sidebar')) setup.rooms.refresh();});

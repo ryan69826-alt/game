@@ -23,7 +23,7 @@ setup.doorLocks = (() => {
     const hasKey=object=>object.kind==='car'||object.kind==='car-trunk'?setup.vehicles.hasKey(object):!!object.unitId&&setup.housing.canEnter(object.unitId);
     function canUseLatch(object) {
         const room=setup.rooms.current();
-        return !!object.exit||!!object.unitId&&room.unit?.id===object.unitId||
+        return object.kind==='car'&&setup.vehicleCabin.current()?.car.id===object.id||!!object.exit||!!object.unitId&&room.unit?.id===object.unitId||
             !!object.interiorOf&&room.unit?.id===object.interiorOf&&room.bathroom;
     }
     function set(object,locked) {

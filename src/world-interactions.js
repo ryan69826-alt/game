@@ -35,6 +35,8 @@ setup.interactions = (() => {
     function nearby(world = State.variables.world) {
         const map = setup.worldMaps[world?.mapId];
         if (!map) return [];
+        const seated=setup.vehicleCabin.current();
+        if(seated) return [{object:seated.car,distance:0}];
         return (map.interactables || []).map(object => {
             const dx = Math.max(object.x - world.x, 0, world.x - (object.x + (object.width || 1) - 1));
             const dy = Math.max(object.y - world.y, 0, world.y - (object.y + (object.height || 1) - 1));
@@ -60,8 +62,10 @@ setup.interactions = (() => {
         }];
         if (object.kind === 'car') {
             if (!world) return [];
+            const seated=setup.vehicleCabin.current();
+            if(seated) return seated.car.id===object.id?[{...doorToggle(object),label:isOpen(object.id)?'Close door':'Open door'},...setup.doorLocks.actions(object),...setup.vehicleCabin.actions(object)]:[];
             const edge = setup.vehicles.edge(object,world);
-            if(edge==='side') return [types.car[0],{...doorToggle(object),label:isOpen(object.id)?'Close door':'Open door'},...setup.doorLocks.actions(object)];
+            if(edge==='side') return [types.car[0],{...doorToggle(object),label:isOpen(object.id)?'Close door':'Open door'},...setup.doorLocks.actions(object),...(isOpen(object.id)?[{id:'get-in',label:'Get in car',result:()=>setup.vehicleCabin.enter(object.id)}]:[])];
             if(edge==='rear') {
                 const trunk=setup.vehicles.trunk(object),opened=isOpen(trunk.id);
                 return [opened?{...close,id:'close-trunk',label:'Close trunk',enabled:()=>isOpen(trunk.id),result:()=>close.result(trunk)}:

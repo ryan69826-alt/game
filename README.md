@@ -95,10 +95,19 @@ visible while inside or at its open doorway; moving away conceals it again.
 Bathrooms have their own doors and visibility. Door numbers remain visible from
 the hall. The world atlas shows only area icons.
 
-The Sounds description follows the current room and activity. Sitting produces
-bed-frame creaks; waking produces bedding sounds. `setup.rooms.setActivity(mapId,
-roomId, activity)` supports quiet, music, conversation, plumbing and work sounds
-for future NPC/event systems; changes persist and do not cost time.
+The Sounds description follows the current environment and the player's actions.
+Outdoor leaf sounds occur only within eight tiles of park trees; elsewhere the
+grounds have quiet breeze ambience. Halls and studios have ventilation, bathrooms
+an extractor fan, and the office a faint ceiling-light hum. No default traffic,
+footsteps, typing, paper rustling, voices or other unmodeled human activity plays.
+Sitting on a bed produces its creak, and waking there produces bedding rustles.
+
+`setup.rooms.setActivity(mapId, roomId, activity, sourceId)` supports quiet,
+music, conversation, plumbing and work for future scene events. A non-quiet
+activity needs a present interactable in that room whose `soundActivities`
+includes the requested activity; `active: false`, a removed/moved source, or a
+legacy source-free activity silences it. Activity state persists without costing
+time, but never substitutes for a missing source.
 
 Beds offer **Sit**, **Nap for 1 hour**, and **Sleep** with a 1–10 hour choice.
 Sitting takes no time. Rest advances the game clock and processes any rent due.
@@ -171,6 +180,27 @@ already-open trunk offers **View trunk inventory**. Locked, closed, or remote
 trunks reject inventory access and transfers. Unlocking a car door does not
 unlock its trunk. Existing opened doors remain open/unlocked when migrating.
 
+## Entering parked vehicles
+
+After opening a side door, **Get in car** seats the player. **E** now targets that
+vehicle and offers its door controls, **Cabin inventory**, any visible cash,
+**Hotwire** (disabled placeholder), and **Get out of car**. Entry, exit and cash
+collection take no time. Walking/sprinting is blocked while seated; no driving,
+engine-starting, ownership changes or hotwiring mechanics are implemented.
+Getting out uses the original clear side tile, opening/unlatching the door from
+inside if necessary, so closing or locking it does not trap the player.
+
+Sidebar **Inventory** automatically includes a separate 4×3 cabin storage grid
+while seated, alongside worn storage. It starts empty and uses the same block
+packing and drag/click transfers as other storage. Cabin cash has its own take
+control, consistent with the existing money stat. Cabin items and seating persist
+in browser/disk saves. On exit, cabin access ends; cabin and trunk storage never
+share containers or contents. Other cars' cabins and all trunks are inaccessible
+while seated. The map marker moves onto the car, and the position/description
+identify the cabin. Cabin sounds describe the stopped engine and open/closed
+door, with no invented occupants or running engine. Sleeping there uses the
+existing slower recovery for an uncomfortable place.
+
 ## Sprinting and endurance
 
 Hold **Shift** with movement keys, or toggle **Sprint [Shift]** for keyboard,
@@ -193,8 +223,12 @@ and recovery seconds; UI input state is never saved.
 Looking through a car window rolls a 15% chance of visible cabin money. A hit
 chooses a whole-dollar amount uniformly from $1 through $120. Both a miss and
 the rolled amount persist per car in `$vehicleContents`, including across reloads;
-repeated inspection does not reroll. Inspection describes visible contents and
-does not add cash, consume time, or unlock the vehicle. Trunk loot stays separate.
+repeated inspection does not reroll. Inspection describes visible contents without taking them, consuming time, or
+unlocking the vehicle. Once seated, **Take $amount** collects exactly that amount
+into the money stat and clears the cabin cash in the same saved transaction.
+It can be taken from either the vehicle action menu or cabin inventory. Empty or
+already-collected cash never rerolls; remote/stale targets cannot award money.
+Trunk loot stays separate.
 Repeated Shift keydown events do not restart the held-movement timer. Exhaustion
 uses the existing walking fallback rather than stopping held movement.
 
@@ -333,7 +367,7 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
 - `calendar-data.js`: seasonal starts, Gregorian clock, formatting and legacy time conversion.
 - `player-state.js`, `housing.js`: money/health, six listings, physical keys and weekly billing.
 - `room-sense.js`, `rest.js`: room visibility/sounds, tiredness/fatigue, beds and collapse.
-- `vehicle-contents.js`: saved window observations and cabin money rolls.
+- `vehicle-cabin.js`, `vehicle-contents.js`: seating/access, saved observations and one-time cash claims.
 - `vehicle-geometry.js`, `door-locks.js`: vehicle orientation, ownership/key checks, independent locks and chance calculations.
 - `world-action-ui.js`: personal waiting, rest and sleep overlay.
 - `world-interactions.js`, `world-interaction-ui.js`: reach, directional actions,
@@ -348,7 +382,8 @@ other valid selections, traits and XP remain. Removed height/composition fields
 are discarded. Invalid traits are filtered; imported XP is rounded down and capped
 to 250 in skill order. `$world` stores only map ID, position and elapsed seconds (v2). `$openedObjects`
 stores open/closed flags; `$doorLocks` stores shared lock states, `$endurance`
-stores breath/counters, and `$skillXp` stores earned XP independently of character creation.
+stores breath/counters, `$vehicleSeat` stores the seated car and exit anchor,
+`$vehicleContents` stores cabin cash, and `$skillXp` stores earned XP independently of character creation.
 `$inventory` version 2 stores container IDs and item placements. Version-4 equipment
 booleans migrate to category selections. Old shared pocket grids repack into the
 new independent pockets and any equipped backpack. Items too large to fit return

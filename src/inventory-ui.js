@@ -1,14 +1,16 @@
 /* Click/keyboard block placement; the map remains visible behind this dialog. */
 setup.inventoryUI = (() => {
-    function open(trunkId) {
+    function open(externalId) {
         if (!State.variables.worldStarted || !document.querySelector('.world-sidebar')) return;
+        const seated=setup.vehicleCabin.current();
+        if(!externalId&&seated) externalId=`cabin:${seated.car.id}`;
         const inventory = setup.inventory;
-        if (trunkId && !inventory.openExternal(trunkId)) return;
+        if (externalId && !inventory.openExternal(externalId)) return;
         inventory.ensure();
-        Dialog.setup(trunkId==='housing-counter'?'Key handover & inventory':trunkId ? 'Trunk & inventory' : 'Inventory', 'character-window inventory-window');
+        Dialog.setup(externalId==='housing-counter'?'Key handover & inventory':externalId?.startsWith('cabin:')?'Cabin & inventory':externalId?'Trunk & inventory':'Inventory', 'character-window inventory-window');
         const root = Dialog.body();
         let selected = null, message = 'Drag an item to a free space. You can also select an item and then a destination square. Items cannot overlap or rotate.';
-        const drag = setup.inventoryDrag.mount(root,trunkId,result => {message=result.message;if(result.ok) selected=null;render();});
+        const drag = setup.inventoryDrag.mount(root,externalId,result => {message=result.message;if(result.ok) selected=null;render();});
         function render() {
             root.replaceChildren();
             const status = document.createElement('p');status.id = 'inventory-status';status.className = 'world-note';
@@ -43,7 +45,7 @@ setup.inventoryUI = (() => {
                     cell.addEventListener('click', () => {
                         if(drag.ignoreClick()) return;
                         if (!selected) {message = 'Select an item first.';status.textContent = message;return;}
-                        const result = inventory.transfer(selected.container, container.id, selected.id, x, y, trunkId);
+                        const result = inventory.transfer(selected.container, container.id, selected.id, x, y, externalId);
                         message = result.message;if (result.ok) selected = null;
                         render();root.querySelector('.inventory-grid button')?.focus();
                     });grid.append(cell);
@@ -64,10 +66,20 @@ setup.inventoryUI = (() => {
                 }
                 section.append(title, count, grid);parent.append(section);
             }
-            if (trunkId) {
+            if (externalId) {
                 const column = document.createElement('div');column.className = 'inventory-column';layout.append(column);
-                const container = inventory.external(trunkId);
-                if (container) drawContainer(container, column);
+                const container = inventory.external(externalId);
+                if(container) {
+                    if(externalId.startsWith('cabin:')) {
+                        const cabin=setup.vehicleCabin.current(),contents=setup.vehicleContents.ensure(cabin.car);
+                        const cash=document.createElement('p');cash.className='world-note';cash.textContent=`Cash on the seat: ${setup.playerState.formatMoney(contents.money)}`;column.append(cash);
+                        if(contents.money) {
+                            const take=document.createElement('button');take.type='button';take.textContent=`Take ${setup.playerState.formatMoney(contents.money)}`;
+                            take.addEventListener('click',()=>{message=setup.vehicleContents.take(cabin.car.id).message;render();});column.append(take);
+                        }
+                    }
+                    drawContainer(container,column);
+                }
             }
             const player = document.createElement('div');player.className = 'inventory-column';layout.append(player);
             const heading = document.createElement('h2');heading.textContent = 'Worn storage';player.append(heading);

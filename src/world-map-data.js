@@ -61,6 +61,6 @@ setup.worldMaps = (() => {
     }
     return {apartments: {id: 'apartments', name: 'Apartments', width: 50, height: 50,
         subtitle:'A small corner of the city.',description:'Four single-floor apartment buildings face a small central park. Each contains six apartments. Paths connect their entrances, with parking to the southwest. The housing office stands to the right of Apartment 3.',
-        spawn: {x: 30, y: 23}, buildings, housingOffice, roads, park, parking, parkingBays, cars, interactables, tileAt: apartmentTile},
+        spawn: {x: 30, y: 23}, trees, buildings, housingOffice, roads, park, parking, parkingBays, cars, interactables, tileAt: apartmentTile},
         ...Object.fromEntries([...interiorMaps,officeMap].map(map=>[map.id,map]))};
 })();
