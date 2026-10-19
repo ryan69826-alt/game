@@ -29,7 +29,7 @@ setup.interactions = (() => {
     const doorToggle=object=>isOpen(object.id)?close:open;
     const types = {
         door: [{id: 'knock', label: 'Knock', result: 'You knock on the door.'}, open],
-        car: [{id: 'look-inside', label: 'Look through window', result: 'You look through the window. No one is inside.'}, {...open, label: 'Open door'}],
+        car: [{id: 'look-inside', label: 'Look through window', result: object=>setup.vehicleContents.inspect(object)}, {...open, label: 'Open door'}],
         ground: [inspect], npc: [inspect]
     };
     function nearby(world = State.variables.world) {

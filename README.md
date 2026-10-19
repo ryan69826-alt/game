@@ -49,14 +49,22 @@ The four buildings each contain one floor with six furnished studio apartments.
 Each floor plan (including furniture and unit doors) rotates to match the outdoor
 building's entrance toward the park. Open an entrance with E, then choose Enter;
 inside, Open and Exit returns through the corresponding outdoor door. The lower
-world map is an area atlas: Apartments is one icon, selected while outdoors or
+world map sits above the sidebar character and is an area atlas: Apartments is one icon, selected while outdoors or
 inside any building in that area. New areas can be added in `world-atlas.js`;
-the atlas never renders local tiles, cars, or camera bounds.
+the atlas never renders local tiles, cars, or camera bounds. The right-side local
+map uses the freed height and adjusts its outdoor camera rows to fit the panel.
+
+Unit numbers start at the nearest room on the left when entering, then the
+opposite room, continuing 1–6 down the hall. Rotating the building preserves
+that entry-relative order. Stable save IDs stay attached to physical rooms, so
+leases, keys, beds, and saved room activity keep their existing associations.
+Rental labels, map numbers, room descriptions and key tooltips use the displayed numbers.
 
 The north-facing Housing Office stands immediately right of Apartment 3, linked
 by sidewalk. Its receptionist is behind a blocking desk; approach the service
 positions on the front side and press E. The first screen has Talk and Attack.
-Talk → Rent apartment lists only six units: 1–2, 1–5, 2–3, 3–1, 3–4, and 4–6. Attack is an explicit
+Talk → Rent apartment lists six physical units: Apartment 1 units 1 and 6,
+Apartment 2 unit 3, Apartment 3 units 4 and 5, and Apartment 4 unit 2. Attack is an explicit
 placeholder and makes no attack until combat rules are developed.
 
 The player starts with **$99,999** and **100 / 100 health**. Both appear above
@@ -182,6 +190,14 @@ of the creator's 250-XP allocation, and Stats uses both. Level-ups immediately
 increase capacity. `$endurance` stores used breath, the sprint-step remainder
 and recovery seconds; UI input state is never saved.
 
+Looking through a car window rolls a 15% chance of visible cabin money. A hit
+chooses a whole-dollar amount uniformly from $1 through $120. Both a miss and
+the rolled amount persist per car in `$vehicleContents`, including across reloads;
+repeated inspection does not reroll. Inspection describes visible contents and
+does not add cash, consume time, or unlock the vehicle. Trunk loot stays separate.
+Repeated Shift keydown events do not restart the held-movement timer. Exhaustion
+uses the existing walking fallback rather than stopping held movement.
+
 ## Game calendar
 
 Creation offers the 2026 Northern Hemisphere spring equinox (Friday March 20),
@@ -255,7 +271,8 @@ median bays, and two five-square-wide roads meet at the south edge. Cars occupy
 Doors are walkable thresholds; buildings, cars, trees, and medians block movement.
 
 The description takes 60% of the main area and maps take 40%, beside the character
-sidebar. The scrolling local map sits above the world atlas of area icons.
+sidebar. The scrolling local map occupies the right-side panel; the world atlas
+of area icons sits above the character in the left sidebar.
 Both maps fit desktop viewport heights; narrow screens stack them below the text.
 The compact movement panel above the location title is the only exact-location
 readout. Player coordinates are displayed starting at 1.
@@ -316,6 +333,7 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
 - `calendar-data.js`: seasonal starts, Gregorian clock, formatting and legacy time conversion.
 - `player-state.js`, `housing.js`: money/health, six listings, physical keys and weekly billing.
 - `room-sense.js`, `rest.js`: room visibility/sounds, tiredness/fatigue, beds and collapse.
+- `vehicle-contents.js`: saved window observations and cabin money rolls.
 - `vehicle-geometry.js`, `door-locks.js`: vehicle orientation, ownership/key checks, independent locks and chance calculations.
 - `world-action-ui.js`: personal waiting, rest and sleep overlay.
 - `world-interactions.js`, `world-interaction-ui.js`: reach, directional actions,

@@ -22,7 +22,8 @@
                 entry.append(icon,document.createTextNode(name));legend.append(entry);
             }
         }
-        const tileSize = 16, columns = local.width / tileSize, rows = local.height / tileSize;
+        const tileSize = 16, columns = local.width / tileSize;
+        let rows = local.height / tileSize;
         const terrain = setup.worldMapArt.paint(map);
         const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
         function cameraTarget() {
@@ -163,7 +164,7 @@
         sprintButton.addEventListener('click',()=>{if(Dialog.isOpen()) return;sprintToggle=!sprintToggle;sprintButton.setAttribute('aria-pressed',String(sprintToggle));updatePace();});
         function keydown(event) {
             if (Dialog.isOpen() || event.ctrlKey || event.altKey || event.metaKey || event.target.closest('input,select,textarea,[contenteditable="true"]')) return;
-            if(event.key==='Shift') {shiftHeld=true;updatePace();return;}
+            if(event.key==='Shift') {if(!shiftHeld) {shiftHeld=true;updatePace();}return;}
             shiftHeld=event.shiftKey;
             const direction = keys[event.key] || keys[event.key.toLowerCase()];
             if (!direction) return;
@@ -190,10 +191,19 @@
             const y = Math.floor(camera.y + (event.clientY - rect.top) / rect.height * rows);
             step(x - world.x, y - world.y);
         });
+        function resizeLocal() {
+            if(map.interior) return;
+            const viewport=local.parentElement.getBoundingClientRect();
+            if(!viewport.width||!viewport.height) return;
+            const next=Math.max(10,Math.min(map.height,Math.floor(viewport.height*columns/viewport.width)));
+            if(rows===next) return;
+            rows=next;local.height=rows*tileSize;local.style.setProperty('--map-aspect',columns/rows);refresh();
+        }
+        const localResize=new ResizeObserver(resizeLocal);localResize.observe(local.parentElement);
         const atlasResize=new ResizeObserver(()=>setup.worldAtlas.draw(overview));atlasResize.observe(overview.parentElement);
         refresh();
         cleanup = () => {
-            stopHold();cancelAnimationFrame(frame);atlasResize.disconnect();
+            stopHold();cancelAnimationFrame(frame);atlasResize.disconnect();localResize.disconnect();
             document.removeEventListener('keydown', keydown);document.removeEventListener('keyup', keyup);
             document.removeEventListener('visibilitychange', visibilityChange);window.removeEventListener('blur', stopHold);
             $(document).off(':dialogopening.worldMovement', stopHold);

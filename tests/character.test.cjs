@@ -464,7 +464,7 @@ test('movement buttons, keyboard, and adjacent map clicks advance five seconds, 
     const target=await local.evaluate(canvas=>{
         const r=canvas.getBoundingClientRect(),world=SugarCube.State.variables.world;
         return {x:(world.x-Number(canvas.dataset.cameraX)+1.5)/25*r.width,
-            y:(world.y-Number(canvas.dataset.cameraY)+.5)/35*r.height};
+            y:(world.y-Number(canvas.dataset.cameraY)+.5)/(canvas.height/16)*r.height};
     });
     await local.click({position:target});
     assert.equal((await world()).elapsedSeconds,20);
@@ -479,7 +479,8 @@ test('movement buttons, keyboard, and adjacent map clicks advance five seconds, 
     await page.getByRole('link',{name:'Continue',exact:true}).click();
     assert.deepEqual(await world(),expected);
     const mapBox=await local.boundingBox(),worldBox=await overview.boundingBox();
-    assert.ok(worldBox.y>=mapBox.y+mapBox.height,'world map sits below local map');
+    assert.ok(worldBox.x+worldBox.width<mapBox.x,'world map sits in the left sidebar');
+    assert.ok(await overview.evaluate(canvas=>!!canvas.closest('.world-sidebar')));
 });
 
 test('walls, parked cars, trees, map bounds, and distant clicks do not advance time',async()=>{
@@ -1191,7 +1192,7 @@ test('renting through Talk provides a key to explicitly unlock the selected apar
     await page.getByRole('button',{name:'Empty block 1, 1 in Shirt pocket',exact:true}).click();
     await page.keyboard.press('Escape');await walkTo(8,1);await openPortal('Exit','apartments');
     await walkTo(30,30);await openPortal('Enter','apartment-3');
-    // Unit 2 is west of this hallway after rotating the north-facing building.
+    // Unit 4 is west of this hallway after rotating the north-facing building.
     await walkTo(11,14);await page.keyboard.press('e');await dialog.getByRole('button',{name:'Open',exact:true}).click();
     assert.match(await dialog.locator('#interaction-result').textContent(),/locked/);
     await dialog.getByRole('button',{name:'Unlock',exact:true}).click();await dialog.getByRole('button',{name:'Open',exact:true}).click();
@@ -1772,4 +1773,76 @@ test('Rest in the T menu waits one awake minute and recovers endurance and fatig
     const after=await page.evaluate(()=>({world:structuredClone(SugarCube.State.variables.world),tiredness:SugarCube.State.variables.rest.tiredness,awake:SugarCube.State.variables.rest.awakeSeconds}));
     assert.deepEqual(after.world,{...before,elapsedSeconds:before.elapsedSeconds+60});assert.equal(after.tiredness,51);assert.equal(after.awake,959);
     assert.equal(await page.locator('#player-endurance').textContent(),'8 / 25');assert.equal(await page.locator('#player-fatigue').textContent(),'49 / 100');
+});
+
+test('world atlas sits above the sidebar character and the local map uses the freed vertical space',async()=>{
+    await page.setViewportSize({width:1440,height:1000});
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await stableAtlas();
+    const layout=await page.evaluate(()=>{
+        const atlas=document.querySelector('.world-sidebar .world-map-panel'),character=document.querySelector('.sidebar-character'),local=document.getElementById('local-map');
+        const a=atlas.getBoundingClientRect(),c=character.getBoundingClientRect(),l=local.getBoundingClientRect();
+        return {atlasBottom:a.bottom,characterTop:c.top,localHeight:l.height,rows:local.height/16,
+            rightAtlases:document.querySelectorAll('.map-stack .world-map-panel').length,windowHeight:innerHeight,localBottom:l.bottom};
+    });
+    assert.ok(layout.atlasBottom<layout.characterTop);assert.equal(layout.rightAtlases,0);
+    assert.ok(layout.localHeight>700);assert.ok(layout.rows>35);assert.ok(layout.localBottom<layout.windowHeight);
+});
+
+test('apartment numbering starts near the entrance on the entering players left in every orientation, preserving room IDs',async()=>{
+    const plans=await page.evaluate(()=>Object.values(SugarCube.setup.worldMaps).filter(map=>/^apartment-\d$/.test(map.id)).map(map=>{
+        const exit=map.interactables.find(object=>object.exit),forward={south:{x:0,y:-1},north:{x:0,y:1},west:{x:1,y:0},east:{x:-1,y:0}}[map.facing];
+        const left={x:forward.y,y:-forward.x};
+        return {id:map.id,units:map.units.map(unit=>({id:unit.id,number:unit.number,name:unit.name,
+            depth:(unit.door.x-exit.x)*forward.x+(unit.door.y-exit.y)*forward.y,
+            left:(unit.door.x-exit.x)*left.x+(unit.door.y-exit.y)*left.y}))};
+    }));
+    for(const plan of plans) {
+        const units=plan.units.sort((a,b)=>a.depth-b.depth||b.left-a.left);
+        assert.deepEqual(units.map(unit=>unit.number),[1,2,3,4,5,6]);
+        assert.ok(units[0].left>0);assert.ok(units[1].left<0);assert.match(units[0].id,/-5$/);
+        for(const unit of units) assert.match(unit.name,new RegExp(`Unit ${unit.number}$`));
+    }
+});
+
+test('repeated Shift events do not stall held sprinting; breath passes five and exhaustion falls back to walking',async()=>{
+    await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',10,46);
+    await page.keyboard.down('Shift');await page.keyboard.down('d');
+    for(let repeat=0;repeat<48;repeat++) {await page.clock.runFor(50);await page.keyboard.down('Shift');}
+    assert.equal(await page.locator('#player-endurance').textContent(),'25 / 25');
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),35);assert.equal(await page.locator('#player-time').textContent(),'08:00:50');
+    await page.clock.runFor(200);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),36);
+    assert.equal(await page.locator('#player-time').textContent(),'08:00:55');assert.equal(await page.locator('#player-endurance').textContent(),'24 / 25');
+    assert.match(await page.locator('#movement-status').textContent(),/Out of breath/);
+    await page.clock.runFor(100);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),37);assert.equal(await page.locator('#player-time').textContent(),'08:00:57');
+    await page.keyboard.up('d');await page.keyboard.up('Shift');assert.equal(await page.evaluate(()=>SugarCube.setup.skills.earned('Endurance')),1);
+});
+
+test('car window money rolls have exact 15-percent boundaries and one-to-120 dollar amounts',async()=>{
+    const rolls=await page.evaluate(()=>{
+        const roll=SugarCube.setup.vehicleContents.roll;
+        const withDraws=values=>roll(()=>values.shift());
+        return {low:withDraws([1,1]),edge:withDraws([15,120]),miss:withDraws([16]),highMiss:withDraws([100]),
+            population:Array.from({length:100},(_,index)=>withDraws([index+1,60]).money).filter(Boolean).length};
+    });
+    assert.deepEqual(rolls,{low:{money:1},edge:{money:120},miss:{money:0},highMiss:{money:0},population:15});
+});
+
+test('looking through car windows reports stable visible money without changing cash or time, including after reload',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',13,29);
+    await page.evaluate(()=>{SugarCube.State.variables.vehicleContents={'apartments:parked-car-1':{money:120},'apartments:parked-car-2':{money:0}};});
+    const before=await page.evaluate(()=>({cash:SugarCube.State.variables.player.money,time:SugarCube.setup.gameClock.now()}));
+    await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
+    await dialog.getByRole('button',{name:'Look through window',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/\$120 lying on a seat/);
+    await dialog.getByRole('button',{name:'Look through window',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/\$120 lying on a seat/);
+    await page.evaluate(()=>SugarCube.State.create(SugarCube.State.passage));await page.reload();await page.waitForSelector('#local-map');
+    await page.keyboard.press('e');await dialog.getByRole('button',{name:'Look through window',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/\$120/);
+    assert.deepEqual(await page.evaluate(()=>({cash:SugarCube.State.variables.player.money,time:SugarCube.setup.gameClock.now()})),before);
+    await page.keyboard.press('Escape');await placeInWorld('apartments',17,29);await page.keyboard.press('e');
+    await dialog.getByRole('button',{name:'Look through window',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/no money is visible/);
+    await page.keyboard.press('Escape');await placeInWorld('apartments',23,29);
+    const generated=await page.evaluate(()=>{const {setup,State}=SugarCube;const first=setup.interactions.run('parked-car-3','look-inside'),moment=State.length;
+        const second=setup.interactions.run('parked-car-3','look-inside');return {first,second,moment,after:State.length,stored:State.variables.vehicleContents['apartments:parked-car-3']};});
+    assert.ok(generated.first.ok);assert.ok(generated.first.visibleMoney>=0&&generated.first.visibleMoney<=120);
+    assert.equal(generated.second.visibleMoney,generated.first.visibleMoney);assert.equal(generated.stored.money,generated.first.visibleMoney);assert.equal(generated.after,generated.moment);
 });

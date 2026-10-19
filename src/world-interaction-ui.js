@@ -37,7 +37,7 @@ setup.interactionUI = (() => {
             const form=document.createElement('div');form.className='rental-form';
             const label=document.createElement('label');label.htmlFor='rental-unit';label.textContent='Choose an apartment';
             const select=document.createElement('select');select.id=label.htmlFor;
-            for(const unit of setup.housing.listings()) select.append(new Option(unit.name,unit.id));
+            for(const unit of setup.housing.listings().sort((a,b)=>a.building-b.building||a.number-b.number)) select.append(new Option(unit.name,unit.id));
             const result=document.createElement('p');result.id='interaction-result';result.setAttribute('role','status');result.setAttribute('aria-live','polite');
             const confirm=button(`Rent · ${setup.playerState.formatMoney(setup.housing.rentPrice)} first week`,()=>{
                 const outcome=setup.housing.rent(select.value);result.textContent=outcome.message;

@@ -20,8 +20,9 @@ setup.interiorMaps = (() => {
         }
         for(let y=1;y<28;y++) for(let x=11;x<=13;x++) put(x,y,'hall',`${building.name} hallway`);
         put(12,28,'entrance',`${building.name} exit`);
+        // Stable save IDs retain their physical rooms; displayed numbers follow entry order.
         for(let row=0;row<3;row++) for(let side=0;side<2;side++) {
-            const number=row*2+side+1,unitId=`${index}-${number}`,name=`Apartment ${index} · Unit ${number}`;
+            const number=(2-row)*2+side+1,unitId=`${index}-${row*2+side+1}`,name=`Apartment ${index} · Unit ${number}`;
             const y0=1+row*9,left=side===0?1:15,right=side===0?9:23,doorX=side===0?10:14,doorY=y0+4;
             for(let y=y0;y<y0+8;y++) for(let x=left;x<=right;x++) put(x,y,'floor',`${name} living area`);
             // A small enclosed bathroom at the far corner; opening faces inward.

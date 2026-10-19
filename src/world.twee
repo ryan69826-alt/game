@@ -7,6 +7,11 @@
 :: WorldSidebar [nobr]
 <aside class="world-sidebar" aria-label="Character sidebar">
 <div class="sidebar-brand">◈ <span>NEON MERIDIAN</span></div>
+<figure class="world-map-panel">
+<div class="map-heading"><span>WORLD MAP</span><span>1 AREA</span></div>
+<div class="map-viewport"><canvas id="world-map" width="300" height="300" role="img" aria-label="World map showing the current area"></canvas></div>
+<figcaption><span class="location-dot" aria-hidden="true"></span> Apartments <span>Current area</span></figcaption>
+</figure>
 <p class="sidebar-eyebrow">YOUR CHARACTER</p>
 <div class="sidebar-character"><<include "CharacterArtwork">></div>
 <p class="sidebar-identity"><span data-character-summary></span><span class="sidebar-age">Age 26</span></p>
@@ -68,11 +73,7 @@
 <figcaption><span class="location-dot" aria-hidden="true"></span> You <span id="map-camera-note">Scrolls as you move</span></figcaption>
 <div id="local-map-legend" class="map-legend"><span><i class="legend-door"></i>Entrance</span><span><i class="legend-park"></i>Park</span><span><i class="legend-road"></i>Road</span></div>
 </figure>
-<figure class="world-map-panel">
-<div class="map-heading"><span>WORLD MAP</span><span>1 AREA</span></div>
-<div class="map-viewport"><canvas id="world-map" width="300" height="300" role="img" aria-label="World map showing the current area"></canvas></div>
-<figcaption><span class="location-dot" aria-hidden="true"></span> Apartments <span>Current area</span></figcaption>
-</figure>
+
 </div>
 </main>
 

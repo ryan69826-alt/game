@@ -31,7 +31,7 @@ body[data-tags~="world"] #passages{max-width:none;margin:0 auto}
 .world-subtitle{color:var(--muted);font-size:.9rem;margin:18px 0 32px}
 .location-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:32px;align-items:start}
 .location-story{min-width:0}
-.map-stack{position:sticky;top:24px;min-width:0;height:calc(100dvh - 48px);display:grid;grid-template-rows:minmax(0,1fr) clamp(140px,22dvh,180px);gap:12px}
+.map-stack{position:sticky;top:24px;min-width:0;height:calc(100dvh - 48px);display:grid;grid-template-rows:minmax(0,1fr);gap:0}
 .district-map,.world-map-panel{display:flex;flex-direction:column;min-height:0;margin:0;border:1px solid #3b5c51;background:#142326;min-width:0;overflow:hidden}
 .map-viewport{flex:1;min-height:0;display:grid;place-items:center;container-type:size}
 .district-map> :not(.map-viewport),.world-map-panel> :not(.map-viewport){flex-shrink:0}
@@ -129,3 +129,8 @@ html:has(#ui-dialog-body.character-window) #ui-overlay{background:#050c10;opacit
 .pocket-group .storage-count { font-size: .6rem; white-space: nowrap; }
 
 .movement-actions{display:flex;flex-wrap:wrap;gap:6px}
+
+.world-sidebar .world-map-panel{height:170px;margin-top:18px}
+.world-sidebar .world-map-panel .map-heading{padding:7px 8px;font-size:.5rem;letter-spacing:.5px}
+.world-sidebar .world-map-panel figcaption{display:none}
+@media(max-width:700px){.world-sidebar .world-map-panel{height:140px}}

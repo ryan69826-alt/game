@@ -53,7 +53,7 @@ setup.inventoryUI = (() => {
                     button.className = 'inventory-item';button.dataset.item = item.id;
                     button.style.gridColumn = `${item.x + 1} / span ${definition.width}`;button.style.gridRow = `${item.y + 1} / span ${definition.height}`;
                     button.style.setProperty('--item-color', definition.color);
-                    button.textContent = {water:'Water',tools:'Tools',cloth:'Cloth',apartmentKey:'Key',coffee:'Coffee'}[item.type] || definition.name;button.title=item.type==='apartmentKey'?`Apartment key ${item.id.split(':').at(-1)}`:definition.name;button.setAttribute('aria-label', `${definition.name}, ${definition.width} by ${definition.height} blocks, ${container.name}`);
+                    button.textContent = {water:'Water',tools:'Tools',cloth:'Cloth',apartmentKey:'Key',coffee:'Coffee'}[item.type] || definition.name;button.title=item.type==='apartmentKey'?`Key for ${setup.housing.units().find(unit=>unit.id===item.id.split(':').at(-1))?.name||item.id.split(':').at(-1)}`:definition.name;button.setAttribute('aria-label', `${definition.name}, ${definition.width} by ${definition.height} blocks, ${container.name}`);
                     button.setAttribute('aria-pressed', String(selected?.id === item.id));
                     button.addEventListener('click', () => {
                         if(drag.ignoreClick()) return;
