@@ -12,12 +12,12 @@
         document.getElementById('location-title').textContent=map.name;
         document.getElementById('location-subtitle').textContent=map.subtitle;
         document.getElementById('location-description').textContent=map.description;
-        document.getElementById('location-eyebrow').textContent=map.interior?'RESIDENTIAL · SINGLE FLOOR':'URBAN AREA · RESIDENTIAL';
+        document.getElementById('location-eyebrow').textContent=map.eyebrow||(map.interior?'RESIDENTIAL · SINGLE FLOOR':'URBAN AREA · RESIDENTIAL');
         document.getElementById('local-map-title').textContent=`${map.name.toUpperCase()} · ${map.width} × ${map.height}`;
         document.getElementById('map-camera-note').textContent=map.interior?'Single floor':'Scrolls as you move';
-        if(map.interior) {
+        if(map.interior||map.legend) {
             const legend=document.getElementById('local-map-legend');legend.replaceChildren();
-            for(const [name,color] of [['Door','#dfb777'],['Furniture','#907451'],...(map.id==='housing-office'?[['NPC','#9cd7ea']]:[])]) {
+            for(const [name,color] of (map.legend||[['Door','#dfb777'],['Furniture','#907451'],...(map.id==='housing-office'?[['NPC','#9cd7ea']]:[])])) {
                 const entry=document.createElement('span'),icon=document.createElement('i');icon.style.backgroundColor=color;
                 entry.append(icon,document.createTextNode(name));legend.append(entry);
             }
@@ -94,6 +94,7 @@
         function step(dx, dy) {
             if (Dialog.isOpen()) return false;
             const result = setup.worldMovement.move(dx, dy,sprintRequested());
+            if(result.travelled) return result.moved;
             const status = document.getElementById('movement-status');
             const world = State.variables.world;
             const entrance = map.tileAt(world.x, world.y).kind === 'entrance';

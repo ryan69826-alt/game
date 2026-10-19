@@ -318,6 +318,36 @@ Direction aliases share a slot. Blocked attempts cost nothing and keep inputs
 active. Dialogs, blur, hidden tabs, and navigation clear held inputs. Movement and
 elapsed game seconds persist through reloads, Continue, and disk saves.
 
+## Warehouse / Storage (B1)
+
+Walking west beyond any open tile on the Apartments west edge enters B1;
+walking east beyond B1 returns. Crossing counts as one ordinary walking/sprint
+step (5/2 game seconds), including endurance and billing, with no interaction
+menu. Positions align proportionally along different-sized edges; invalid or
+blocked destinations stay blocked. B1 is 70×50 while Apartments remains 50×50.
+
+The self-storage compound has ten reinforced units, fenced across the back and
+sides with an open southern frontage. Its automated front-office kiosk rents
+only units 2, 6 and 9 for **$200 per week each**. The first week is charged now;
+later payments use the apartment billing convention: automatic weekly collection,
+with unpaid charges kept as arrears, without eviction or destruction of items.
+Inspect a rented unit for its due date and outstanding balance. No key is required
+for the kiosk's personal access authorization. Other units cannot be rented or
+lockpicked, and the future breaching tool is not implemented.
+
+Approach your rented shutter and use E → Open storage to access an initially
+empty 8×6 block inventory beside worn pockets/bags. Drag or select/place existing
+items using the same packing rules as car storage. Units keep separate contents
+through travel, reload and disk saves. Every transfer checks ownership and reach;
+there is no remote access or invisible carrying capacity. The warehouse loading
+doors remain inaccessible; the mechanic service terminal only describes future
+vehicle repair. No repair action, fee, NPC activity or new tool is added.
+
+`storage-district.js` registers geometry through `world-map-data.js`;
+`self-storage.js` owns lease/access rules in `$selfStorage` and persistent unit
+containers use `$inventory.containers['storage:b1:UNIT']`. Region-edge connections
+live in each map's `exits` metadata and are resolved by `world-travel.js`.
+
 ## District plan and discovery
 
 `src/district-data.js` records the supplied spreadsheet as columns A–H, rows 1–7

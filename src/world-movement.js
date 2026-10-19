@@ -18,17 +18,21 @@ setup.worldMovement = (() => {
         if(setup.rest.fatigue()>=100||setup.rest.ensure().tiredness>=100) {const outcome=setup.rest.collapse();setup.rest.commit();return {moved:false,collapsed:true,reason:outcome.message};}
         if (!Number.isInteger(dx) || !Number.isInteger(dy) || Math.abs(dx) + Math.abs(dy) !== 1) return {moved: false, reason: 'Choose one adjacent square.'};
         const target = map.tileAt(world.x + dx, world.y + dy);
-        if (!target.walkable) return {moved: false, reason: target.kind === 'boundary' ? `You have reached the edge of ${map.name}.` : `${target.label} blocks the way.`};
+        const destination=target.kind==='boundary'?setup.worldTravel.edge(world,dx,dy):null;
+        if (!target.walkable&&!destination) return {moved: false, reason: target.kind === 'boundary' ? `You have reached the edge of ${map.name}.` : `${target.label} blocks the way.`};
         const door=map.interactables.find(object=>object.kind==='door'&&!object.destination&&object.x===world.x+dx&&object.y===world.y+dy);
         if(door&&!setup.interactions.isOpen(door.id)) return {moved:false,reason:'The door is closed. Press E to interact; unlock locked doors with a key or lockpicking.'};
         const sprinted=sprintRequested===true&&setup.endurance.sprint();
-        world.x += dx;world.y += dy;
+        if(destination) Object.assign(world,destination);
+        else {world.x += dx;world.y += dy;}
+        setup.worldAtlas.discover();
         const rest=setup.rest.advanceAwake(sprinted?2:setup.gameClock.stepSeconds,true,!sprinted);
         setup.housing.collectDue();
         // Create a SugarCube moment without rebuilding the DOM. This also saves
         // the step to the browser session, so a reload retains the last move.
         State.create(State.passage);
         $(document).trigger(':timechange');
+        if(destination) {Engine.play('Apartments');return {moved:true,sprinted,travelled:true,collapsed:!!rest.collapsed,reason:`You enter ${setup.worldMaps[destination.mapId].name}.`};}
         return {moved: true,sprinted,collapsed:!!rest.collapsed, reason:rest.collapsed?rest.message:sprintRequested&&!sprinted?'Out of breath. You walk while recovering.':`You move onto ${target.label.toLowerCase()}.`};
     }
     return {ensure, move};

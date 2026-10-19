@@ -56,7 +56,7 @@ setup.interactionUI = (() => {
         function showObject(object, focus = false) {
             root.replaceChildren();
             const title = document.createElement('h2');title.className = 'interaction-title';title.textContent = object.name;
-            const description = document.createElement('p');description.className = 'world-note';description.textContent = (setup.vehicleCabin.current()?.car.id===object.id?'You are seated inside the parked vehicle. Its engine is off. Hotwiring is not available yet.':object.description || 'Choose an interaction.')+(['door','car'].includes(object.kind)?(()=>{const target=object.kind==='car'&&setup.vehicles.edge(object,State.variables.world)==='rear'?setup.vehicles.trunk(object):object;return ` Lock level ${setup.doorLocks.difficulty(target)} / 5 · ${setup.doorLocks.isLocked(target)?'Locked':'Unlocked'} · Your lockpicking level: ${setup.doorLocks.skill()}.`;})():'');
+            const description = document.createElement('p');description.className = 'world-note';description.textContent = (setup.vehicleCabin.current()?.car.id===object.id?'You are seated inside the parked vehicle. Its engine is off. Hotwiring is not available yet.':(object.storageId&&setup.selfStorage.owned(object.storageId)?setup.selfStorage.summary(object.storageId):object.description) || 'Choose an interaction.')+(['door','car'].includes(object.kind)?(()=>{const target=object.kind==='car'&&setup.vehicles.edge(object,State.variables.world)==='rear'?setup.vehicles.trunk(object):object;return ` Lock level ${setup.doorLocks.difficulty(target)} / 5 · ${setup.doorLocks.isLocked(target)?'Locked':'Unlocked'} · Your lockpicking level: ${setup.doorLocks.skill()}.`;})():'');
             const actions = document.createElement('div');actions.className = 'interaction-actions';
             const result = document.createElement('p');result.id = 'interaction-result';result.setAttribute('role', 'status');result.setAttribute('aria-live', 'polite');
             for (const action of setup.interactions.actionsFor(object)) {
@@ -67,7 +67,7 @@ setup.interactionUI = (() => {
                     if(outcome.ok&&outcome.conversation==='housing') {showTalk(object);return;}
                     if(outcome.ok&&outcome.sleepBedId) {showSleep(object);return;}
                     if (outcome.ok && outcome.trunkId) {setup.inventoryUI.open(outcome.trunkId);return;}
-                    if(outcome.vehicleChanged||['open','close','close-trunk','trunk','unlock','lock','lockpick'].includes(action.id)) {
+                    if(outcome.refreshActions||outcome.vehicleChanged||['open','close','close-trunk','trunk','unlock','lock','lockpick'].includes(action.id)) {
                         // Opening a portal enables Enter/Exit in the same window.
                         showObject(object,true);document.getElementById('interaction-result').textContent=outcome.message;
                     } else {

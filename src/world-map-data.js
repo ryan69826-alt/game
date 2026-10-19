@@ -64,3 +64,5 @@ setup.worldMaps = (() => {
         spawn: {x: 30, y: 23}, trees, buildings, housingOffice, roads, park, parking, parkingBays, cars, interactables, tileAt: apartmentTile},
         ...Object.fromEntries([...interiorMaps,officeMap].map(map=>[map.id,map]))};
 })();
+
+setup.storageDistrict();

@@ -7,7 +7,7 @@ setup.inventoryUI = (() => {
         const inventory = setup.inventory;
         if (externalId && !inventory.openExternal(externalId)) return;
         inventory.ensure();
-        Dialog.setup(externalId==='housing-counter'?'Key handover & inventory':externalId?.startsWith('cabin:')?'Cabin & inventory':externalId?'Trunk & inventory':'Inventory', 'character-window inventory-window');
+        Dialog.setup(externalId?.startsWith('storage:')?'Storage unit & inventory':externalId==='housing-counter'?'Key handover & inventory':externalId?.startsWith('cabin:')?'Cabin & inventory':externalId?'Trunk & inventory':'Inventory', 'character-window inventory-window');
         const root = Dialog.body();
         let selected = null, message = 'Drag an item to a free space. You can also select an item and then a destination square. Items cannot overlap or rotate.';
         const drag = setup.inventoryDrag.mount(root,externalId,result => {message=result.message;if(result.ok) selected=null;render();});

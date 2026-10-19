@@ -43,6 +43,7 @@ setup.housing = (() => {
         return {ok:true,message:`You rent ${unit.name} for ${setup.playerState.formatMoney(rentPrice)} per week. The receptionist places its key on the tray. Move it into a pocket or bag before leaving.`};
     }
     function collectDue() {
+        setup.selfStorage.collectDue();
         const housing=ensure();if(!housing.rentedUnit) return;
         const now=setup.gameClock.now();
         if(now>=housing.nextRentAt) {

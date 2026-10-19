@@ -107,9 +107,9 @@ setup.inventory = (() => {
         State.create(State.passage);
         return container;
     }
-    const external=objectId=>objectId==='housing-counter'?setup.housing.counter():objectId?.startsWith('cabin:')?setup.vehicleCabin.container(objectId.slice(6)):trunk(objectId);
+    const external=objectId=>objectId?.startsWith('storage:')?setup.selfStorage.container(objectId.slice(8)):objectId==='housing-counter'?setup.housing.counter():objectId?.startsWith('cabin:')?setup.vehicleCabin.container(objectId.slice(6)):trunk(objectId);
     function openExternal(objectId) {
-        if(objectId!=='housing-counter'&&!objectId?.startsWith('cabin:')) return openTrunk(objectId);
+        if(objectId!=='housing-counter'&&!objectId?.startsWith('cabin:')&&!objectId?.startsWith('storage:')) return openTrunk(objectId);
         const container=external(objectId);if(!container) return null;
         ensure().containers[container.id] ||= [];State.create(State.passage);return container;
     }

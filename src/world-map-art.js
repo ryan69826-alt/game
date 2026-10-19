@@ -4,13 +4,14 @@ setup.worldMapArt=(()=>{
         const tileSize=16;
         const terrain = document.createElement('canvas');terrain.width = map.width * tileSize;terrain.height = map.height * tileSize;
         const terrainContext = terrain.getContext('2d');
-        const colors = {ground: '#293e35', park: '#416444', road: '#3b4750', parking: '#47525a',
+        const colors = {fence:'#87969a',shutter:'#9e9ca4',kiosk:'#72c4c4',ground: '#293e35', park: '#416444', road: '#3b4750', parking: '#47525a',
             pavement: '#66736c', path: '#889182', building: '#536b70', entrance: '#dfb777', tree: '#204b35', car: '#47525a', median: '#416444', wall:'#26373f',floor:'#5b665c',hall:'#7c8270',bathroom:'#7f9995',furniture:'#65584b',npc:'#5c9bb1'};
         for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) {
             const {kind} = map.tileAt(x, y), px = x * tileSize, py = y * tileSize;
             terrainContext.fillStyle = colors[kind];terrainContext.fillRect(px, py, tileSize, tileSize);
             terrainContext.strokeStyle = '#b7d6c41b';terrainContext.lineWidth = .6;terrainContext.strokeRect(px, py, tileSize, tileSize);
-            if (kind === 'tree') {
+            if(kind==='fence') {terrainContext.fillStyle='#273c42';terrainContext.fillRect(px+3,py+3,10,10);terrainContext.strokeStyle='#a4b8b5';terrainContext.beginPath();terrainContext.moveTo(px,py);terrainContext.lineTo(px+16,py+16);terrainContext.stroke();}
+            else if (kind === 'tree') {
                 terrainContext.fillStyle = '#6e9170';terrainContext.fillRect(px + 4, py + 3, 8, 9);
             } else if (kind === 'road') {
                 const centerY = map.roads.horizontal.y + Math.floor(map.roads.horizontal.height / 2);
@@ -57,6 +58,7 @@ setup.worldMapArt=(()=>{
             terrainContext.font=building.label?'bold 13px monospace':'bold 20px monospace';
             terrainContext.fillText(building.label||`0${i + 1}`, (building.x + building.width / 2) * tileSize, (building.y + building.height / 2) * tileSize + 7);
         });
+        for(const label of map.labels||[]) {terrainContext.fillStyle='#dbe5dd';terrainContext.font='bold 10px monospace';terrainContext.textAlign='center';terrainContext.fillText(label.text,label.x*tileSize,label.y*tileSize);}
         const furnitureColors={bed:'#657e9b',kitchen:'#b5ac86',table:'#907451',bath:'#d5ddd2',desk:'#9a7e55',seat:'#526c7a',cabinet:'#87978a'};
         for(const item of map.furniture||[]) {
             const x=item.x*tileSize,y=item.y*tileSize;

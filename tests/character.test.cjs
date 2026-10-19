@@ -485,7 +485,7 @@ test('movement buttons, keyboard, and adjacent map clicks advance five seconds, 
 
 test('walls, parked cars, trees, map bounds, and distant clicks do not advance time',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    for(const [x,y,dx,dy] of [[30,15,0,-1],[14,32,0,1],[13,35,1,0],[27,21,0,-1],[0,0,-1,0],[49,49,1,0]]) {
+    for(const [x,y,dx,dy] of [[30,15,0,-1],[14,32,0,1],[13,35,1,0],[27,21,0,-1],[0,0,0,-1],[49,49,1,0]]) {
         const result=await page.evaluate(({x,y,dx,dy})=>{
             SugarCube.State.variables.world={mapId:'apartments',x,y,elapsedSeconds:35};
             const result=SugarCube.setup.worldMovement.move(dx,dy);
@@ -1940,4 +1940,86 @@ test('district discovery accumulates without recursively revealing neighbors and
     await page.getByRole('button',{name:'Expand world map',exact:true}).click();
     assert.equal(await page.locator('#ui-dialog [data-district-id]').count(),7);
     assert.doesNotMatch(await page.locator('#ui-dialog').innerText(),/Park|City Center|Military Base/);
+});
+
+test('west edge travel enters the larger B1 district automatically and east returns to Apartments',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await placeInWorld('apartments',0,46);await page.getByRole('button',{name:'Move west',exact:true}).click();
+    await page.waitForSelector('#local-map[data-map-id="b1"]');
+    assert.match(await page.locator('#location-title').innerText(),/Warehouse/);
+    assert.match(await page.locator('#local-map-title').innerText(),/70 × 50/);
+    assert.deepEqual(await page.evaluate(()=>({id:SugarCube.State.variables.world.mapId,x:SugarCube.State.variables.world.x,y:SugarCube.State.variables.world.y,time:SugarCube.State.variables.world.elapsedSeconds})),{id:'b1',x:69,y:46,time:5});
+    assert.equal(await page.locator('#world-map').getAttribute('data-location-id'),'b1');
+    assert.deepEqual(await page.evaluate(()=>SugarCube.setup.worldAtlas.visible().map(a=>a.coordinate).sort()),['A1','B1','B2','C1','C2','D1']);
+    await page.getByRole('button',{name:'Move east',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="apartments"]');
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),0);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),10);
+    await page.keyboard.press('ArrowLeft');await page.waitForSelector('#local-map[data-map-id="b1"]');
+    await page.reload();await page.waitForSelector('#local-map[data-map-id="b1"]');
+});
+
+test('storage district has ten reachable shutters, three rentals, a fenced compound and sealed facilities',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{
+        const map=SugarCube.setup.worldMaps.b1,seen=new Set(),queue=[map.spawn];
+        for(let i=0;i<queue.length;i++){const p=queue[i],key=`${p.x},${p.y}`;if(seen.has(key)||!map.tileAt(p.x,p.y).walkable)continue;seen.add(key);for(const [dx,dy] of [[0,1],[1,0],[0,-1],[-1,0]])queue.push({x:p.x+dx,y:p.y+dy});}
+        const reachable=object=>[[0,1],[1,0],[0,-1],[-1,0]].some(([dx,dy])=>seen.has(`${object.x+dx},${object.y+dy}`));
+        return {units:map.storageUnits.length,available:map.storageUnits.filter(u=>u.available).map(u=>u.number),reachable:map.interactables.every(reachable),fence:[[7,23],[50,35],[28,23]].every(([x,y])=>!map.tileAt(x,y).walkable),front:map.tileAt(28,42).walkable,warehouse:map.interactables.filter(o=>o.id.startsWith('warehouse-')).length};
+    });
+    assert.deepEqual(result,{units:10,available:[2,6,9],reachable:true,fence:true,front:true,warehouse:2});
+    for(const [id,x,y] of [['storage-unit-1',11,31],['storage-unit-2',19,31],['warehouse-1',15,18],['mechanic-shop',57,18]]) {
+        await placeInWorld('b1',x,y);
+        const actions=await page.evaluate(id=>{const {setup}=SugarCube;return setup.interactions.actionsFor(setup.worldMaps.b1.interactables.find(o=>o.id===id)).map(a=>a.id);},id);
+        assert.equal(actions.includes('lockpick'),false);assert.equal(actions.includes('enter'),false);
+        assert.equal(await page.evaluate(id=>SugarCube.setup.interactions.run(id,'lockpick').ok,id),false);
+    }
+});
+
+test('automated kiosk rents only the three available units at $200 weekly and rejects repeat or remote purchases',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    assert.equal(await page.evaluate(()=>SugarCube.setup.selfStorage.buy('2').ok),false);
+    await placeInWorld('b1',57,37);await page.keyboard.press('e');
+    await page.getByRole('button',{name:'Rent unit 2 · $200 / week',exact:true}).waitFor({state:'visible'});
+    assert.equal(await page.getByRole('button',{name:/^Rent unit .*200/}).count(),3);
+    await page.getByRole('button',{name:'Rent unit 2 · $200 / week',exact:true}).click();
+    assert.match(await page.locator('#interaction-result').textContent(),/first week is paid/);
+    assert.equal(await page.locator('#player-money').textContent(),'$99,799');
+    assert.equal(await page.getByRole('button',{name:'Rent unit 2 · $200 / week',exact:true}).isDisabled(),true);
+    const outcome=await page.evaluate(()=>{const {setup,State}=SugarCube;return {repeat:setup.selfStorage.buy('2').ok,occupied:setup.selfStorage.buy('1').ok,money:State.variables.player.money,time:State.variables.world.elapsedSeconds};});
+    assert.deepEqual(outcome,{repeat:false,occupied:false,money:99799,time:0});
+    await page.keyboard.press('Escape');await page.evaluate(()=>SugarCube.setup.playerState.changeMoney(-99799));
+    assert.equal(await page.evaluate(()=>SugarCube.setup.selfStorage.buy('6').ok),false);
+    assert.deepEqual(await page.evaluate(()=>SugarCube.setup.selfStorage.ensure().owned),['2']);
+});
+
+test('storage weekly billing keeps arrears and lease dates through reload without duplicate charges',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('b1',57,37);
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;setup.selfStorage.buy('2');const due=setup.selfStorage.ensure().leases['2'].nextRentAt;
+        State.variables.world.elapsedSeconds+=setup.selfStorage.weekSeconds-1;setup.housing.collectDue();const before=State.variables.player.money;
+        State.variables.world.elapsedSeconds++;setup.housing.collectDue();const after=State.variables.player.money;
+        State.variables.player.money=0;State.variables.world.elapsedSeconds+=setup.selfStorage.weekSeconds*2;setup.housing.collectDue();
+        const lease=structuredClone(setup.selfStorage.ensure().leases['2']);State.create(State.passage);return {before,after,due,lease};});
+    assert.equal(result.before,99799);assert.equal(result.after,99599);assert.equal(result.lease.arrears,400);assert.equal(result.lease.nextRentAt,result.due+3*604800);
+    await page.reload();await page.waitForSelector('#local-map');
+    assert.deepEqual(await page.evaluate(()=>SugarCube.setup.selfStorage.ensure().leases['2']),result.lease);
+    const paid=await page.evaluate(()=>{const {setup,State}=SugarCube;setup.playerState.changeMoney(500);setup.housing.collectDue();setup.housing.collectDue();return {money:State.variables.player.money,arrears:setup.selfStorage.ensure().leases['2'].arrears};});
+    assert.deepEqual(paid,{money:100,arrears:0});
+});
+
+test('rented storage uses block transfers, remains separate per unit, persists and denies remote access',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('b1',57,37);
+    await page.evaluate(()=>{const {setup}=SugarCube;setup.selfStorage.buy('2');setup.selfStorage.buy('6');setup.inventory.ensure().containers['worn:shirt']=[{id:'storage-test-cloth',type:'cloth',x:0,y:0}];});
+    await placeInWorld('b1',19,31);await page.keyboard.press('e');await page.getByRole('button',{name:'Open storage',exact:true}).click();
+    assert.equal(await page.locator('#ui-dialog-title').textContent(),'Storage unit & inventory');
+    const grid=page.locator('[data-storage-id="storage:b1:2"]');assert.equal(await grid.getAttribute('data-columns'),'8');assert.equal(await grid.getAttribute('data-rows'),'6');
+    await page.getByRole('button',{name:'Cleaning cloth, 1 by 1 blocks, Shirt pocket',exact:true}).click();
+    await page.getByRole('button',{name:'Empty block 1, 1 in Storage unit 2',exact:true}).click();
+    assert.equal(await grid.locator('[data-item="storage-test-cloth"]').count(),1);
+    await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map');
+    await page.keyboard.press('e');await page.getByRole('button',{name:'Open storage',exact:true}).click();assert.equal(await page.locator('[data-storage-id="storage:b1:2"] [data-item]').count(),1);
+    await page.getByRole('button',{name:'Cleaning cloth, 1 by 1 blocks, Storage unit 2',exact:true}).click();await page.getByRole('button',{name:'Empty block 1, 1 in Shirt pocket',exact:true}).click();
+    await page.keyboard.press('Escape');await placeInWorld('b1',11,34);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.inventory.external('storage:2')),null);
+    await page.keyboard.press('e');await page.getByRole('button',{name:'Open storage',exact:true}).click();assert.equal(await page.locator('[data-storage-id="storage:b1:6"] [data-item]').count(),0);
+    await page.keyboard.press('Escape');await placeInWorld('apartments',30,23);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.inventory.transfer('worn:shirt','storage:b1:2','storage-test-cloth',0,0,'storage:2').ok),false);
 });
