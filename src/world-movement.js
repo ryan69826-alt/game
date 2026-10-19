@@ -9,6 +9,7 @@ setup.worldMovement = (() => {
             x: valid ? value.x : map.spawn.x, y: valid ? value.y : map.spawn.y,
             elapsedSeconds: setup.gameClock.elapsed(value)
         };
+        setup.worldAtlas.discover();
         return State.variables.world;
     }
     function move(dx, dy, sprintRequested=false) {

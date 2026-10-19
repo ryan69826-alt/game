@@ -8,8 +8,9 @@
 <aside class="world-sidebar" aria-label="Character sidebar">
 <div class="sidebar-brand">◈ <span>NEON MERIDIAN</span></div>
 <figure class="world-map-panel">
-<div class="map-heading"><span>WORLD MAP</span><span>1 AREA</span></div>
+<div class="map-heading"><span>WORLD MAP</span><span id="world-map-count"></span></div>
 <div class="map-viewport"><canvas id="world-map" width="300" height="300" role="img" aria-label="World map showing the current area"></canvas></div>
+<<button "Expand world map">><<run setup.worldAtlas.open()>><</button>>
 <figcaption><span class="location-dot" aria-hidden="true"></span> Apartments <span>Current area</span></figcaption>
 </figure>
 <p class="sidebar-eyebrow">YOUR CHARACTER</p>

@@ -134,3 +134,17 @@ html:has(#ui-dialog-body.character-window) #ui-overlay{background:#050c10;opacit
 .world-sidebar .world-map-panel .map-heading{padding:7px 8px;font-size:.5rem;letter-spacing:.5px}
 .world-sidebar .world-map-panel figcaption{display:none}
 @media(max-width:700px){.world-sidebar .world-map-panel{height:140px}}
+
+/* Region tiles represent adjacency only; every district can have its own dimensions. */
+.world-map-panel>button{flex-shrink:0;border:0;border-top:1px solid var(--line);padding:5px;background:#20372f;color:var(--accent);font-size:.65rem;cursor:pointer}
+#ui-dialog-body.atlas-window{box-sizing:border-box;width:min(1100px,calc(100vw - 32px));max-height:calc(100dvh - 100px);overflow:auto}
+.atlas-note{color:var(--muted);font-size:.85rem;line-height:1.5}
+.atlas-grid{display:grid;grid-template-columns:repeat(8,minmax(105px,1fr));gap:5px;min-width:875px}
+.atlas-cell{display:flex;flex-direction:column;gap:6px;min-height:95px;padding:10px;background:#20332e;border:1px solid #40594e;font-size:.8rem;overflow-wrap:anywhere}
+.atlas-cell strong{color:var(--accent);font-size:.85rem}
+.atlas-cell small{margin-top:auto;color:var(--muted);font-size:.65rem}
+.atlas-current{border-color:#bcf4d7;background:#304d40}
+.atlas-current small{color:#bcf4d7}
+.atlas-unknown{background:#142126;border-color:#25383a}
+#ui-dialog:has(#ui-dialog-body.atlas-window){max-width:calc(100vw - 32px)}
+html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}

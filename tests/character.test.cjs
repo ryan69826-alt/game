@@ -1719,7 +1719,7 @@ test('sideways beds rotate their pillows and bedding instead of stretching a hor
 
 test('world atlas shows an area icon that stays fixed across local movement and entering buildings',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await stableAtlas();const atlas=page.locator('#world-map');
-    assert.equal(await atlas.getAttribute('data-location-id'),'apartments');assert.equal(await atlas.getAttribute('data-icon-count'),'1');
+    assert.equal(await atlas.getAttribute('data-location-id'),'apartments');assert.equal(await atlas.getAttribute('data-icon-count'),'4');
     const before=await atlas.evaluate(canvas=>canvas.toDataURL());await page.keyboard.press('d');
     assert.equal(await atlas.evaluate(canvas=>canvas.toDataURL()),before);
     await placeInWorld('apartment-2',12,12);assert.equal(await atlas.evaluate(canvas=>canvas.toDataURL()),before);
@@ -1901,4 +1901,43 @@ test('default ambience follows nearby environment and contains no phantom traffi
     const results=await page.evaluate(()=>{const {setup,State}=SugarCube;const points=[['apartments',30,23],['apartments',0,46],['apartment-1',12,5],['apartment-1',18,3],['apartment-1',21,3],['housing-office',8,7]];return points.map(([mapId,x,y])=>{State.variables.world={...State.variables.world,mapId,x,y};State.variables.roomActivities={[`${mapId}:hall`]:'conversation'};return {mapId,x,y,sound:setup.rooms.sounds()};});});
     for(const result of results) assert.doesNotMatch(result.sound,/traffic|footstep|voice|laughter|paper|keys tap|music|tools tap/i);
     assert.match(results[0].sound,/leaves/);assert.doesNotMatch(results[1].sound,/leaves/);assert.match(results[2].sound,/quiet hallway/);assert.match(results[4].sound,/extractor fan/);
+});
+
+test('district atlas reveals only Apartments and cardinal neighbors, with readable names in an overlay',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await stableAtlas();
+    assert.equal(await page.locator('#world-map-count').textContent(),'4 KNOWN');
+    assert.deepEqual(await page.evaluate(()=>SugarCube.setup.worldAtlas.visible().map(area=>area.coordinate).sort()),['B1','C1','C2','D1']);
+    const before=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
+    await page.getByRole('button',{name:'Expand world map',exact:true}).click();
+    const dialog=page.locator('#ui-dialog');assert.equal(await dialog.isVisible(),true);
+    assert.equal(await dialog.locator('[data-district-id]').count(),4);
+    assert.match(await dialog.innerText(),/Warehouse\/Storage/);assert.match(await dialog.innerText(),/Marketplace/);
+    assert.match(await dialog.innerText(),/Transit Area w\/ Shops/);
+    assert.doesNotMatch(await dialog.innerText(),/Gas Station Area|Corporate Housing|Nightlife|Military Base/);
+    assert.equal(await dialog.locator('.atlas-current').innerText(),'C1\nApartments\nYou are here');
+    assert.equal(await dialog.locator('button,a').filter({hasText:/Travel|Enter/}).count(),0);
+    assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),before);
+    await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
+    assert.equal(await page.locator('#local-map').isVisible(),true);
+});
+
+test('district discovery accumulates without recursively revealing neighbors and survives reload',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const known=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;
+        // A future district supplies worldArea regardless of its walkable dimensions.
+        setup.worldMaps['future-market']={id:'future-market',worldArea:'c2',width:160,height:90,spawn:{x:100,y:70},tileAt:()=>({walkable:true})};
+        State.variables.world={...State.variables.world,mapId:'future-market',x:100,y:70};setup.worldMovement.ensure();
+        const result={coordinates:setup.worldAtlas.visible().map(area=>area.coordinate).sort(),world:structuredClone(State.variables.world)};
+        State.variables.world={...State.variables.world,mapId:'apartments',x:30,y:40};setup.worldMovement.ensure();State.create(State.passage);
+        return result;
+    });
+    assert.deepEqual(known.coordinates,['B1','B2','C1','C2','C3','D1','D2']);
+    assert.equal(known.world.x,100);assert.equal(known.world.y,70);
+    await page.reload();await page.waitForSelector('#world-map');
+    assert.deepEqual(await page.evaluate(()=>SugarCube.setup.worldAtlas.visible().map(area=>area.coordinate).sort()),known.coordinates);
+    assert.deepEqual(await page.evaluate(()=>SugarCube.State.variables.worldDiscovery.visited.sort()),['apartments','c2']);
+    await page.getByRole('button',{name:'Expand world map',exact:true}).click();
+    assert.equal(await page.locator('#ui-dialog [data-district-id]').count(),7);
+    assert.doesNotMatch(await page.locator('#ui-dialog').innerText(),/Park|City Center|Military Base/);
 });

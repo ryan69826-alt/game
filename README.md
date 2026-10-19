@@ -318,6 +318,28 @@ Direction aliases share a slot. Blocked attempts cost nothing and keep inputs
 active. Dialogs, blur, hidden tabs, and navigation clear held inputs. Movement and
 elapsed game seconds persist through reloads, Continue, and disk saves.
 
+## District plan and discovery
+
+`src/district-data.js` records the supplied spreadsheet as columns A–H, rows 1–7
+(north increases upward). Apartments is C1; E7 and H5 are unassigned. These are
+relative district coordinates, not dimensions of walkable maps. Repeated labels
+such as Highway or Scrapyard remain separate cells. Distant destinations are not
+placed until their travel connections are defined.
+
+The world atlas initially reveals Apartments and its cardinal neighbors: B1
+Warehouse/Storage, C2 Marketplace, and D1 Transit Area w/ Shops. Entering a district
+reveals that district and its north, south, east and west neighbors, without
+recursively revealing neighbors of neighbors. `$worldDiscovery` stores discovered
+and visited district IDs for saves/reloads; interiors stay within their parent
+`worldArea`. Existing saves initialize discovery from their current district.
+
+Use **Expand world map** for readable district names and a highlighted current
+cell. Unknown cells show no names, and discovered cells remain visible after
+leaving. Planned districts are markers only, with no travel action. To develop a
+future district, give its local map a `worldArea` matching the registry ID; local
+width, height, terrain and connections are independent of the atlas. Implement
+and review one playable district at a time.
+
 ## Local development and preview
 
 Requires Python 3.9+ and Linux x64. Node 20+ and Chromium are needed only for tests.

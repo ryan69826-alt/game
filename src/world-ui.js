@@ -65,7 +65,7 @@ setup.worldWindows = (() => {
 })();
 
 $(document).on('keydown.characterWindow', event => {
-    if (event.key === 'Escape' && Dialog.isOpen() && Dialog.body().classList.contains('character-window')) {
+    if (event.key === 'Escape' && Dialog.isOpen() && ['character-window','atlas-window'].some(name=>Dialog.body().classList.contains(name))) {
         event.preventDefault();
         Dialog.close();
     }
