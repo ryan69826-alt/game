@@ -2,7 +2,7 @@
 
 A modular browser RPG prototype built with Twine 2, SugarCube 2.37.3 and Tweego
 2.1.1. For the click-to-play site, see [GitHub Pages deployment](DEPLOYMENT.md).
-The protagonist is an adult woman (age 26). Apartments and B1 Warehouse / Storage are available;
+The protagonist is an adult woman (age 26). Apartments, B1 Warehouse / Storage, and A1 Low Density Housing are available;
 no story, NPC schedules, or trait modifiers have been added. The game clock advances with movement only.
 
 ## Current character and equipment
@@ -346,6 +346,29 @@ uses the actual cabin grid, rather than putting an item outside the car.
 The existing inventory/drag modules handle packing, pointer cancellation and
 reachable storage consistently. Drops outside storage/drop zones are cancelled;
 dragging onto the visible local map drops at the player's feet.
+
+## Low Density Housing (A1)
+
+Walk west beyond B1 to enter A1 and east to return. The 100×90 local map shares
+road rows 44–48 with B1/C1. Five modest houses stand north of the road and four
+south, with entrances facing the street. The road retains five driving squares
+and adds two-square curb parking strips on each side, plus sidewalks. Long bays
+and east/west-facing cars represent parallel parking; existing vehicle locks,
+side/rear interactions, separate inventories and cabin behavior still apply.
+
+All nine houses have enterable 13×12 floor plans, modestly larger than the
+9×8 apartment studios: a bedroom, side room, combined living/dining room and
+bathroom. North-facing houses rotate the complete plan and bed artwork by 180°.
+Bedroom, side-room and bathroom doors hide their room until the player enters or
+stands beside its open door. Room descriptions, sounds, sleeping and dropped-item
+visibility use the actual room. No occupants, footsteps or traffic are simulated.
+Front doors start unlocked to allow layout review; house purchases/rentals and
+ownership are not implemented. Existing apartment listings are unchanged.
+
+`neighborhood-district.js` defines A1 and registers its edge connection;
+`house-interiors.js` shares one floor plan across the nine homes. House rooms use
+`map.rooms`, separate from apartment `map.units`, and their `worldArea` remains
+`a1` while indoors, so the atlas does not discover unrelated districts.
 
 ## Warehouse / Storage (B1)
 

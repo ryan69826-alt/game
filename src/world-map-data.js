@@ -66,3 +66,5 @@ setup.worldMaps = (() => {
 })();
 
 setup.storageDistrict();
+
+setup.neighborhoodDistrict();
