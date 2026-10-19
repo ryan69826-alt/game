@@ -12,7 +12,7 @@ setup.character = (() => {
         skinTone: ['Pale', 'Tan', 'Olive', 'Dark']
     };
     const defaults = () => ({
-        version: 6, age: 26, gender: 'Male', genitals: 'Male', bodySize: 'Medium',
+        version: 7, age: 26, gender: 'Male', genitals: 'Male', bodySize: 'Medium',
         clothing: setup.clothing.defaults(), eyeColor: 'Brown',
         hairColor: 'Black', hairLength: 'Ear', skinTone: 'Tan', breastSize: 'Medium',
         traits: [], skills: Object.fromEntries(setup.characterRules.skills.map(name => [name, 0]))

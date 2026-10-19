@@ -4,12 +4,12 @@ setup.characterRules = (() => {
         'Deviant', 'Beautiful', 'Lustful', 'Masochist', 'Sadist', 'Polyamorous',
         'Nudist', 'Insane', 'Ugly', 'Innocent'];
     const skills = ['Lockpicking', 'Stealth', 'Dancing', 'Swimming', 'Athleticism',
-        'Tending', 'Housekeeping', 'Endurance', 'Agility', 'Combat', 'Ranged',
+        'Tending', 'Housekeeping', 'Endurance', 'Agility', 'Melee Combat', 'Ranged',
         'Medical', 'Crafting', 'Charm', 'Deception', 'Perception', 'Intimidation', 'Focus'];
     // Display organization only. Keep the flat skill order above stable for saves.
     const skillCategories = [
         {id:'physical', name:'Physical', skills:['Athleticism', 'Endurance', 'Agility', 'Swimming', 'Dancing']},
-        {id:'combat', name:'Combat', skills:['Combat', 'Ranged']},
+        {id:'combat', name:'Combat', skills:['Melee Combat', 'Ranged']},
         {id:'covert', name:'Covert', skills:['Stealth', 'Lockpicking']},
         {id:'practical', name:'Practical', skills:['Tending', 'Housekeeping', 'Medical', 'Crafting']},
         {id:'social', name:'Social', skills:['Charm', 'Deception', 'Intimidation']},

@@ -21,6 +21,37 @@ setup.interactionUI = (() => {
             const element = document.createElement('button');element.type = 'button';element.textContent = label;
             element.addEventListener('click', action);return element;
         }
+        function showTalk(object,focus=true) {
+            root.replaceChildren();
+            const title=document.createElement('h2');title.className='interaction-title';title.textContent=object.name;
+            const text=document.createElement('p');text.className='world-note';text.textContent='“Looking for a place to live?”';
+            const actions=document.createElement('div');actions.className='interaction-actions';
+            actions.append(button('Rent apartment',()=>showRental(object)),button('Back',()=>showObject(object,true)));
+            root.append(title,text,actions);if(focus) actions.firstElementChild.focus();
+        }
+        function showRental(object) {
+            root.replaceChildren();
+            const title=document.createElement('h2');title.className='interaction-title';title.textContent='Rent an apartment';
+            const text=document.createElement('p');text.className='world-note';
+            text.textContent=`Rent is ${setup.playerState.formatMoney(setup.housing.rentPrice)} per month. Pay the first month now. Later monthly payments will begin when a calendar system is added.`;
+            const form=document.createElement('div');form.className='rental-form';
+            const label=document.createElement('label');label.htmlFor='rental-unit';label.textContent='Choose an apartment';
+            const select=document.createElement('select');select.id=label.htmlFor;
+            for(const unit of setup.housing.units()) select.append(new Option(unit.name,unit.id));
+            const result=document.createElement('p');result.id='interaction-result';result.setAttribute('role','status');result.setAttribute('aria-live','polite');
+            const confirm=button(`Rent · ${setup.playerState.formatMoney(setup.housing.rentPrice)} first month`,()=>{
+                const outcome=setup.housing.rent(select.value);result.textContent=outcome.message;
+                if(outcome.ok) {confirm.disabled=true;select.disabled=true;}
+            });
+            const rented=setup.housing.ensure().rentedUnit;
+            if(rented) {
+                select.value=rented;select.disabled=true;confirm.disabled=true;
+                result.textContent=`You already rent ${setup.housing.units().find(unit=>unit.id===rented).name}.`;
+            }
+            form.append(label,select,confirm);
+            root.append(title,text,form,result,button('Back to talk',()=>showTalk(object)));
+            select.focus();
+        }
         function showObject(object, focus = false) {
             root.replaceChildren();
             const title = document.createElement('h2');title.className = 'interaction-title';title.textContent = object.name;
@@ -30,9 +61,16 @@ setup.interactionUI = (() => {
             for (const action of setup.interactions.actionsFor(object)) {
                 const control = button(action.label, () => {
                     const outcome = setup.interactions.run(object.id, action.id);
+                    if(outcome.travelled) return;
+                    if(outcome.ok&&outcome.conversation==='housing') {showTalk(object);return;}
                     if (outcome.ok && outcome.trunkId) {setup.inventoryUI.open(outcome.trunkId);return;}
-                    result.textContent = outcome.message;
-                    control.disabled = !!action.enabled && !action.enabled(object);
+                    if(action.id==='open') {
+                        // Opening a portal enables Enter/Exit in the same window.
+                        showObject(object,true);document.getElementById('interaction-result').textContent=outcome.message;
+                    } else {
+                        result.textContent=outcome.message;
+                        control.disabled=!!action.enabled&&!action.enabled(object);
+                    }
                 });
                 control.disabled = !!action.enabled && !action.enabled(object);actions.append(control);
             }

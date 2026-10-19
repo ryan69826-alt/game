@@ -11,6 +11,12 @@ body[data-tags~="world"] #passages{max-width:none;margin:0 auto}
 .sidebar-identity{text-align:center;font-size:.75rem;margin:6px 0 20px;color:var(--accent)}
 .sidebar-age{display:block;font-size:.65rem;color:var(--muted)}
 .sidebar-nav{display:flex;flex-direction:column;gap:8px}
+.sidebar-vitals{display:grid;gap:8px;margin:0 0 16px;font-size:.75rem}
+.sidebar-vitals>div{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 8px;color:var(--muted)}
+.sidebar-vitals output{color:var(--accent);font-variant-numeric:tabular-nums}
+.sidebar-vitals progress{width:100%;height:6px;accent-color:var(--accent)}
+.rental-form{display:grid;gap:14px;min-width:0;margin:16px 0}
+.rental-form select{width:100%;min-width:0;background:#16292c;color:var(--text);padding:10px;border:1px solid #3c5952}
 .sidebar-nav a,.world-actions a{display:block;border:1px solid #3b5c51;background:#1a302d;color:var(--text);padding:10px 14px;font-size:.85rem;text-decoration:none;font-weight:400}
 .sidebar-nav a:hover,.world-actions a:hover{background:#2a493e;border-color:var(--accent);color:#fff}
 .sidebar-nav a[aria-current="page"]{border-left:3px solid var(--accent);background:#2a453c;color:var(--accent)}
@@ -25,7 +31,7 @@ body[data-tags~="world"] #passages{max-width:none;margin:0 auto}
 .district-map,.world-map-panel{display:flex;flex-direction:column;min-height:0;margin:0;border:1px solid #3b5c51;background:#142326;min-width:0;overflow:hidden}
 .map-viewport{flex:1;min-height:0;display:grid;place-items:center;container-type:size}
 .district-map> :not(.map-viewport),.world-map-panel> :not(.map-viewport){flex-shrink:0}
-.district-map canvas{display:block;width:min(100cqw,calc(100cqh * 5 / 7));height:auto;image-rendering:pixelated;cursor:crosshair}
+.district-map canvas{display:block;width:min(100cqw,calc(100cqh * var(--map-aspect, .7142857)));height:auto;image-rendering:pixelated;cursor:crosshair}
 .world-map-panel canvas{display:block;width:min(100cqw,100cqh);height:auto;image-rendering:pixelated}
 .district-map figcaption,.world-map-panel figcaption{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 12px;border-top:1px solid var(--line);color:var(--muted);font-size:.7rem}
 .district-map figcaption>span:last-child,.world-map-panel figcaption>span:last-child{margin-left:auto;color:var(--accent)}

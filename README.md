@@ -31,16 +31,45 @@ costs another 100, then 200, doubling through level 10. Entries are cumulative
 all. The last increment uses the remaining pool. No trait combinations are restricted.
 
 Skills share the same six categories in creation and the Stats window: Physical
-(Athleticism, Endurance, Agility, Swimming, Dancing), Combat (Combat, Ranged), Covert
+(Athleticism, Endurance, Agility, Swimming, Dancing), Combat (Melee Combat, Ranged), Covert
 (Stealth, Lockpicking), Practical (Tending, Housekeeping, Medical, Crafting), Social
 (Charm, Deception, Intimidation), and Mental (Perception, Focus). Category definitions
 live in `character-rules.js`; grouping does not change save keys, XP or progression.
+The old generic Combat skill has been removed; Athleticism retains its own XP.
 
 Start at Apartments locks creation. The sidebar shows the same full-body sprite.
 Character and Stats are read-only windows over the map; Inventory is also a
 window. Escape, close button, or backdrop closes them. Character creation cannot
 be reopened after starting. Use a private browser window to review a fresh creator
 without changing an existing playthrough; disk export preserves saves across origins.
+
+## Apartments, housing, money and health
+
+The four buildings each contain one floor with six furnished studio apartments.
+Each floor plan (including furniture and unit doors) rotates to match the outdoor
+building's entrance toward the park. Open an entrance with E, then choose Enter;
+inside, Open and Exit returns through the corresponding outdoor door. The lower
+world map always shows the district and the building you are inside.
+
+The north-facing Housing Office stands immediately right of Apartment 3, linked
+by sidewalk. Its receptionist is behind a blocking desk; approach the service
+positions on the front side and press E. The first screen has Talk and Attack.
+Talk → Rent apartment lets you choose any of the 24 units. Attack is an explicit
+placeholder and makes no attack until combat rules are developed.
+
+The player starts with **$99,999** and **100 / 100 health**. Both appear above
+Character in the sidebar and in Stats; the old Apartments navigation tab is gone.
+Rent is **$600 per month**. Renting charges the first month, records the lease,
+and unlocks only that unit's door. Further monthly billing awaits a calendar;
+there is no invented conversion from movement turns to months. Duplicate leases,
+insufficient funds, invalid units, and remote rental calls cannot take payment.
+Money, health, lease, map position and open doors survive reloads/disk saves.
+
+`setup.playerState.changeMoney(integer)` applies safe currency changes;
+`changeHealth(integer)` applies damage/healing, clamped to 0–100. Both commit a
+save moment and refresh the sidebar. No hunger or thirst systems are present.
+Food/drink consumption and other stat bonuses are deferred until their rules are
+defined; health is ready for those effects without a hunger/thirst dependency.
 
 ## Block inventories and cars
 
@@ -137,15 +166,17 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
 ## Source and saves
 
 - `story.twee`, `world.twee`: menu, creator, world, sidebar and window markup.
-- `character-data.js`: version-6 serializable schema, defaults and migrations.
+- `character-data.js`: version-7 serializable schema, defaults and migrations.
 - `character-rules.js`, `character-creation-build.js`: traits, XP and allocation UI.
 - `character-ui.js`, `character-display.js`: creator controls/shared preview lifecycle.
 - `character-female.js`, `character-body.js`, `character-preview.js`, `clothing.js`:
   fixed female/male bases, independent equipment art, head/hair and capacity definitions.
 - `inventory.js`, `inventory-ui.js`, `inventory-drag.js`: packing, access, transfers,
   pointer dragging, cancellation/cleanup and block windows.
-- `world-map-data.js`, `world-movement.js`, `world-map-ui.js`: terrain, movement,
-  held-input pacing, map rendering and camera.
+- `world-map-data.js`, `interior-maps.js`, `world-map-art.js`, `world-map-ui.js`:
+  outdoor/interior geometry, rotated floors, furnishings, rendering and camera.
+- `world-movement.js`, `world-travel.js`: held-input movement and door transitions.
+- `player-state.js`, `housing.js`: money/health and validated apartment rentals.
 - `vehicle-geometry.js`: shared vehicle headings and front/rear/side geometry.
 - `world-interactions.js`, `world-interaction-ui.js`: reach, directional actions,
   prompts and object windows. Definitions can supply custom action text/handlers.
@@ -179,13 +210,16 @@ SugarCube browser runtime. Coverage includes two fixed body models,
 proportional heads and visible faces, independent clothing layers, old-save normalization,
 all visual choices, long-hair face/curtain regressions, creator migration,
 traits/XP, responsive layouts, read-only sheets, map geometry/collision,
-movement/held-direction pacing, interaction reach/actions, nose-in parking/headlight orientation, directional car access, garment-only layer bounds,
+movement/held-direction pacing, interaction reach/actions, nose-in parking/headlight orientation, directional car access, oriented six-unit interiors and portal returns,
+rental transactions/access/desk reach, persistent money and bounded health, garment-only layer bounds,
 block packing/failed transfers, separate single-block pockets, dropdown categories,
 pointer tracking/drop/cancel behavior, legacy item migration, crisp sprite edges,
 no invisible storage, empty-trunk persistence,
 reloads, and portable save round trips. CI runs the same suite before Pages deploys.
 
-For review: try both base models and clothing dropdowns in a fresh creator, enter
-Apartments, open sidebar Inventory, walk to a car's side/back and press E, and
-transfer the differently sized placeholder items between pockets, backpack and
-trunk. Stop here for feedback before adding another feature.
+For review: enter each apartment building with E → Open → Enter, then return
+through its exit. Visit the Housing Office beside Apartment 3, approach the desk,
+and use Talk → Rent apartment. Check the $600 first-month charge, enter that unit,
+and verify the lease, health, and balance after reload or disk save/load. Check
+Inventory and the separate pockets as before. Stop here for feedback before
+adding another feature.

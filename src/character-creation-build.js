@@ -37,7 +37,7 @@ setup.characterCreationBuild = (() => {
             for (const name of category.skills) {
                 const row = document.createElement('div');row.className = 'skill-row';
                 const heading = document.createElement('div');heading.className = 'skill-heading';
-                const label = document.createElement('label');label.textContent = name;label.htmlFor = `skill-${name.toLowerCase()}`;
+                const label = document.createElement('label');label.textContent = name;label.htmlFor = `skill-${name.toLowerCase().replace(/\s+/g,'-')}`;
                 const level = document.createElement('span');level.className = 'skill-level';heading.append(label, level);
                 const controls = document.createElement('div');controls.className = 'skill-allocation';
                 const minus = document.createElement('button');minus.type = 'button';minus.textContent = '−';minus.setAttribute('aria-label', `Refund 10 XP from ${name}`);

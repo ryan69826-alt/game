@@ -12,6 +12,14 @@ $(document).on(':passagedisplay', () => {
 /* SugarCube owns dialog focus, backdrop, and close-button behavior. */
 setup.worldWindows = (() => {
     function populate(root, character) {
+        const vitals=root.querySelector('#player-stats');
+        if(vitals) {
+            const player=setup.playerState.ensure();
+            for(const [name,value] of Object.entries({Health:`${player.health} / ${player.maxHealth}`,Money:setup.playerState.formatMoney(player.money)})) {
+                const term=document.createElement('dt');term.textContent=name;
+                const description=document.createElement('dd');description.textContent=value;vitals.append(term,description);
+            }
+        }
         const details = root.querySelector('#character-details');
         if (details) {
             const fields = {Age: character.age, Gender: character.gender, Genitals: character.genitals,

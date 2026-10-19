@@ -6,13 +6,17 @@
 
 :: WorldSidebar [nobr]
 <aside class="world-sidebar" aria-label="Character sidebar">
-<a class="sidebar-brand" data-passage="Apartments" aria-label="Neon Meridian — Apartments">◈ <span>NEON MERIDIAN</span></a>
+<div class="sidebar-brand">◈ <span>NEON MERIDIAN</span></div>
 <p class="sidebar-eyebrow">YOUR CHARACTER</p>
 <div class="sidebar-character"><<include "CharacterArtwork">></div>
 <p class="sidebar-identity"><span data-character-summary></span><span class="sidebar-age">Age 26</span></p>
 <p id="preview-status" class="preview-status" role="status" aria-live="polite"></p>
+<div class="sidebar-vitals" aria-label="Money and health">
+<div><span>Money</span><output id="player-money"></output></div>
+<div><label for="player-health-bar">Health</label><output id="player-health"></output></div>
+<progress id="player-health-bar" aria-label="Health" max="100" value="100"></progress>
+</div>
 <nav class="sidebar-nav" aria-label="Game pages">
-[[Apartments|Apartments]]
 <<link "Character">><<run setup.worldWindows.open("Character")>><</link>>
 <<link "Inventory">><<run setup.inventoryUI.open()>><</link>>
 <<link "Stats">><<run setup.worldWindows.open("Stats")>><</link>>
@@ -46,17 +50,17 @@
 </div>
 <p id="movement-status" role="status" aria-live="polite"></p>
 </section>
-<header class="world-heading"><p class="eyebrow">URBAN AREA · RESIDENTIAL</p><h1 id="location-title">Apartments</h1><p class="world-subtitle">A small corner of the city.</p></header>
-<section class="location-description" aria-label="Location description"><p>Four apartment buildings face a small central park. Paths link their entrances, with a parking lot to the southwest and two roads meeting along the southern edge.</p></section>
+<header class="world-heading"><p id="location-eyebrow" class="eyebrow">URBAN AREA · RESIDENTIAL</p><h1 id="location-title">Apartments</h1><p id="location-subtitle" class="world-subtitle">A small corner of the city.</p></header>
+<section class="location-description" aria-label="Location description"><p id="location-description"></p><p id="housing-summary" class="world-note"></p></section>
 
 
 </div>
 <div class="map-stack">
 <figure class="district-map">
-<div class="map-heading"><span>LOCAL MAP</span><span>APARTMENTS · 50 × 50</span></div>
+<div class="map-heading"><span>LOCAL MAP</span><span id="local-map-title">APARTMENTS · 50 × 50</span></div>
 <div class="map-viewport"><canvas id="local-map" width="400" height="560" role="img" tabindex="0" aria-label="Apartments area map" aria-describedby="movement-help"></canvas></div>
-<figcaption><span class="location-dot" aria-hidden="true"></span> You <span>Scrolls as you move</span></figcaption>
-<div class="map-legend"><span><i class="legend-door"></i>Entrance</span><span><i class="legend-park"></i>Park</span><span><i class="legend-road"></i>Road</span></div>
+<figcaption><span class="location-dot" aria-hidden="true"></span> You <span id="map-camera-note">Scrolls as you move</span></figcaption>
+<div id="local-map-legend" class="map-legend"><span><i class="legend-door"></i>Entrance</span><span><i class="legend-park"></i>Park</span><span><i class="legend-road"></i>Road</span></div>
 </figure>
 <figure class="world-map-panel">
 <div class="map-heading"><span>WORLD MAP</span><span>1 AREA</span></div>
@@ -75,6 +79,7 @@
 
 :: StatsSheet [nobr]
 <div class="character-window-content">
+<section class="world-panel" aria-labelledby="vitals-title"><h2 id="vitals-title">Vitals & money</h2><dl id="player-stats" class="character-details"></dl></section>
 <section class="world-panel" aria-labelledby="skills-title"><h2 id="skills-title">Skills</h2><p class="world-note">Levels range from 0 (untrained) to 10. XP shown is progress toward the next level.</p><div id="world-skills" class="world-skills"></div></section>
 <p class="world-note">Additional character stats and trait effects have not been defined yet.</p>
 </div>

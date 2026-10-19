@@ -6,6 +6,9 @@ setup.worldMaps = (() => {
         {name: 'Apartment 3', x: 25, y: 31, width: 11, height: 8, door: {x: 30, y: 31}, facing: 'north'},
         {name: 'Apartment 4', x: 16, y: 19, width: 8, height: 9, door: {x: 23, y: 23}, facing: 'east'}
     ];
+    const housingOffice={name:'Housing Office',label:'OFFICE',x:38,y:32,width:9,height:8,door:{x:42,y:32},facing:'north'};
+    const interiorMaps=buildings.map((building,index)=>setup.interiorMaps.apartment(building,index+1));
+    const officeMap=setup.interiorMaps.office(housingOffice);
     const inRect = (x, y, left, top, width, height) => x >= left && x < left + width && y >= top && y < top + height;
     const trees = [[27, 20], [33, 20], [27, 26], [33, 26]];
     const roads = {horizontal: {y: 44, height: 5}, vertical: {x: 4, width: 5}};
@@ -22,7 +25,10 @@ setup.worldMaps = (() => {
     const interactables = [
         ...buildings.map((building, index) => ({id: `apartment-door-${index + 1}`, kind: 'door',
             name: `${building.name} door`, ...building.door, width: 1, height: 1,
-            description: 'An apartment entrance facing the central park.'})),
+            destination:{mapId:interiorMaps[index].id,...interiorMaps[index].spawn},
+            description: 'A single-floor building with six apartments. Its entrance faces the central park.'})),
+        {id:'housing-office-door',kind:'door',name:'Housing office door',...housingOffice.door,width:1,height:1,
+            destination:{mapId:officeMap.id,...officeMap.spawn},description:'The housing office handles rentals for all four apartment buildings.'},
         ...cars.map((car, index) => ({id: `parked-car-${index + 1}`, kind: 'car',
             name: `Parked car ${index + 1}`, x: car.x, y: car.y, width: car.width, height: car.height, facing: car.facing,
             description: `Parked nose-in, facing ${car.facing}. The trunk faces the driving aisle.`}))
@@ -31,7 +37,7 @@ setup.worldMaps = (() => {
     const tile = (kind, label, walkable = true) => ({kind, label, walkable});
     function apartmentTile(x, y) {
         if (!Number.isInteger(x) || !Number.isInteger(y) || !inRect(x, y, 0, 0, 50, 50)) return tile('boundary', 'Edge of the area', false);
-        for (const building of buildings) {
+        for (const building of [...buildings,housingOffice]) {
             if (x === building.door.x && y === building.door.y) return tile('entrance', `${building.name} entrance`);
             if (inRect(x, y, building.x, building.y, building.width, building.height)) return tile('building', building.name, false);
         }
@@ -48,10 +54,13 @@ setup.worldMaps = (() => {
             y === 23 && (x === 24 || x === 36);
         const accessPath = (x === 24 || x === 36) && y >= 28 && y <= 42 ||
             x === 23 && y >= 39 && y <= 42 || y === 42 && x >= 23 && x <= 36;
-        if (parkRing || entrancePath || accessPath) return tile('path', 'Courtyard sidewalk');
+        const officePath=y===30&&x>=36&&x<=42 || x===42&&y===31;
+        if (parkRing || entrancePath || accessPath || officePath) return tile('path', 'Courtyard sidewalk');
         if (inside(x, y, park)) return tile('park', 'Central park');
         return tile('ground', 'Apartment grounds');
     }
     return {apartments: {id: 'apartments', name: 'Apartments', width: 50, height: 50,
-        spawn: {x: 30, y: 23}, buildings, roads, park, parking, parkingBays, cars, interactables, tileAt: apartmentTile}};
+        subtitle:'A small corner of the city.',description:'Four single-floor apartment buildings face a small central park. Each contains six apartments. Paths connect their entrances, with parking to the southwest. The housing office stands to the right of Apartment 3.',
+        spawn: {x: 30, y: 23}, buildings, housingOffice, roads, park, parking, parkingBays, cars, interactables, tileAt: apartmentTile},
+        ...Object.fromEntries([...interiorMaps,officeMap].map(map=>[map.id,map]))};
 })();

@@ -8,6 +8,7 @@ setup.interactions = (() => {
         return State.variables.openedObjects?.[`${mapId}:${objectId}`] === true;
     }
     function openDoor(object) {
+        if(object.unitId && !setup.housing.canEnter(object.unitId)) return 'This apartment is locked. Rent it at the housing office first.';
         const stored = State.variables.openedObjects;
         State.variables.openedObjects = {...(stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {}),
             [`${State.variables.world.mapId}:${object.id}`]: true};
@@ -27,11 +28,20 @@ setup.interactions = (() => {
         return (map.interactables || []).map(object => {
             const dx = Math.max(object.x - world.x, 0, world.x - (object.x + (object.width || 1) - 1));
             const dy = Math.max(object.y - world.y, 0, world.y - (object.y + (object.height || 1) - 1));
-            return {object, distance: dx + dy};
+            const atCounter=object.interactionTiles?.some(tile=>tile.x===world.x&&tile.y===world.y);
+            return {object, distance: atCounter ? 1 : dx + dy};
         }).filter(target => target.distance <= 1 && actionsFor(target.object, world).length)
             .sort((a, b) => a.distance - b.distance || a.object.name.localeCompare(b.object.name));
     }
     function actionsFor(object, world = State.variables.world) {
+        if(object.role==='housing') return [
+            {id:'talk',label:'Talk',result:()=>({message:'How can I help you?',conversation:'housing'})},
+            {id:'attack',label:'Attack',result:'Combat is not implemented yet. No attack is made.'}
+        ];
+        if(object.kind==='door' && object.destination) return [...types.door,{
+            id:'enter',label:object.exit?'Exit':'Enter',
+            enabled:()=>isOpen(object.id),unavailableMessage:'Open the door first.',result:()=>setup.worldTravel.enter(object)
+        }];
         if (object.kind === 'car') {
             if (!world) return [];
             const edge = setup.vehicles.edge(object,world);
@@ -47,9 +57,9 @@ setup.interactions = (() => {
         if (!target) return {ok: false, message: 'That object is no longer within reach.'};
         const action = actionsFor(target.object).find(action => action.id === actionId);
         if (!action) return {ok: false, message: 'That interaction is not available.'};
-        if (action.enabled && !action.enabled(target.object)) return {ok: false, message: 'The door is already open.'};
-        const message = typeof action.result === 'function' ? action.result(target.object) : action.result;
-        return {ok: true, message, ...(action.id === 'trunk' ? {trunkId: target.object.id} : {})};
+        if (action.enabled && !action.enabled(target.object)) return {ok: false, message: action.unavailableMessage || 'The door is already open.'};
+        const result = typeof action.result === 'function' ? action.result(target.object) : action.result;
+        return {ok: true, ...(typeof result==='object'?result:{message:result}), ...(action.id === 'trunk' ? {trunkId: target.object.id} : {})};
     }
     return {nearby, actionsFor, run, isOpen};
 })();

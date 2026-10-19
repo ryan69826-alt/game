@@ -41,7 +41,7 @@ Neon Meridian
 <div class="preview-heading"><span class="eyebrow">LIVE PREVIEW</span><span class="preview-badge">ADULT · 26</span></div>
 <<include "CharacterArtwork">>
 <figcaption><span id="build-description"></span><br><span id="appearance-description"></span></figcaption>
-<p class="preview-note">Six adult body fits share a fixed head. Clothing uses separate fitted layers. Genitals are saved independently of appearance.</p>
+<p class="preview-note">Fixed adult base models use separate clothing layers. Genitals are saved independently of appearance.</p>
 <p id="preview-status" class="preview-status" role="status" aria-live="polite"></p>
 </figure>
 </div>
