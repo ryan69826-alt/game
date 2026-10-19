@@ -43,17 +43,14 @@ async function stableAtlas() {
     await page.waitForFunction(()=>{const canvas=document.getElementById('world-map');return canvas&&canvas.width===Math.round(canvas.clientWidth)&&canvas.height===Math.round(canvas.clientHeight);});
 }
 
-test('fixed bases replace size controls and preserve the original male artwork',async()=>{
+test('creator is female-only and legacy male saves migrate without losing character choices',async()=>{
     assert.equal(await page.getByLabel('Body Size',{exact:true}).count(),0);
     assert.equal(await page.getByLabel('Breast Size',{exact:true}).count(),0);
-    const male=await image();
-    await page.getByLabel('Gender',{exact:true}).selectOption('Female');
-    assert.notEqual(await image(),male);
+    assert.deepEqual(await page.getByLabel('Gender',{exact:true}).locator('option').allTextContents(),['Female']);
+    assert.equal((await value()).gender,'Female');assert.equal((await value()).genitals,'Female');
     assert.equal(await page.locator('#character-canvas').getAttribute('data-variation'),'Female-Fixed');
-    assert.equal(await page.locator('#preview-status').innerText(),'');
-    await page.getByLabel('Gender',{exact:true}).selectOption('Male');
-    assert.equal(await image(),male);
-    assert.equal((await value()).genitals,'Male');
+    const old=await page.evaluate(()=>SugarCube.setup.character.normalize({gender:'Male',genitals:'Both',hairColor:'Gray',skills:{Charm:50},clothing:{top:'none',bottoms:'pants',shoes:'none',storage:'backpack'}}));
+    assert.equal(old.gender,'Female');assert.equal(old.genitals,'Both');assert.equal(old.hairColor,'Gray');assert.equal(old.skills.Charm,50);assert.equal(old.clothing.storage,'backpack');
 });
 
 test('every eye color, hair color, hair length, and skin tone changes the pixels',async()=>{
@@ -63,7 +60,7 @@ test('every eye color, hair color, hair length, and skin tone changes the pixels
         'Hair Length':['Shaved','Ear','Neck','Chest','Waist','Knee','Floor'],
         'Skin Tone':['Pale','Tan','Olive','Dark']
     };
-    for(const gender of ['Male','Female']) for(const [label,choices] of Object.entries(fields)) {
+    for(const gender of ['Female']) for(const [label,choices] of Object.entries(fields)) {
         await page.getByLabel('Gender',{exact:true}).selectOption(gender);
         const images=new Set();
         for(const choice of choices) {await page.getByLabel(label,{exact:true}).selectOption(choice);images.add(await image());}
@@ -71,8 +68,8 @@ test('every eye color, hair color, hair length, and skin tone changes the pixels
     }
 });
 
-test('each clothing layer toggles independently on both fixed bases without changing the body',async()=>{
-    for(const gender of ['Male','Female']) for(const size of ['Medium']) {
+test('each clothing layer toggles independently on the female base without changing the body',async()=>{
+    for(const gender of ['Female']) for(const size of ['Medium']) {
         await page.getByLabel('Gender',{exact:true}).selectOption(gender);
         assert.equal(await page.getByLabel('Body Size',{exact:true}).count(),0);
         const body=await page.locator('#body-layer').evaluate(canvas=>canvas.toDataURL());
@@ -88,8 +85,8 @@ test('each clothing layer toggles independently on both fixed bases without chan
     }
 });
 
-test('both fixed bases have proportional heads',async()=>{
-    for(const key of ['Male','Female']) {
+test('the female base has a proportional head',async()=>{
+    for(const key of ['Female']) {
         await page.getByLabel('Gender',{exact:true}).selectOption(key);
         const proportions=await page.evaluate(()=>{
             function height(id) {
@@ -107,7 +104,7 @@ test('both fixed bases have proportional heads',async()=>{
 
 test('the three longest hairstyles preserve the rendered eyes, nose, and mouth',async()=>{
     await page.getByLabel('Eye Color',{exact:true}).selectOption('Blue');
-    for(const key of ['Male','Female']) {
+    for(const key of ['Female']) {
         await page.getByLabel('Gender',{exact:true}).selectOption(key);
         for(const skin of ['Pale','Dark']) for(const color of ['Blonde','Black']) for(const length of ['Waist','Knee','Floor']) {
             await page.getByLabel('Skin Tone',{exact:true}).selectOption(skin);
@@ -141,9 +138,9 @@ test('the three longest hairstyles preserve the rendered eyes, nose, and mouth',
     }
 });
 
-test('long hair keeps its left curtain continuous and inside the canvas on both fixed bases',async()=>{
+test('long hair keeps its left curtain continuous and inside the canvas on the female base',async()=>{
     await page.getByLabel('Hair Color',{exact:true}).selectOption('Blonde');
-    for(const key of ['Male','Female']) {
+    for(const key of ['Female']) {
         await page.getByLabel('Gender',{exact:true}).selectOption(key);
         for(const length of ['Chest','Waist','Knee','Floor']) {
             await page.getByLabel('Hair Length',{exact:true}).selectOption(length);
@@ -205,7 +202,7 @@ test('old saves without character data open safely; malformed fields normalize',
     await page.waitForSelector('#character-gender');assert.equal((await value()).bodySize,'Medium');
     await page.evaluate(()=>{SugarCube.State.variables.character={gender:'Unknown',genitals:'Both',heightInches:900,bodyFat:'Fat'};SugarCube.Engine.play('CharacterCreation');});
     await page.waitForSelector('#character-gender');const character=await value();
-    assert.equal(character.gender,'Male');assert.equal(character.genitals,'Both');assert.equal(character.bodySize,'Medium');assert.equal(character.heightInches,undefined);assert.equal(character.bodyFat,undefined);assert.deepEqual(character.clothing,{top:'shirt',bottoms:'pants',shoes:'shoes',storage:'none',handheld:'none'});
+    assert.equal(character.gender,'Female');assert.equal(character.genitals,'Both');assert.equal(character.bodySize,'Medium');assert.equal(character.heightInches,undefined);assert.equal(character.bodyFat,undefined);assert.deepEqual(character.clothing,{top:'shirt',bottoms:'pants',shoes:'shoes',storage:'none',handheld:'none'});
     assert.equal(character.breastSize,'Medium');assert.equal(character.version,8);
     assert.deepEqual(character.traits,[]);assert.ok(Object.values(character.skills).every(xp=>xp===0));
 });
@@ -285,7 +282,7 @@ test('creator fits narrow screens and large-text preference without horizontal s
         await page.getByLabel('Gender',{exact:true}).selectOption('Female');
         assert.equal(await page.locator('#character-controls select:visible').count(),12);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        await page.getByLabel('Gender',{exact:true}).selectOption('Male');
+        await page.getByLabel('Gender',{exact:true}).selectOption('Female');
         await page.getByRole('link',{name:'Save & return to menu'}).click();
         assert.equal(await page.locator('.main-menu a').count(),3);
         await page.getByRole('link',{name:'Character Creation',exact:true}).click();
@@ -957,7 +954,7 @@ test('legacy clothing and oversized old pocket contents migrate without hidden s
 });
 
 test('detailed sprite rendering uses crisp opaque pixels at native preview resolution',async()=>{
-    for(const gender of ['Male','Female']) for(const size of ['Medium']) {
+    for(const gender of ['Female']) for(const size of ['Medium']) {
         await page.getByLabel('Gender',{exact:true}).selectOption(gender);assert.equal(await page.getByLabel('Body Size',{exact:true}).count(),0);
         const result=await page.locator('#character-canvas').evaluate(canvas=>{
             const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
@@ -1947,7 +1944,7 @@ test('west edge travel enters the larger B1 district automatically and east retu
     await placeInWorld('apartments',0,46);await page.getByRole('button',{name:'Move west',exact:true}).click();
     await page.waitForSelector('#local-map[data-map-id="b1"]');
     assert.match(await page.locator('#location-title').innerText(),/Warehouse/);
-    assert.match(await page.locator('#local-map-title').innerText(),/70 × 50/);
+    assert.match(await page.locator('#local-map-title').innerText(),/70 × 90/);
     assert.deepEqual(await page.evaluate(()=>({id:SugarCube.State.variables.world.mapId,x:SugarCube.State.variables.world.x,y:SugarCube.State.variables.world.y,time:SugarCube.State.variables.world.elapsedSeconds})),{id:'b1',x:69,y:46,time:5});
     assert.equal(await page.locator('#world-map').getAttribute('data-location-id'),'b1');
     assert.deepEqual(await page.evaluate(()=>SugarCube.setup.worldAtlas.visible().map(a=>a.coordinate).sort()),['A1','B1','B2','C1','C2','D1']);
@@ -1966,7 +1963,7 @@ test('storage district has ten reachable shutters, three rentals, a fenced compo
         return {units:map.storageUnits.length,available:map.storageUnits.filter(u=>u.available).map(u=>u.number),reachable:map.interactables.every(reachable),fence:[[7,23],[50,35],[28,23]].every(([x,y])=>!map.tileAt(x,y).walkable),front:map.tileAt(28,42).walkable,warehouse:map.interactables.filter(o=>o.id.startsWith('warehouse-')).length};
     });
     assert.deepEqual(result,{units:10,available:[2,6,9],reachable:true,fence:true,front:true,warehouse:2});
-    for(const [id,x,y] of [['storage-unit-1',11,31],['storage-unit-2',19,31],['warehouse-1',15,18],['mechanic-shop',57,18]]) {
+    for(const [id,x,y] of [['storage-unit-1',11,31],['storage-unit-2',19,31],['warehouse-1',15,57],['mechanic-shop',57,58]]) {
         await placeInWorld('b1',x,y);
         const actions=await page.evaluate(id=>{const {setup}=SugarCube;return setup.interactions.actionsFor(setup.worldMaps.b1.interactables.find(o=>o.id===id)).map(a=>a.id);},id);
         assert.equal(actions.includes('lockpick'),false);assert.equal(actions.includes('enter'),false);
@@ -2008,6 +2005,7 @@ test('storage weekly billing keeps arrears and lease dates through reload withou
 test('rented storage uses block transfers, remains separate per unit, persists and denies remote access',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('b1',57,37);
     await page.evaluate(()=>{const {setup}=SugarCube;setup.selfStorage.buy('2');setup.selfStorage.buy('6');setup.inventory.ensure().containers['worn:shirt']=[{id:'storage-test-cloth',type:'cloth',x:0,y:0}];});
+    await collectStorageKeys();
     await placeInWorld('b1',19,31);await page.keyboard.press('e');await page.getByRole('button',{name:'Open storage',exact:true}).click();
     assert.equal(await page.locator('#ui-dialog-title').textContent(),'Storage unit & inventory');
     const grid=page.locator('[data-storage-id="storage:b1:2"]');assert.equal(await grid.getAttribute('data-columns'),'8');assert.equal(await grid.getAttribute('data-rows'),'6');
@@ -2045,6 +2043,7 @@ test('removing and rewearing clothing preserves all four pants pockets and updat
 test('equipped clothing drags to rented storage with contents and invalid or self-pocket drops keep it worn',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('b1',57,37);
     await page.evaluate(()=>{const {setup}=SugarCube;setup.selfStorage.buy('2');setup.inventory.ensure().containers['worn:shirt']=[{id:'kept-key',type:'apartmentKey',x:0,y:0}];});
+    await collectStorageKeys();
     await placeInWorld('b1',19,31);await page.keyboard.press('e');await page.getByRole('button',{name:'Open storage',exact:true}).click();
     const rejected=await page.evaluate(()=>{const {setup}=SugarCube;return {self:setup.equipment.remove('top','worn:shirt',0,0,'storage:2').ok,overflow:setup.equipment.remove('top','storage:b1:2',7,5,'storage:2').ok};});
     assert.deepEqual(rejected,{self:false,overflow:false});
@@ -2101,4 +2100,65 @@ test('dragging equipment to the ground drop zone and back onto its matching slot
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.shoes),'shoes');
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.wornGarmentIds.shoes),identity);
     assert.equal(await page.locator('#local-map').getAttribute('data-ground-count'),'0');
+});
+
+async function collectStorageKeys() {
+    await page.evaluate(()=>{
+        const {setup}=SugarCube,inv=setup.inventory,tray=setup.selfStorage.counter();
+        if(!tray) throw new Error('Collect keys while at the kiosk');
+        for(const item of [...inv.placements(tray)]) {
+            let moved=false;
+            for(const pocket of inv.worn()) {const fit=inv.firstFit(pocket,item,inv.placements(pocket));if(fit){moved=inv.transfer(tray.id,pocket.id,item.id,fit.x,fit.y,'storage-kiosk').ok;break;}}
+            if(!moved) throw new Error('No free pocket for the storage key');
+        }
+    });
+}
+
+test('storage kiosk dispenses a physical key; full pockets retain it on the tray and the matching carried key controls access',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('b1',57,37);
+    await page.evaluate(()=>{const {setup}=SugarCube;for(const pocket of setup.inventory.worn())setup.inventory.ensure().containers[pocket.id]=[{id:`full:${pocket.id}`,type:'cloth',x:0,y:0}];});
+    await page.keyboard.press('e');await page.getByRole('button',{name:'Rent unit 2 · $200 / week',exact:true}).click();
+    await page.getByRole('button',{name:'Collect storage keys',exact:true}).click();
+    const key=page.locator('[data-container="storage:key-tray"] [data-item="storage-key:2"]');await key.waitFor({state:'visible'});
+    assert.equal(await key.getAttribute('title'),'Key for storage unit 2');
+    assert.equal(await key.textContent(),'S2');assert.match(await key.getAttribute('aria-label'),/Storage unit 2 key/);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.selfStorage.canEnter('2')),false);
+    const failed=await page.evaluate(()=>SugarCube.setup.inventory.transfer('storage:key-tray','worn:pants:1','storage-key:2',0,0,'storage-kiosk').ok);assert.equal(failed,false);
+    await page.evaluate(()=>{const {setup}=SugarCube;const floor=setup.groundItems.current();setup.inventory.transfer('worn:pants:1',floor.id,'full:worn:pants:1',0,0,'storage-kiosk');});
+    await key.click();await page.locator('[data-storage-id="worn:pants:1"] [data-x="0"][data-y="0"]').click();
+    assert.equal(await key.count(),0);assert.equal(await page.evaluate(()=>SugarCube.setup.selfStorage.canEnter('2')),true);
+    await page.evaluate(()=>SugarCube.setup.selfStorage.buy('6'));
+    assert.equal(await page.evaluate(()=>SugarCube.setup.selfStorage.canEnter('6')),false,'another unit cannot use this key');
+    await page.keyboard.press('Escape');await placeInWorld('b1',19,31);
+    assert.equal(await page.evaluate(()=>!!SugarCube.setup.inventory.external('storage:2')),true);
+    await page.evaluate(()=>SugarCube.setup.equipment.drop('worn:pants:1','storage-key:2'));
+    assert.equal(await page.evaluate(()=>SugarCube.setup.inventory.external('storage:2')),null);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.interactions.run('storage-unit-2','storage').ok),false);
+    await page.reload();await page.waitForSelector('#local-map');
+    assert.equal(await page.evaluate(()=>SugarCube.setup.inventory.placements({id:'storage:key-tray'}).filter(item=>item.id==='storage-key:2').length),0,'lost keys do not respawn');
+});
+
+test('existing storage leases get one kiosk key without resetting balances, dates or nested keys',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;const due=setup.gameClock.now()+12345;
+        State.variables.selfStorage={version:1,owned:['2'],leases:{'2':{nextRentAt:due,arrears:400}}};
+        const before=setup.playerState.ensure().money;const lease=structuredClone(setup.selfStorage.ensure().leases['2']);setup.selfStorage.ensure();
+        const tray=setup.inventory.placements({id:'storage:key-tray'}),count=tray.length;
+        const key=tray[0];State.variables.inventory.containers['storage:key-tray']=[];
+        State.variables.inventory.containers['ground:apartments:30:23']=[{id:'legacy-shirt',type:'shirt',x:0,y:0,pockets:{'worn:shirt':[key]}}];
+        State.variables.selfStorage.leases['2'].keyIssued=false;setup.selfStorage.ensure();
+        return {due,before,after:State.variables.player.money,lease,count,respawn:setup.inventory.placements({id:'storage:key-tray'}).length};});
+    assert.equal(result.lease.nextRentAt,result.due);assert.equal(result.lease.arrears,400);assert.equal(result.lease.keyIssued,true);assert.equal(result.before,result.after);assert.equal(result.count,1);assert.equal(result.respawn,0);
+});
+
+test('expanded B1 keeps road crossings aligned with C1 and cannot exit its southern extension into C1',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup}=SugarCube,b1=setup.worldMaps.b1,c1=setup.worldMaps.apartments;
+        return {height:b1.height,south:b1.buildings.slice(0,3).every(b=>b.y>b1.roads.horizontal.y+b1.roads.horizontal.height),
+            crossings:[44,45,46,47,48].map(y=>({out:setup.worldTravel.edge({mapId:'apartments',x:0,y},-1,0),back:setup.worldTravel.edge({mapId:'b1',x:69,y},1,0),road:[b1.tileAt(69,y).kind,c1.tileAt(0,y).kind]})),
+            blocked:setup.worldTravel.edge({mapId:'b1',x:69,y:65},1,0)};});
+    assert.equal(result.height,90);assert.equal(result.south,true);assert.equal(result.blocked,null);
+    for(const [i,crossing] of result.crossings.entries()){assert.deepEqual(crossing.out,{mapId:'b1',x:69,y:44+i});assert.deepEqual(crossing.back,{mapId:'apartments',x:0,y:44+i});assert.deepEqual(crossing.road,['road','road']);}
+    await placeInWorld('b1',69,65);await page.getByRole('button',{name:'Move east',exact:true}).click();
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.mapId),'b1');assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),0);
 });

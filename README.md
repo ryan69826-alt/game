@@ -2,25 +2,25 @@
 
 A modular browser RPG prototype built with Twine 2, SugarCube 2.37.3 and Tweego
 2.1.1. For the click-to-play site, see [GitHub Pages deployment](DEPLOYMENT.md).
-All protagonists are adults (age 26). Only the Apartments location is available;
+The protagonist is an adult woman (age 26). Apartments and B1 Warehouse / Storage are available;
 no story, NPC schedules, or trait modifiers have been added. The game clock advances with movement only.
 
 ## Current character and equipment
 
 The menu has Character Creation (Continue after starting), Options, and
-Import/Export Saves. The creator has independent gender/genital selections,
+Import/Export Saves. The creator is female-only, with an independent genital selection,
 three eye colors, five hair colors, seven hair lengths, four skin tones, and four seasonal start dates.
-Body size and breast size controls are removed. Each gender uses one fixed base;
-old saves normalize shape fields to Medium without losing equipment, traits or XP.
-The male artwork is the existing medium model. The female base is prepared from
+Body size and breast size controls are removed. The protagonist uses one fixed female base;
+old male saves migrate to it without losing other choices, equipment, traits or XP.
+The female base is prepared from
 user-provided pixel art, retaining its original bodysuit, head and proportions.
 
 Clothing dropdowns follow Appearance: Top, Bottoms, Shoes, Wearable Storage, and
 Handheld. Current choices are None or a generic shirt/pants/shoes/backpack; Handheld
 has None until handheld equipment is added. The female shirt, pants and shoes are
 independent garment-only assets, aligned directly to the base rather than extracted
-from a dressed character. Deselecting garments leaves the bodysuit visible. Male
-underwear stays opaque. Hair remains a separate layer. All layers use hard alpha
+from a dressed character. Deselecting garments leaves the bodysuit visible.
+Hair remains a separate layer. All layers use hard alpha
 and nearest-neighbor rendering at 288×416. See [artwork details](assets/characters/README.md).
 
 There are 15 independent starting-trait checkboxes and 18 skills. Traits are saved
@@ -352,16 +352,24 @@ dragging onto the visible local map drops at the player's feet.
 Walking west beyond any open tile on the Apartments west edge enters B1;
 walking east beyond B1 returns. Crossing counts as one ordinary walking/sprint
 step (5/2 game seconds), including endurance and billing, with no interaction
-menu. Positions align proportionally along different-sized edges; invalid or
-blocked destinations stay blocked. B1 is 70×50 while Apartments remains 50×50.
+menu. This connection preserves the exact north–south coordinate across both edges;
+B1 is 70×90, extending south of the road while Apartments remains 50×50.
+The warehouses and mechanic stand south of the road. B1 rows beyond the
+Apartments boundary have no eastward exit; they cannot warp back into C1.
+Other map connections may use explicit coordinate offsets or proportional alignment.
 
 The self-storage compound has ten reinforced units, fenced across the back and
 sides with an open southern frontage. Its automated front-office kiosk rents
 only units 2, 6 and 9 for **$200 per week each**. The first week is charged now;
 later payments use the apartment billing convention: automatic weekly collection,
 with unpaid charges kept as arrears, without eviction or destruction of items.
-Inspect a rented unit for its due date and outstanding balance. No key is required
-for the kiosk's personal access authorization. Other units cannot be rented or
+Inspect a rented unit for its due date and outstanding balance. The kiosk
+dispenses a physical 1×1 key onto its three-slot tray; use Collect storage keys
+and move the matching key into a worn pocket or bag. Full pockets leave it on
+the tray. Rental ownership alone does not grant access. Keys in removed clothing
+or distant storage do not unlock the unit, and lost keys are not reissued.
+Existing leases receive their key at the kiosk once, preserving dates, balances
+and stored items; nested garment keys are detected to prevent duplicate issuance. Other units cannot be rented or
 lockpicked, and the future breaching tool is not implemented.
 
 Approach your rented shutter and use E → Open storage to access an initially

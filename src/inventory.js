@@ -9,6 +9,7 @@ setup.inventory = (() => {
         tools: {name: 'Tool kit', width: 2, height: 2, color: '#d6aa70'},
         cloth: {name: 'Cleaning cloth', width: 1, height: 1, color: '#b4bfba'},
         apartmentKey:{name:'Apartment key',width:1,height:1,color:'#d6bc78'},
+        storageKey:{name:'Storage key',width:1,height:1,color:'#e0c57d'},
         vehicleKey:{name:'Vehicle key',width:1,height:1,color:'#b7c5cd'},
         coffee:{name:'Canned coffee',width:1,height:1,color:'#b78a63'}
     };
@@ -111,9 +112,9 @@ setup.inventory = (() => {
         State.create(State.passage);
         return container;
     }
-    const external=objectId=>objectId?.startsWith('ground:')?setup.groundItems.container(objectId):objectId?.startsWith('storage:')?setup.selfStorage.container(objectId.slice(8)):objectId==='housing-counter'?setup.housing.counter():objectId?.startsWith('cabin:')?setup.vehicleCabin.container(objectId.slice(6)):trunk(objectId);
+    const external=objectId=>objectId==='storage-kiosk'?setup.selfStorage.counter():objectId?.startsWith('ground:')?setup.groundItems.container(objectId):objectId?.startsWith('storage:')?setup.selfStorage.container(objectId.slice(8)):objectId==='housing-counter'?setup.housing.counter():objectId?.startsWith('cabin:')?setup.vehicleCabin.container(objectId.slice(6)):trunk(objectId);
     function openExternal(objectId) {
-        if(objectId!=='housing-counter'&&!objectId?.startsWith('cabin:')&&!objectId?.startsWith('storage:')&&!objectId?.startsWith('ground:')) return openTrunk(objectId);
+        if(objectId!=='storage-kiosk'&&objectId!=='housing-counter'&&!objectId?.startsWith('cabin:')&&!objectId?.startsWith('storage:')&&!objectId?.startsWith('ground:')) return openTrunk(objectId);
         const container=external(objectId);if(!container) return null;
         ensure().containers[container.id] ||= [];State.create(State.passage);return container;
     }
@@ -137,6 +138,7 @@ setup.inventory = (() => {
         const item = placements(from).find(item => item.id === itemId);
         if (!item) return {ok: false, message: 'That item is no longer here.'};
         if(toId===setup.housing.trayId&&item.type!=='apartmentKey') return {ok:false,message:'The receptionist tray is only for apartment keys.'};
+        if(toId===setup.selfStorage.trayId&&item.type!=='storageKey') return {ok:false,message:'The kiosk tray is only for storage keys.'};
         if (!fits(to, item, x, y, fromId === toId ? itemId : null)) return {ok: false, message: 'Not enough adjoining free blocks at that square.'};
         const state = ensure();
         state.containers[fromId] = placements(from).filter(other => other.id !== itemId);

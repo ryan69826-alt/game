@@ -2,7 +2,7 @@
 setup.character = (() => {
     const choices = {
         startDate: setup.gameClock.starts.map(start=>start.date),
-        gender: ['Male', 'Female'],
+        gender: ['Female'],
         genitals: ['Male', 'Female', 'Both'],
         // Retained for old saves; fixed artwork has no shape distortion.
         bodySize: ['Medium'],
@@ -13,7 +13,7 @@ setup.character = (() => {
         skinTone: ['Pale', 'Tan', 'Olive', 'Dark']
     };
     const defaults = () => ({
-        version: 8, startDate: choices.startDate[0], age: 26, gender: 'Male', genitals: 'Male', bodySize: 'Medium',
+        version: 8, startDate: choices.startDate[0], age: 26, gender: 'Female', genitals: 'Female', bodySize: 'Medium',
         clothing: setup.clothing.defaults(), eyeColor: 'Brown',
         hairColor: 'Black', hairLength: 'Ear', skinTone: 'Tan', breastSize: 'Medium',
         traits: [], skills: Object.fromEntries(setup.characterRules.skills.map(name => [name, 0]))
