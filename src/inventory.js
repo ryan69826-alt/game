@@ -5,6 +5,7 @@ setup.inventory = (() => {
         tools: {name: 'Tool kit', width: 2, height: 2, color: '#d6aa70'},
         cloth: {name: 'Cleaning cloth', width: 1, height: 1, color: '#b4bfba'},
         apartmentKey:{name:'Apartment key',width:1,height:1,color:'#d6bc78'},
+        vehicleKey:{name:'Vehicle key',width:1,height:1,color:'#b7c5cd'},
         coffee:{name:'Canned coffee',width:1,height:1,color:'#b78a63'}
     };
     function fitsItems(container, item, x, y, placements, ignoreId) {
@@ -81,10 +82,15 @@ setup.inventory = (() => {
     function trunk(objectId) {
         const world = State.variables.world;
         const object = setup.worldMaps[world?.mapId]?.interactables.find(object => object.id === objectId && object.kind === 'car');
-        if (!object || !setup.interactions.actionsFor(object).some(action => action.id === 'trunk')) return null;
+        if(!object||setup.vehicles.edge(object,world)!=='rear') return null;
+        const target=setup.vehicles.trunk(object);
+        if(setup.doorLocks.isLocked(target)||!setup.interactions.isOpen(target.id)) return null;
         return {id: `trunk:${world.mapId}:${object.id}`, name: `${object.name} trunk`, columns: 6, rows: 4};
     }
     function openTrunk(objectId) {
+        const world=State.variables.world,car=setup.worldMaps[world?.mapId]?.interactables.find(object=>object.id===objectId&&object.kind==='car');
+        if(!car||setup.vehicles.edge(car,world)!=='rear'||setup.doorLocks.isLocked(setup.vehicles.trunk(car))) return null;
+        if(!setup.interactions.isOpen(setup.vehicles.trunk(car).id)) setup.interactions.run(car.id,'trunk');
         const container = trunk(objectId);
         if (!container) return null;
         const state = ensure();

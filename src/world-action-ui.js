@@ -15,8 +15,8 @@ setup.actionUI = (() => {
             root.replaceChildren();
             const help=document.createElement('p');help.className='world-note';help.textContent='Take a moment where you are.';
             const actions=document.createElement('div');actions.className='interaction-actions';const result=status();
-            actions.append(button('Pass Time',()=>{result.textContent=setup.rest.passTime().message;}),button('Lay down to sleep',showSleep));
-            const note=document.createElement('p');note.className='world-note';note.textContent='Pass Time advances the clock by 15 minutes.';
+            actions.append(button('Pass Time',()=>{result.textContent=setup.rest.passTime().message;}),button('Rest',()=>{result.textContent=setup.rest.restOneMinute().message;}),button('Lay down to sleep',showSleep));
+            const note=document.createElement('p');note.className='world-note';note.textContent='Pass Time waits 15 minutes. Rest waits 1 minute. Both keep you awake.';
             root.append(help,actions,note,result);if(focus) actions.firstElementChild.focus();
         }
         function showSleep() {

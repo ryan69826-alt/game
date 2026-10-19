@@ -49,7 +49,9 @@ The four buildings each contain one floor with six furnished studio apartments.
 Each floor plan (including furniture and unit doors) rotates to match the outdoor
 building's entrance toward the park. Open an entrance with E, then choose Enter;
 inside, Open and Exit returns through the corresponding outdoor door. The lower
-world map always shows the district and the building you are inside.
+world map is an area atlas: Apartments is one icon, selected while outdoors or
+inside any building in that area. New areas can be added in `world-atlas.js`;
+the atlas never renders local tiles, cars, or camera bounds.
 
 The north-facing Housing Office stands immediately right of Apartment 3, linked
 by sidewalk. Its receptionist is behind a blocking desk; approach the service
@@ -83,7 +85,7 @@ No key respawns after collection, storage transfers, or reloads.
 Closed-room interiors, furniture, and interior objects are concealed. A room is
 visible while inside or at its open doorway; moving away conceals it again.
 Bathrooms have their own doors and visibility. Door numbers remain visible from
-the hall. The district overview continues to show roofs rather than interiors.
+the hall. The world atlas shows only area icons.
 
 The Sounds description follows the current room and activity. Sitting produces
 bed-frame creaks; waking produces bedding sounds. `setup.rooms.setActivity(mapId,
@@ -121,7 +123,8 @@ No item or key adds invisible carrying capacity.
 
 Press **T** or click **Actions [T]** in the movement panel to open an overlay.
 It pauses held movement, like the interaction window. **Pass Time** advances
-15 game minutes, updating tiredness, fatigue, the calendar and rent. Ordinary
+15 game minutes; **Rest** waits one awake minute. Both update tiredness, fatigue,
+endurance, the calendar and rent without moving or resetting awake tiredness. Ordinary
 interactions continue to cost no time.
 
 **Lay down to sleep** offers 1–10 hours anywhere. At a bed within reach (the same
@@ -131,8 +134,9 @@ or 8 per hour. Fatigue still recovers by 1 per minute above its tiredness floor.
 Comfort is checked again when confirming sleep. Existing bed nap/sleep and
 unconsciousness retain their normal 5-minute tiredness recovery rate.
 
-Every building, apartment and bathroom door offers **Unlock**, **Lock**, and
-**Lockpick** alongside its existing interactions. Apartments start locked;
+**Open** is replaced by **Close** while a door is open. Locked doors show
+**Unlock** and **Lockpick**; unlocked doors show **Lock**. The Lockpick label
+includes the lock level before the chance. Apartments start locked;
 common entrances and bathrooms start unlocked. Apartment keys must be carried
 in worn storage. Interior latches permit locking/unlocking from inside without
 a key. A closed, unlocked door can be locked again with its key or inside latch.
@@ -140,13 +144,43 @@ Building entrances share both open/closed and lock state across their two sides.
 Old saves preserve already-open doors as unlocked. Lock states persist in saves.
 
 Lock levels are integers 1–5: common entrances and bathrooms use level 1;
-apartment units cycle through levels 1–5 as prototype defaults. Each door shows
+all apartment units use level 2. Car doors normally use level 3 and trunks level 2. Each door shows
 its difficulty, your Lockpicking level, and your chance before an attempt. For
 skill/lock ratio `r`, chance is `clamp((r - 0.5) × 100, 0, 50)` below equal level,
 and `clamp(50 + (r - 1) × 50, 50, 100)` at or above equal level. This gives 0%
 at half level, 50% at equal level, and 100% at double level. Each attempt rolls
 independently; success unlocks without opening, and failure leaves the lock
 intact. No tools, XP rewards, damage or extra time costs are introduced.
+
+Unowned cars start with locked doors and trunks, independently. An explicit
+`locked: false` / `trunkLocked: false` map definition or a saved unlocked state
+can override the default. Ownership uses `$ownedVehicles` entries such as
+`apartments:parked-car-1` (or a map object's `ownedByPlayer: true`); owned cars
+have key access. A carried `vehicleKey` with ID `vehicle-key:apartments:parked-car-1`
+also unlocks that vehicle. Doors can open and close from the sides; trunks can
+open and close from the rear. Opening an unlocked trunk shows inventory; an
+already-open trunk offers **View trunk inventory**. Locked, closed, or remote
+trunks reject inventory access and transfers. Unlocking a car door does not
+unlock its trunk. Existing opened doors remain open/unlocked when migrating.
+
+## Sprinting and endurance
+
+Hold **Shift** with movement keys, or toggle **Sprint [Shift]** for keyboard,
+pointer buttons and map clicks. Sprint steps repeat every 100 ms instead of
+200 ms, cost 2 game seconds instead of 5, and increase endurance used by 1.
+Blocked steps cost no time, endurance, or XP. At the limit the player walks
+instead, recovering breath; holding Sprint can resume running as breath allows.
+Endurance use recovers by 1 per five non-sprinting game seconds, including
+walking, waiting, sleep and unconsciousness. Partial recovery seconds survive
+saves. Starting a sprint resets the partial recovery interval.
+
+The sidebar meter shows endurance **used / maximum**. Base maximum is 25.
+Endurance level `L` adds `5 × L × (L + 1) / 2`, giving 30, 40, 55 at levels 1–3
+and 300 at level 10. Every 25 successful sprint steps awards 1 Endurance XP;
+the counter survives rest and saves. `$skillXp` stores earned XP independently
+of the creator's 250-XP allocation, and Stats uses both. Level-ups immediately
+increase capacity. `$endurance` stores used breath, the sprint-step remainder
+and recovery seconds; UI input state is never saved.
 
 ## Game calendar
 
@@ -221,7 +255,7 @@ median bays, and two five-square-wide roads meet at the south edge. Cars occupy
 Doors are walkable thresholds; buildings, cars, trees, and medians block movement.
 
 The description takes 60% of the main area and maps take 40%, beside the character
-sidebar. The scrolling local map sits above a complete current-area world overview.
+sidebar. The scrolling local map sits above the world atlas of area icons.
 Both maps fit desktop viewport heights; narrow screens stack them below the text.
 The compact movement panel above the location title is the only exact-location
 readout. Player coordinates are displayed starting at 1.
@@ -276,11 +310,14 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
   pointer dragging, cancellation/cleanup and block windows.
 - `world-map-data.js`, `interior-maps.js`, `world-map-art.js`, `world-map-ui.js`:
   outdoor/interior geometry, rotated floors, furnishings, rendering and camera.
+- `world-atlas.js`: region-level location icons, separate from walkable maps.
 - `world-movement.js`, `world-travel.js`: held-input movement and door transitions.
+- `endurance.js`, `skill-progress.js`: sprint breath, recovery, XP rewards and earned skill progress.
 - `calendar-data.js`: seasonal starts, Gregorian clock, formatting and legacy time conversion.
 - `player-state.js`, `housing.js`: money/health, six listings, physical keys and weekly billing.
 - `room-sense.js`, `rest.js`: room visibility/sounds, tiredness/fatigue, beds and collapse.
-- `vehicle-geometry.js`: shared vehicle headings and front/rear/side geometry.
+- `vehicle-geometry.js`, `door-locks.js`: vehicle orientation, ownership/key checks, independent locks and chance calculations.
+- `world-action-ui.js`: personal waiting, rest and sleep overlay.
 - `world-interactions.js`, `world-interaction-ui.js`: reach, directional actions,
   prompts and object windows. Definitions can supply custom action text/handlers.
 - `world-ui.js`, `world.css`, `interface.css`, `settings.js`: sheets, responsive
@@ -292,7 +329,9 @@ Old character saves migrate to Medium with shirt/pants/shoes and no backpack;
 other valid selections, traits and XP remain. Removed height/composition fields
 are discarded. Invalid traits are filtered; imported XP is rounded down and capped
 to 250 in skill order. `$world` stores only map ID, position and elapsed seconds (v2). `$openedObjects`
-stores door flags; `$inventory` version 2 stores container IDs and item placements. Version-4 equipment
+stores open/closed flags; `$doorLocks` stores shared lock states, `$endurance`
+stores breath/counters, and `$skillXp` stores earned XP independently of character creation.
+`$inventory` version 2 stores container IDs and item placements. Version-4 equipment
 booleans migrate to category selections. Old shared pocket grids repack into the
 new independent pockets and any equipped backpack. Items too large to fit return
 to existing car trunks; an inventory notice lists their destinations. Migration is

@@ -1,4 +1,4 @@
-/* Stateless map artwork shared by local and district overview canvases. */
+/* Stateless tile artwork for local outdoor and interior maps. */
 setup.worldMapArt=(()=>{
     function paint(map) {
         const tileSize=16;
@@ -59,10 +59,16 @@ setup.worldMapArt=(()=>{
         });
         const furnitureColors={bed:'#657e9b',kitchen:'#b5ac86',table:'#907451',bath:'#d5ddd2',desk:'#9a7e55',seat:'#526c7a',cabinet:'#87978a'};
         for(const item of map.furniture||[]) {
-            const x=item.x*tileSize,y=item.y*tileSize,w=item.width*tileSize,h=item.height*tileSize;
-            terrainContext.fillStyle='#25353a';terrainContext.fillRect(x+1,y+1,w-2,h-2);
-            terrainContext.fillStyle=furnitureColors[item.style]||'#907451';terrainContext.fillRect(x+3,y+3,w-6,h-6);
-            if(item.style==='bed') {terrainContext.fillStyle='#d6d7c4';terrainContext.fillRect(x+4,y+4,w-8,8);}
+            const x=item.x*tileSize,y=item.y*tileSize;
+            terrainContext.save();
+            terrainContext.translate(x+item.width*tileSize/2,y+item.height*tileSize/2);
+            terrainContext.rotate((item.rotation||0)*Math.PI/2);
+            const sideways=(item.rotation||0)%2,w=(sideways?item.height:item.width)*tileSize,h=(sideways?item.width:item.height)*tileSize;
+            terrainContext.translate(-w/2,-h/2);
+            terrainContext.fillStyle='#25353a';terrainContext.fillRect(1,1,w-2,h-2);
+            terrainContext.fillStyle=furnitureColors[item.style]||'#907451';terrainContext.fillRect(3,3,w-6,h-6);
+            if(item.style==='bed') {terrainContext.fillStyle='#d6d7c4';terrainContext.fillRect(4,4,w-8,8);}
+            terrainContext.restore();
         }
         for(const unit of map.units||[]) {
             terrainContext.fillStyle='#e2e5d6';terrainContext.font='bold 12px monospace';terrainContext.textAlign='center';

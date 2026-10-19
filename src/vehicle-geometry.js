@@ -19,5 +19,12 @@ setup.vehicles = (() => {
         const direction=headings.indexOf(facing(object));
         return side===headings[direction]?'front':side===headings[(direction+2)%4]?'rear':'side';
     }
-    return {facing,angle,edge};
+    const vehicleId=object=>object.vehicleId||object.id;
+    const isOwned=(object,mapId=State.variables.world?.mapId)=>object.ownedByPlayer===true||
+        (Array.isArray(State.variables.ownedVehicles)&&State.variables.ownedVehicles.includes(`${mapId}:${vehicleId(object)}`));
+    const hasKey=object=>isOwned(object)||setup.inventory.worn().some(container=>setup.inventory.placements(container).some(item=>
+        item.type==='vehicleKey'&&item.id===`vehicle-key:${State.variables.world.mapId}:${vehicleId(object)}`));
+    const trunk=car=>({...car,id:`${car.id}:trunk`,vehicleId:car.id,kind:'car-trunk',name:`${car.name} trunk`,
+        lockId:`${car.lockId||`${State.variables.world?.mapId||'apartments'}:${car.id}`}:trunk`,lockLevel:car.trunkLockLevel||2,locked:car.trunkLocked});
+    return {facing,angle,edge,isOwned,hasKey,trunk};
 })();

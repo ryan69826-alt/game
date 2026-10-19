@@ -30,7 +30,7 @@ setup.worldMaps = (() => {
         {id:'housing-office-door',kind:'door',name:'Housing office door',...housingOffice.door,width:1,height:1,lockId:'housing-office',lockLevel:1,
             destination:{mapId:officeMap.id,...officeMap.spawn},description:'The housing office handles rentals for all four apartment buildings.'},
         ...cars.map((car, index) => ({id: `parked-car-${index + 1}`, kind: 'car',
-            name: `Parked car ${index + 1}`, x: car.x, y: car.y, width: car.width, height: car.height, facing: car.facing,
+            name: `Parked car ${index + 1}`,lockId:`vehicle:apartments:parked-car-${index+1}`,lockLevel:3,trunkLockLevel:2, x: car.x, y: car.y, width: car.width, height: car.height, facing: car.facing,
             description: `Parked nose-in, facing ${car.facing}. The trunk faces the driving aisle.`}))
     ];
     const inside = (x, y, rect) => inRect(x, y, rect.x, rect.y, rect.width, rect.height);

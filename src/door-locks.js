@@ -1,24 +1,26 @@
 /* Lock data is saved independently of door position and open/closed state.
  * Both sides of a building entrance share one lock ID. */
 setup.doorLocks = (() => {
-    const id=(object,mapId=State.variables.world.mapId)=>object.lockId||`${mapId}:${object.id}`;
-    const difficulty=object=>Number.isInteger(object.lockLevel)&&object.lockLevel>=1&&object.lockLevel<=5?object.lockLevel:1;
+    const id=(object,mapId=State.variables.world?.mapId||'apartments')=>object.lockId||`${mapId}:${object.id}`;
+    const difficulty=object=>Number.isInteger(object.lockLevel)&&object.lockLevel>=1&&object.lockLevel<=5?object.lockLevel:object.kind==='car'?3:object.kind==='car-trunk'?2:1;
     function chance(skill,level) {
         if(!Number.isFinite(skill)||!Number.isInteger(level)||level<1||level>5) return 0;
         const ratio=Math.max(0,skill)/level;
         return Math.max(0,Math.min(100,ratio<=1?(ratio-.5)*100:50+(ratio-1)*50));
     }
-    const skill=()=>setup.characterRules.progress(setup.character.ensure().skills.Lockpicking).level;
-    function isLocked(object,mapId=State.variables.world.mapId) {
+    const skill=()=>setup.skills.progress('Lockpicking').level;
+    function isLocked(object,mapId=State.variables.world?.mapId||'apartments') {
         const value=State.variables.doorLocks?.[id(object,mapId)];
         if(typeof value==='boolean') return value;
         // Preserve already-open doors from saves made before locks existed.
-        const locked=!!object.unitId&&!setup.interactions.isOpen(object.id,mapId);
+        const vehicle=object.kind==='car'||object.kind==='car-trunk';
+        const defaultLocked=vehicle?(typeof object.locked==='boolean'?object.locked:!setup.vehicles.isOwned(object,mapId)):!!object.unitId;
+        const locked=defaultLocked&&!setup.interactions.isOpen(object.id,mapId);
         const old=State.variables.doorLocks;
         State.variables.doorLocks={...(old&&typeof old==='object'&&!Array.isArray(old)?old:{}),[id(object,mapId)]:locked};
         return locked;
     }
-    const hasKey=object=>!!object.unitId&&setup.housing.canEnter(object.unitId);
+    const hasKey=object=>object.kind==='car'||object.kind==='car-trunk'?setup.vehicles.hasKey(object):!!object.unitId&&setup.housing.canEnter(object.unitId);
     function canUseLatch(object) {
         const room=setup.rooms.current();
         return !!object.exit||!!object.unitId&&room.unit?.id===object.unitId||
@@ -48,10 +50,11 @@ setup.doorLocks = (() => {
         return {ok:false,chance:percent,message:'You fail to pick the lock. The door remains locked.'};
     }
     function actions(object) {
-        return [
-            {id:'unlock',label:'Unlock',enabled:()=>isLocked(object),result:()=>unlock(object)},
-            {id:'lock',label:'Lock',enabled:()=>!isLocked(object)&&!setup.interactions.isOpen(object.id),result:()=>lock(object)},
-            {id:'lockpick',label:`Lockpick · ${Number(chance(skill(),difficulty(object)).toFixed(1))}% chance`,enabled:()=>isLocked(object),result:()=>pick(object)}
+        const locked=isLocked(object);
+        return [locked?
+            {id:'unlock',label:'Unlock',result:()=>unlock(object)}:
+            {id:'lock',label:'Lock',enabled:()=>!setup.interactions.isOpen(object.id),unavailableMessage:'Close it before locking it.',result:()=>lock(object)},
+            ...(locked?[{id:'lockpick',label:`Lockpick · Level ${difficulty(object)} · ${Number(chance(skill(),difficulty(object)).toFixed(1))}% chance`,result:()=>pick(object)}]:[])
         ];
     }
     return {id,difficulty,chance,skill,isLocked,actions};

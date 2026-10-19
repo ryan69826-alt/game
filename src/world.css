@@ -36,7 +36,7 @@ body[data-tags~="world"] #passages{max-width:none;margin:0 auto}
 .map-viewport{flex:1;min-height:0;display:grid;place-items:center;container-type:size}
 .district-map> :not(.map-viewport),.world-map-panel> :not(.map-viewport){flex-shrink:0}
 .district-map canvas{display:block;width:min(100cqw,calc(100cqh * var(--map-aspect, .7142857)));height:auto;image-rendering:pixelated;cursor:crosshair}
-.world-map-panel canvas{display:block;width:min(100cqw,100cqh);height:auto;image-rendering:pixelated}
+.world-map-panel canvas{display:block;width:100cqw;height:100cqh}
 .district-map figcaption,.world-map-panel figcaption{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 12px;border-top:1px solid var(--line);color:var(--muted);font-size:.7rem}
 .district-map figcaption>span:last-child,.world-map-panel figcaption>span:last-child{margin-left:auto;color:var(--accent)}
 .location-dot{display:inline-block;flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent)}

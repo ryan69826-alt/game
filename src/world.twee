@@ -18,6 +18,8 @@
 <progress id="player-health-bar" aria-label="Health" max="100" value="100"></progress>
 <div><span>Tiredness</span><output id="player-tiredness"></output></div>
 <div><span>Fatigue</span><output id="player-fatigue"></output></div>
+<div><label for="player-endurance-bar">Endurance used</label><output id="player-endurance"></output></div>
+<progress id="player-endurance-bar" aria-label="Endurance used" max="25" value="0"></progress>
 </div>
 <nav class="sidebar-nav" aria-label="Game pages">
 <<link "Character">><<run setup.worldWindows.open("Character")>><</link>>
@@ -38,8 +40,8 @@
 
 <section class="movement-panel" aria-labelledby="movement-title">
 <div class="movement-info">
-<div class="movement-heading"><h2 id="movement-title">Move around</h2><div class="movement-actions"><button id="actions-button" type="button">Actions [T]</button><button id="interact-button" type="button" disabled>Interact [E]</button></div></div>
-<p id="movement-help">Hold arrows, WASD, or a button. Each square takes 5 seconds.</p>
+<div class="movement-heading"><h2 id="movement-title">Move around</h2><div class="movement-actions"><button id="sprint-button" type="button" aria-pressed="false">Sprint [Shift]</button><button id="actions-button" type="button">Actions [T]</button><button id="interact-button" type="button" disabled>Interact [E]</button></div></div>
+<p id="movement-help">Hold arrows, WASD, or a button. Walk: 5 seconds per square. Sprint: 2 seconds. Hold Shift or toggle Sprint.</p>
 <p id="position-description"></p>
 <div class="movement-readout"><span id="movement-position"></span></div>
 <p id="interaction-hint" class="interaction-hint"></p>
@@ -68,7 +70,7 @@
 </figure>
 <figure class="world-map-panel">
 <div class="map-heading"><span>WORLD MAP</span><span>1 AREA</span></div>
-<div class="map-viewport"><canvas id="world-map" width="300" height="300" role="img" aria-label="World map showing Apartments and your position"></canvas></div>
+<div class="map-viewport"><canvas id="world-map" width="300" height="300" role="img" aria-label="World map showing the current area"></canvas></div>
 <figcaption><span class="location-dot" aria-hidden="true"></span> Apartments <span>Current area</span></figcaption>
 </figure>
 </div>

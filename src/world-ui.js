@@ -16,7 +16,7 @@ setup.worldWindows = (() => {
         if(vitals) {
             const player=setup.playerState.ensure();
             const rest=setup.rest.ensure();
-            for(const [name,value] of Object.entries({Health:`${player.health} / ${player.maxHealth}`,Money:setup.playerState.formatMoney(player.money),Tiredness:`${rest.tiredness} / 100`,Fatigue:`${setup.rest.fatigue(rest)} / 100`})) {
+            for(const [name,value] of Object.entries({Health:`${player.health} / ${player.maxHealth}`,Money:setup.playerState.formatMoney(player.money),Tiredness:`${rest.tiredness} / 100`,Fatigue:`${setup.rest.fatigue(rest)} / 100`,'Endurance used':`${setup.endurance.ensure().used} / ${setup.endurance.capacity()}`})) {
                 const term=document.createElement('dt');term.textContent=name;
                 const description=document.createElement('dd');description.textContent=value;vitals.append(term,description);
             }
@@ -44,7 +44,7 @@ setup.worldWindows = (() => {
             const grid=document.createElement('div');grid.className='skill-category-grid';
             group.append(title,grid);skills.append(group);
             for (const name of category.skills) {
-                const status = setup.characterRules.progress(character.skills[name]);
+                const status = setup.skills.progress(name);
                 const row = document.createElement('div');row.className = 'world-skill';row.dataset.skill = name;
                 const label = document.createElement('h4');label.textContent = name;
                 const level = document.createElement('span');level.className = 'world-skill-level';level.textContent = `Level ${status.level} / 10`;

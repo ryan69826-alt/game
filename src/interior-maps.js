@@ -14,7 +14,7 @@ setup.interiorMaps = (() => {
         function furnish(x,y,w,h,label,style,unitId) {
             for(let yy=y;yy<y+h;yy++) for(let xx=x;xx<x+w;xx++) put(xx,yy,'furniture',label,false);
             const a=point(x,y),b=point(x+w-1,y+h-1);
-            const object={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),width:Math.abs(a.x-b.x)+1,height:Math.abs(a.y-b.y)+1,label,style};
+            const object={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),width:Math.abs(a.x-b.x)+1,height:Math.abs(a.y-b.y)+1,label,style,rotation:turns};
             furniture.push(object);
             if(style==='bed') interactables.push({...object,id:`bed-${unitId}`,kind:'bed',name:'Bed',unitId,description:'A bed with a firm mattress and clean bedding.'});
         }
@@ -44,7 +44,7 @@ setup.interiorMaps = (() => {
             interactables.push({id:`bathroom-door-${unitId}`,kind:'door',name:'Bathroom door',...bathroomDoor,width:1,height:1,
                 interiorOf:unitId,lockId:`bathroom-${unitId}`,lockLevel:1,description:'A small bathroom door.'});
             interactables.push({id:`unit-door-${unitId}`,kind:'door',name:`Unit ${number} door`,...door,width:1,height:1,
-                unitId,lockId:`unit-${unitId}`,lockLevel:1+(index+number-2)%5,description:`${name}. Unlock with its matching key or try lockpicking.`});
+                unitId,lockId:`unit-${unitId}`,lockLevel:2,description:`${name}. Unlock with its matching key or try lockpicking.`});
         }
         const exit=point(12,28),spawn=point(12,26);
         const outside={x:building.door.x+({west:-1,east:1}[building.facing]||0),

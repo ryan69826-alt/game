@@ -24,8 +24,6 @@
         }
         const tileSize = 16, columns = local.width / tileSize, rows = local.height / tileSize;
         const terrain = setup.worldMapArt.paint(map);
-        const district=setup.worldMaps.apartments;
-        const districtTerrain=map.interior?setup.worldMapArt.paint(district):terrain;
         const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
         function cameraTarget() {
             const world = State.variables.world;
@@ -62,13 +60,7 @@
             drawOpenDoors(ctx, 1, camera.x, camera.y);
             local.dataset.hiddenCells=setup.rooms.mask(ctx,map,world,camera);
             marker(ctx, (world.x - camera.x + .5) * tileSize, (world.y - camera.y + .5) * tileSize, 5);
-            const small = overview.getContext('2d'), scale = overview.width / districtTerrain.width;
-            small.imageSmoothingEnabled = false;small.drawImage(districtTerrain, 0, 0, overview.width, overview.height);
-            drawOpenDoors(small, scale,0,0,district);
-            small.strokeStyle = '#e1f6d9';small.lineWidth = 1;
-            if(!map.interior) small.strokeRect(camera.x * tileSize * scale, camera.y * tileSize * scale, local.width * scale, local.height * scale);
-            const districtPosition=map.interior?map.exteriorAnchor:world;
-            marker(small, (districtPosition.x + .5) * tileSize * scale, (districtPosition.y + .5) * tileSize * scale, 3);
+            setup.worldAtlas.draw(overview);
             local.dataset.playerX = world.x;local.dataset.playerY = world.y;
             local.dataset.mapId = map.id;
             local.dataset.cameraX = camera.x;local.dataset.cameraY = camera.y;
@@ -93,24 +85,26 @@
             }
             frame = requestAnimationFrame(tick);
         }
+        let sprintToggle=false,shiftHeld=false;
+        const sprintRequested=()=>sprintToggle||shiftHeld;
         function step(dx, dy) {
             if (Dialog.isOpen()) return false;
-            const result = setup.worldMovement.move(dx, dy);
+            const result = setup.worldMovement.move(dx, dy,sprintRequested());
             const status = document.getElementById('movement-status');
             const world = State.variables.world;
             const entrance = map.tileAt(world.x, world.y).kind === 'entrance';
-            const feedback = result.collapsed?result.reason:result.moved ? (entrance ? 'Press E to interact with the door.' : '') : result.reason;
+            const feedback = result.collapsed||sprintRequested()&&result.moved&&!result.sprinted?result.reason:result.moved ? (entrance ? 'Press E to interact with the door.' : '') : result.reason;
             if (status.textContent !== feedback) status.textContent = feedback;
             refresh(result.moved);
             return result.moved;
         }
         const directions = {north: [0, -1], east: [1, 0], south: [0, 1], west: [-1, 0]};
-        const repeatDelay = 200;
+        const repeatDelay=()=>sprintRequested()&&setup.endurance.canSprint()?100:200;
         const heldInputs = new Map();
         let lastDirection = null, repeatTimer = 0;
         function stopHold() {
             clearTimeout(repeatTimer);
-            repeatTimer = 0;lastDirection = null;
+            repeatTimer = 0;lastDirection = null;shiftHeld=false;
             const previous = [...heldInputs.values()];heldInputs.clear();
             for (const input of previous) {
                 if (input.button?.hasPointerCapture(input.key)) input.button.releasePointerCapture(input.key);
@@ -133,7 +127,7 @@
             const active = [...new Set([...heldInputs.values()].map(input => input.direction))];
             lastDirection = active[(active.indexOf(lastDirection) + 1) % active.length];
             step(...directions[lastDirection]);
-            if(heldInputs.size) repeatTimer = setTimeout(repeatStep, repeatDelay);
+            if(heldInputs.size) repeatTimer = setTimeout(repeatStep, repeatDelay());
         }
         function startHold(direction, source, key, button = null) {
             const id = `${source}:${key}`;
@@ -142,7 +136,7 @@
             heldInputs.set(id, {direction, key, button});
             if (wasEmpty) {
                 lastDirection = direction;step(...directions[direction]);
-                if(heldInputs.size) repeatTimer = setTimeout(repeatStep, repeatDelay);
+                if(heldInputs.size) repeatTimer = setTimeout(repeatStep, repeatDelay());
             }
         }
         for (const button of document.querySelectorAll('[data-move]')) {
@@ -162,8 +156,15 @@
             button.addEventListener('click', event => {if (event.detail === 0) step(...directions[button.dataset.move]);});
         }
         const keys = {ArrowUp: 'north', ArrowRight: 'east', ArrowDown: 'south', ArrowLeft: 'west', w: 'north', d: 'east', s: 'south', a: 'west'};
+        function updatePace() {
+            if(repeatTimer) {clearTimeout(repeatTimer);repeatTimer=setTimeout(repeatStep,repeatDelay());}
+        }
+        const sprintButton=document.getElementById('sprint-button');
+        sprintButton.addEventListener('click',()=>{if(Dialog.isOpen()) return;sprintToggle=!sprintToggle;sprintButton.setAttribute('aria-pressed',String(sprintToggle));updatePace();});
         function keydown(event) {
             if (Dialog.isOpen() || event.ctrlKey || event.altKey || event.metaKey || event.target.closest('input,select,textarea,[contenteditable="true"]')) return;
+            if(event.key==='Shift') {shiftHeld=true;updatePace();return;}
+            shiftHeld=event.shiftKey;
             const direction = keys[event.key] || keys[event.key.toLowerCase()];
             if (!direction) return;
             event.preventDefault();
@@ -171,6 +172,7 @@
             if (!event.repeat) startHold(direction, 'keyboard', key);
         }
         function keyup(event) {
+            if(event.key==='Shift') {shiftHeld=false;updatePace();return;}
             releaseInput(`keyboard:${event.code || event.key.toLowerCase()}`);
         }
         function visibilityChange() {if (document.hidden) stopHold();}
@@ -188,9 +190,10 @@
             const y = Math.floor(camera.y + (event.clientY - rect.top) / rect.height * rows);
             step(x - world.x, y - world.y);
         });
+        const atlasResize=new ResizeObserver(()=>setup.worldAtlas.draw(overview));atlasResize.observe(overview.parentElement);
         refresh();
         cleanup = () => {
-            stopHold();cancelAnimationFrame(frame);
+            stopHold();cancelAnimationFrame(frame);atlasResize.disconnect();
             document.removeEventListener('keydown', keydown);document.removeEventListener('keyup', keyup);
             document.removeEventListener('visibilitychange', visibilityChange);window.removeEventListener('blur', stopHold);
             $(document).off(':dialogopening.worldMovement', stopHold);

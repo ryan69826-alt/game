@@ -15,7 +15,7 @@ setup.interactions = (() => {
             [`${State.variables.world.mapId}:${object.id}`]:opened,...(object.lockId?{[`lock:${object.lockId}`]:opened}:{})};
     }
     function openDoor(object) {
-        if(object.kind==='door'&&setup.doorLocks.isLocked(object)) return {ok:false,message:'This door is locked. Unlock it with the matching key or try lockpicking first.'};
+        if(['door','car','car-trunk'].includes(object.kind)&&setup.doorLocks.isLocked(object)) return {ok:false,message:`This ${object.kind==='car-trunk'?'trunk':'door'} is locked. Unlock it with the matching key or try lockpicking first.`};
         setOpen(object,true);
         State.create(State.passage);
         $(document).trigger(':interactionchange');
@@ -24,8 +24,9 @@ setup.interactions = (() => {
     const open = {id: 'open', label: 'Open', enabled: object => !isOpen(object.id), result: openDoor};
     const close={id:'close',label:'Close',enabled:object=>isOpen(object.id),unavailableMessage:'The door is already closed.',result:object=>{
         setOpen(object,false);
-        State.create(State.passage);$(document).trigger(':interactionchange');return 'You close the door.';
+        State.create(State.passage);$(document).trigger(':interactionchange');return object.kind==='car-trunk'?'You close the trunk.':'You close the door.';
     }};
+    const doorToggle=object=>isOpen(object.id)?close:open;
     const types = {
         door: [{id: 'knock', label: 'Knock', result: 'You knock on the door.'}, open],
         car: [{id: 'look-inside', label: 'Look through window', result: 'You look through the window. No one is inside.'}, {...open, label: 'Open door'}],
@@ -53,18 +54,24 @@ setup.interactions = (() => {
             {id:'talk',label:'Talk',result:()=>({message:'How can I help you?',conversation:'housing'})},
             {id:'attack',label:'Attack',result:'Combat is not implemented yet. No attack is made.'}
         ];
-        if(object.kind==='door' && object.destination) return [...types.door,close,...setup.doorLocks.actions(object),{
+        if(object.kind==='door' && object.destination) return [types.door[0],doorToggle(object),...setup.doorLocks.actions(object),{
             id:'enter',label:object.exit?'Exit':'Enter',
             enabled:()=>isOpen(object.id),unavailableMessage:'Open the door first.',result:()=>setup.worldTravel.enter(object)
         }];
         if (object.kind === 'car') {
             if (!world) return [];
             const edge = setup.vehicles.edge(object,world);
-            if (edge === 'side') return types.car;
-            if (edge === 'rear') return [{id: 'trunk', label: 'Open trunk', result: () => 'You open the trunk.'}];
+            if(edge==='side') return [types.car[0],{...doorToggle(object),label:isOpen(object.id)?'Close door':'Open door'},...setup.doorLocks.actions(object)];
+            if(edge==='rear') {
+                const trunk=setup.vehicles.trunk(object),opened=isOpen(trunk.id);
+                return [opened?{...close,id:'close-trunk',label:'Close trunk',enabled:()=>isOpen(trunk.id),result:()=>close.result(trunk)}:
+                    {id:'trunk',label:'Open trunk',result:()=>{const result=openDoor(trunk);return typeof result==='object'?result:{message:'You open the trunk.',trunkId:object.id};}},
+                    ...(opened?[{id:'inventory',label:'View trunk inventory',result:()=>({trunkId:object.id,message:'You look inside the trunk.'})}]:[]),
+                    ...setup.doorLocks.actions(trunk)];
+            }
             return [];
         }
-        if(object.kind==='door') return [...types.door,close,...setup.doorLocks.actions(object)];
+        if(object.kind==='door') return [types.door[0],doorToggle(object),...setup.doorLocks.actions(object)];
         return object.actions || (Object.hasOwn(types, object.kind) ? types[object.kind] : [inspect]);
     }
     function run(objectId, actionId) {
@@ -75,7 +82,7 @@ setup.interactions = (() => {
         if (!action) return {ok: false, message: 'That interaction is not available.'};
         if (action.enabled && !action.enabled(target.object)) return {ok: false, message: action.unavailableMessage || 'The door is already open.'};
         const result = typeof action.result === 'function' ? action.result(target.object) : action.result;
-        return {ok: true, ...(typeof result==='object'?result:{message:result}), ...(action.id === 'trunk' ? {trunkId: target.object.id} : {})};
+        return {ok: true, ...(typeof result==='object'?result:{message:result})};
     }
     return {nearby, actionsFor, run, isOpen};
 })();

@@ -27,7 +27,7 @@ setup.rest = (() => {
     function recover(hours,unitId=null,tirednessInterval=300) {
         const rest=ensure(),seconds=addTime(Math.round(hours*3600));
         rest.tiredness=clamp(rest.tiredness-Math.floor(seconds/tirednessInterval),0,100);
-        recoverFatigue(rest,seconds);
+        recoverFatigue(rest,seconds);setup.endurance.recover(seconds);
         rest.awakeSeconds=0;rest.activity=unitId?{kind:'wake',unitId}:null;
         return seconds;
     }
@@ -36,10 +36,11 @@ setup.rest = (() => {
         const seconds=recover(duration/3600);$(document).trigger(':restcollapse');
         return {ok:false,collapsed:true,message:`You collapse and pass out for ${Math.round(seconds/60)} minutes. You wake at ${setup.gameClock.formatStamp(setup.gameClock.now())}.`};
     }
-    function advanceAwake(seconds,recovering=true) {
+    function advanceAwake(seconds,recovering=true,recoverEndurance=true) {
         if(!Number.isSafeInteger(seconds)||seconds<0) return {ok:false,message:'Invalid awake-time duration.'};
         const rest=ensure(),beforeTicks=Math.floor(rest.awakeSeconds/900);
         const elapsed=addTime(seconds);
+        if(recoverEndurance) setup.endurance.recover(elapsed);else setup.endurance.pauseRecovery();
         rest.activity=null;rest.awakeSeconds+=elapsed;
         rest.tiredness=clamp(rest.tiredness+Math.floor(rest.awakeSeconds/900)-beforeTicks,0,100);
         if(recovering) recoverFatigue(rest,elapsed);
@@ -55,7 +56,7 @@ setup.rest = (() => {
         if(rest.fatigue>=100||rest.tiredness>=100) {
             const result=collapse();commit();return result;
         }
-        const result=advanceAwake(durationSeconds,cost===0);commit();return result;
+        const result=advanceAwake(durationSeconds,cost===0,cost===0);commit();return result;
     }
     function changeTiredness(amount) {
         if(!Number.isFinite(amount)) return false;
@@ -91,11 +92,15 @@ setup.rest = (() => {
         const result=exert(0,900);
         return result.collapsed?result:{ok:true,message:`You pass 15 minutes. It is now ${setup.gameClock.formatStamp(setup.gameClock.now())}.`};
     }
+    function restOneMinute() {
+        const result=exert(0,60);
+        return result.collapsed?result:{ok:true,message:`You rest for 1 minute. It is now ${setup.gameClock.formatStamp(setup.gameClock.now())}.`};
+    }
     function refresh() {
         if(!document.getElementById('player-tiredness')) return;
         const rest=ensure();document.getElementById('player-tiredness').textContent=`${Number(rest.tiredness.toFixed(1))} / 100`;
         document.getElementById('player-fatigue').textContent=`${Number(fatigue(rest).toFixed(1))} / 100`;
     }
-    return {ensure,fatigue,advanceAwake,collapse,commit,exert,changeTiredness,sit,sleep,comfort,sleepAnywhere,passTime,refresh};
+    return {ensure,fatigue,advanceAwake,collapse,commit,exert,changeTiredness,sit,sleep,comfort,sleepAnywhere,passTime,restOneMinute,refresh};
 })();
 $(document).on(':passagedisplay :timechange :playerchange',setup.rest.refresh);
