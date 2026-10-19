@@ -70,3 +70,5 @@ $(document).on('keydown.characterWindow', event => {
         Dialog.close();
     }
 });
+
+$(document).on(':equipmentchange',()=>{if(document.querySelector('.world-sidebar')) setup.characterDisplay.mount(State.variables.character);});

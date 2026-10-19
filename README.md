@@ -291,8 +291,7 @@ Prototype capacities:
 | Each car trunk | 6×4 | 24 |
 
 There is no base or invisible player inventory. Each pocket/bag has its
-own grid; an unequipped item grants no storage. Equipment is selected in creation;
-changing equipment during play is outside this feature. Trunks contain placeholder
+own grid; an unequipped item grants no storage. Initial equipment is selected in creation; clothing can also be removed and worn during play through Inventory. Trunks contain placeholder
 water (1×2), tools (2×2), and cloth (1×1) to test packing/transfers. Each trunk is
 independent, initialized only once, and never restocks when emptied. Contents and
 placements persist through movement, reload, menu/Continue and disk saves.
@@ -317,6 +316,36 @@ directions alternate at that shared pace; releasing one leaves the others active
 Direction aliases share a slot. Blocked attempts cost nothing and keep inputs
 active. Dialogs, blur, hidden tabs, and navigation clear held inputs. Movement and
 elapsed game seconds persist through reloads, Continue, and disk saves.
+
+## Removable clothing and ground items
+
+Inventory shows draggable equipment slots. Drag a garment to reachable storage,
+another garment's bag, or **Drop on ground**; select then choose a block/drop
+button as a keyboard/touch alternative. Drag a stored garment onto an empty
+matching slot or select **Wear**. Remove the existing garment in that slot first.
+Removing/equipping items takes no game time and refreshes the sidebar sprite.
+
+Shirts and pants occupy 2×2 blocks folded, shoes 2×1, and backpacks 2×3. Each
+removed garment embeds its pocket arrays on the item itself. Pocket contents,
+including garments nested in a backpack, travel with that item; wearing it again
+restores its active pocket layout. Unworn pockets do not grant player carrying
+space and are accessed again by wearing the garment. Own-pocket placement,
+blocked/overflow drops, stale external access and occupied equip slots reject
+without detaching or deleting items. Initial wardrobe saves need no inventory
+reset: garment identities are assigned when first removed and retained on rewear.
+
+Ordinary items can also be dropped on the current tile. Ground piles use local
+8×8 grids in `$inventory.containers['ground:MAP:X:Y']`; no empty pile is created
+merely by opening Inventory. A small parcel marker shows nonempty visible piles;
+E → View items opens a reachable pile. Piles and garment contents survive travel,
+reload and disk saves. Hidden rooms conceal their piles. Dropping while seated
+uses the actual cabin grid, rather than putting an item outside the car.
+
+`equipment.js` owns garment transactions, saved `garmentSerial` and
+`wornGarmentIds`. `ground-items.js` owns tile-bound pile definitions and access.
+The existing inventory/drag modules handle packing, pointer cancellation and
+reachable storage consistently. Drops outside storage/drop zones are cancelled;
+dragging onto the visible local map drops at the player's feet.
 
 ## Warehouse / Storage (B1)
 

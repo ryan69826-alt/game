@@ -12,17 +12,26 @@ setup.inventoryDrag = (() => {
             document.documentElement.classList.remove('inventory-dragging');
         }
         function destination(event) {
-            const grid=document.elementFromPoint(event.clientX,event.clientY)?.closest('.inventory-grid');
-            if(!grid || !root.contains(grid)) return null;
+            const node=document.elementFromPoint(event.clientX,event.clientY);
+            const item=active.from.startsWith('equipped:')?setup.equipment.preview(active.from.slice(9)):setup.inventory.placements({id:active.from}).find(item=>item.id===active.id);
+            const equip=node?.closest('[data-equip-slot]');
+            if(equip&&root.contains(equip)) return {grid:equip,kind:'equip',valid:!!item&&!active.from.startsWith('equipped:')&&setup.equipment.slotFor(item.type)===equip.dataset.equipSlot&&State.variables.character.clothing[equip.dataset.equipSlot]==='none'};
+            const map=document.getElementById('local-map'),bounds=map?.getBoundingClientRect();
+            const onMap=node?.id==='ui-overlay'&&bounds&&event.clientX>=bounds.left&&event.clientX<=bounds.right&&event.clientY>=bounds.top&&event.clientY<=bounds.bottom;
+            const ground=node?.closest('[data-ground-drop],#local-map')||(onMap?map:null);
+            if(ground) {const container=setup.groundItems.current();return {grid:ground,kind:'ground',valid:!!item&&!!container&&!!setup.inventory.firstFit(container,item,setup.inventory.placements(container))};}
+            const grid=node?.closest('.inventory-grid');
+            if(!grid||!root.contains(grid)) return null;
             const rect=grid.getBoundingClientRect(),gap=Number.parseFloat(getComputedStyle(grid).gap)||0;
             const columns=Number(grid.dataset.columns),rows=Number(grid.dataset.rows);
             const x=Math.round((event.clientX-active.offsetX-rect.left)/((rect.width+gap)/columns));
             const y=Math.round((event.clientY-active.offsetY-rect.top)/((rect.height+gap)/rows));
-            const container=setup.inventory.worn().concat(trunkId?[setup.inventory.external(trunkId)].filter(Boolean):[]).find(value=>value.id===grid.dataset.storageId);
-            const item=setup.inventory.placements({id:active.from}).find(item=>item.id===active.id);
-            const valid=!!(container && item && setup.inventory.fits(container,item,x,y,active.from===container.id?item.id:null));
+            const container=setup.inventory.accessible(trunkId)?.find(value=>value.id===grid.dataset.storageId);
+            const ownPocket=active.from.startsWith('equipped:')&&item&&setup.clothing.definitions[item.type].pockets.some(pocket=>pocket.id===container?.id);
+            const valid=!!(container&&item&&!ownPocket&&setup.inventory.fits(container,item,x,y,active.from===container.id?item.id:null));
             return {grid,container,x,y,valid};
         }
+
         root.addEventListener('pointerdown',event=>{
             const element=event.target.closest('.inventory-item');
             if(!element || event.button!==0 || !event.isPrimary) return;
@@ -61,8 +70,10 @@ setup.inventoryDrag = (() => {
             const target=destination(event),source={...active};
             suppressed=true;setTimeout(()=>{suppressed=false;},0);
             clear();event.preventDefault();
+            if(target?.kind==='ground') {onDrop(setup.equipment.drop(source.from,source.id,trunkId));return;}
+            if(target?.kind==='equip') {onDrop(target.valid?setup.equipment.equip(source.from,source.id,trunkId):{ok:false,message:'Use an empty matching clothing slot.'});return;}
             if(!target?.container) {onDrop({ok:false,message:'Drop onto a storage grid. The item stays where it was.'});return;}
-            onDrop(setup.inventory.transfer(source.from,target.container.id,source.id,target.x,target.y,trunkId));
+            onDrop(setup.equipment.move(source.from,target.container.id,source.id,target.x,target.y,trunkId));
         },{signal:lifetime.signal});
         const cancel=()=>clear();
         document.addEventListener('pointercancel',cancel,{signal:lifetime.signal});

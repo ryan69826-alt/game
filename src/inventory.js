@@ -1,6 +1,10 @@
 /* Rectangular packing rules. Only serializable placements enter SugarCube saves. */
 setup.inventory = (() => {
     const items = {
+        shirt:{name:'Generic shirt',width:2,height:2,color:'#8faebb'},
+        pants:{name:'Generic pants',width:2,height:2,color:'#8b95b5'},
+        shoes:{name:'Generic shoes',width:2,height:1,color:'#b1a48f'},
+        backpack:{name:'Backpack',width:2,height:3,color:'#92aa8b'},
         water: {name: 'Water bottle', width: 1, height: 2, color: '#83c3d9'},
         tools: {name: 'Tool kit', width: 2, height: 2, color: '#d6aa70'},
         cloth: {name: 'Cleaning cloth', width: 1, height: 1, color: '#b4bfba'},
@@ -107,9 +111,9 @@ setup.inventory = (() => {
         State.create(State.passage);
         return container;
     }
-    const external=objectId=>objectId?.startsWith('storage:')?setup.selfStorage.container(objectId.slice(8)):objectId==='housing-counter'?setup.housing.counter():objectId?.startsWith('cabin:')?setup.vehicleCabin.container(objectId.slice(6)):trunk(objectId);
+    const external=objectId=>objectId?.startsWith('ground:')?setup.groundItems.container(objectId):objectId?.startsWith('storage:')?setup.selfStorage.container(objectId.slice(8)):objectId==='housing-counter'?setup.housing.counter():objectId?.startsWith('cabin:')?setup.vehicleCabin.container(objectId.slice(6)):trunk(objectId);
     function openExternal(objectId) {
-        if(objectId!=='housing-counter'&&!objectId?.startsWith('cabin:')&&!objectId?.startsWith('storage:')) return openTrunk(objectId);
+        if(objectId!=='housing-counter'&&!objectId?.startsWith('cabin:')&&!objectId?.startsWith('storage:')&&!objectId?.startsWith('ground:')) return openTrunk(objectId);
         const container=external(objectId);if(!container) return null;
         ensure().containers[container.id] ||= [];State.create(State.passage);return container;
     }
@@ -119,13 +123,15 @@ setup.inventory = (() => {
     function fits(container, item, x, y, ignoreId) {
         return fitsItems(container,item,x,y,placements(container),ignoreId);
     }
+    function accessible(externalId) {
+        const containers=worn(),ground=setup.groundItems.current();
+        if(ground) containers.push(ground);
+        if(externalId) {const other=external(externalId);if(!other) return null;containers.push(other);}
+        return containers;
+    }
     function transfer(fromId, toId, itemId, x, y, trunkId) {
-        const accessible = worn();
-        if (trunkId) {
-            const rear = external(trunkId);
-            if (!rear) return {ok: false, message: 'That storage is out of reach. Return to the vehicle storage or receptionist.'};
-            accessible.push(rear);
-        }
+        const accessible=setup.inventory.accessible(trunkId);
+        if(!accessible) return {ok:false,message:'That storage is out of reach.'};
         const from = accessible.find(container => container.id === fromId), to = accessible.find(container => container.id === toId);
         if (!from || !to) return {ok: false, message: 'That storage is not accessible.'};
         const item = placements(from).find(item => item.id === itemId);
@@ -135,7 +141,7 @@ setup.inventory = (() => {
         const state = ensure();
         state.containers[fromId] = placements(from).filter(other => other.id !== itemId);
         state.containers[toId] = [...(state.containers[toId] || []), {...item, x, y}];
-        State.create(State.passage);
+        State.create(State.passage);$(document).trigger(':interactionchange');
         return {ok: true, message: `${items[item.type].name} moved to ${to.name.toLowerCase()}.`};
     }
     function consume(containerId,itemId) {
@@ -146,5 +152,5 @@ setup.inventory = (() => {
         setup.rest.changeTiredness(-10);
         return {ok:true,message:'You drink the coffee. Tiredness decreases by 10; your awake-time schedule is unchanged.'};
     }
-    return {items, ensure, worn, trunk, openTrunk, external,openExternal,placements, fits, transfer,consume};
+    return {items, firstFit,accessible,ensure, worn, trunk, openTrunk, external,openExternal,placements, fits, transfer,consume};
 })();

@@ -119,3 +119,5 @@ $(document).on('keydown.interactions', event => {
         Dialog.isOpen() || event.target.closest('input,select,textarea,[contenteditable="true"]') || !document.getElementById('interact-button')) return;
     event.preventDefault();setup.interactionUI.open();
 });
+
+$(document).on(':interactionchange',()=>{if(document.getElementById('interact-button')) setup.interactionUI.refresh();});

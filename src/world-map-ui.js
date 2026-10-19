@@ -62,6 +62,12 @@
             local.dataset.hiddenCells=setup.rooms.mask(ctx,map,world,camera);
             const seated=setup.vehicleCabin.current(),position=seated?{x:seated.car.x+(seated.car.width||1)/2-.5,y:seated.car.y+(seated.car.height||1)/2-.5}:world;
             marker(ctx, (position.x - camera.x + .5) * tileSize, (position.y - camera.y + .5) * tileSize, 5);
+            const piles=setup.groundItems.objects(map.id);
+            local.dataset.groundCount=piles.length;
+            for(const pile of piles) if(setup.rooms.cellVisible(map,pile.x,pile.y,world)) {
+                const x=(pile.x-camera.x)*tileSize+8,y=(pile.y-camera.y)*tileSize+8;
+                ctx.fillStyle='#17232d';ctx.fillRect(x-1,y-1,9,9);ctx.fillStyle='#d6b77f';ctx.fillRect(x,y+1,7,6);ctx.fillStyle='#f4dfad';ctx.fillRect(x+2,y,3,2);ctx.fillStyle='#8a6848';ctx.fillRect(x+3,y+2,1,5);
+            }
             local.dataset.vehicleId=seated?.car.id||'';
             setup.worldAtlas.draw(overview);
             local.dataset.playerX = world.x;local.dataset.playerY = world.y;

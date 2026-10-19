@@ -148,3 +148,12 @@ html:has(#ui-dialog-body.character-window) #ui-overlay{background:#050c10;opacit
 .atlas-unknown{background:#142126;border-color:#25383a}
 #ui-dialog:has(#ui-dialog-body.atlas-window){max-width:calc(100vw - 32px)}
 html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
+.equipment-panel{margin:12px 0 20px;padding:12px;border:1px solid var(--line);background:#192c2b}
+.equipment-panel h2{font-size:1rem;color:var(--accent)}
+.equipment-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px}
+.equipment-slot{border:1px dashed #526b62;padding:8px;min-height:80px;font-size:.75rem;overflow-wrap:anywhere}
+.equipment-slot strong{display:block;margin-bottom:8px}
+.equipment-slot .inventory-item{width:100%;min-width:0;min-height:38px;font-size:.7rem;background:#314b44;color:#deece2;cursor:grab;touch-action:none}
+.ground-drop{display:block;width:100%;margin-top:12px;padding:10px;border:1px dashed #b7a17a;background:#302e27;color:#f1d7a8}
+.equipment-slot.drop-valid,.ground-drop.drop-valid{outline:2px solid #9ae3bb}
+.equipment-slot.drop-invalid,.ground-drop.drop-invalid{outline:2px solid #df9989}

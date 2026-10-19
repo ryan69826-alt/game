@@ -826,7 +826,7 @@ test('trunk blocks support UI transfers, reject insufficient space, and persist 
     await page.getByRole('button',{name:'Inventory',exact:true}).click();
     const player=page.getByRole('dialog',{name:'Inventory',exact:true});await player.waitFor({state:'visible'});
     assert.equal(await player.locator('[data-container^="trunk:"]').count(),0);
-    assert.equal(await player.locator('.inventory-item').count(),2);
+    assert.equal(await player.locator('.inventory-grid .inventory-item').count(),2);
     await page.keyboard.press('Escape');await player.waitFor({state:'hidden'});
     const portable=await page.evaluate(()=>structuredClone(SugarCube.State.variables.inventory));
     await page.getByRole('button',{name:'Saves',exact:true}).click();
@@ -2022,4 +2022,83 @@ test('rented storage uses block transfers, remains separate per unit, persists a
     await page.keyboard.press('e');await page.getByRole('button',{name:'Open storage',exact:true}).click();assert.equal(await page.locator('[data-storage-id="storage:b1:6"] [data-item]').count(),0);
     await page.keyboard.press('Escape');await placeInWorld('apartments',30,23);
     assert.equal(await page.evaluate(()=>SugarCube.setup.inventory.transfer('worn:shirt','storage:b1:2','storage-test-cloth',0,0,'storage:2').ok),false);
+});
+
+test('removing and rewearing clothing preserves all four pants pockets and updates the sprite without time',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const before=await image();
+    await page.evaluate(()=>{const {setup}=SugarCube;const inv=setup.inventory.ensure();for(let i=1;i<=4;i++)inv.containers[`worn:pants:${i}`]=[{id:`kept-${i}`,type:'cloth',x:0,y:0}];});
+    await page.getByRole('button',{name:'Inventory',exact:true}).click();
+    await page.getByRole('button',{name:'Equipped Generic pants',exact:true}).click();await page.getByRole('button',{name:'Drop on ground',exact:true}).click();
+    assert.equal(await page.getByRole('button',{name:'Equipped Generic pants',exact:true}).count(),0);
+    assert.notEqual(await image(),before);
+    const stored=await page.evaluate(()=>{const {setup,State}=SugarCube;const ground=setup.groundItems.current();return {pants:setup.inventory.placements(ground)[0],pockets:setup.inventory.worn().map(c=>c.id),time:State.variables.world.elapsedSeconds};});
+    assert.equal(stored.time,0);assert.equal(stored.pockets.some(id=>id.startsWith('worn:pants:')),false);
+    assert.deepEqual(Object.values(stored.pants.pockets).flat().map(item=>item.id),['kept-1','kept-2','kept-3','kept-4']);
+    await page.getByRole('button',{name:'Generic pants, 2 by 2 blocks, Ground at your feet',exact:true}).click();
+    await page.getByRole('button',{name:'Wear generic pants',exact:true}).click();
+    assert.equal(await page.getByRole('button',{name:'Equipped Generic pants',exact:true}).count(),1);assert.equal(await image(),before);
+    assert.deepEqual(await page.evaluate(()=>[1,2,3,4].map(i=>SugarCube.setup.inventory.placements({id:`worn:pants:${i}`})[0].id)),['kept-1','kept-2','kept-3','kept-4']);
+    assert.equal(await page.locator('#local-map').getAttribute('data-ground-count'),'0');
+});
+
+test('equipped clothing drags to rented storage with contents and invalid or self-pocket drops keep it worn',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('b1',57,37);
+    await page.evaluate(()=>{const {setup}=SugarCube;setup.selfStorage.buy('2');setup.inventory.ensure().containers['worn:shirt']=[{id:'kept-key',type:'apartmentKey',x:0,y:0}];});
+    await placeInWorld('b1',19,31);await page.keyboard.press('e');await page.getByRole('button',{name:'Open storage',exact:true}).click();
+    const rejected=await page.evaluate(()=>{const {setup}=SugarCube;return {self:setup.equipment.remove('top','worn:shirt',0,0,'storage:2').ok,overflow:setup.equipment.remove('top','storage:b1:2',7,5,'storage:2').ok};});
+    assert.deepEqual(rejected,{self:false,overflow:false});
+    const item=page.getByRole('button',{name:'Equipped Generic shirt',exact:true}),box=await item.boundingBox();
+    const target=await page.getByRole('button',{name:'Empty block 1, 1 in Storage unit 2',exact:true}).boundingBox();
+    await page.mouse.move(box.x+8,box.y+8);await page.mouse.down();await page.mouse.move(target.x+8,target.y+8,{steps:10});
+    assert.equal(await page.locator('.inventory-drag-ghost').count(),1);await page.mouse.up();
+    assert.equal(await page.locator('[data-storage-id="storage:b1:2"] [data-item]').count(),1);
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.top),'none');
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.inventory.containers['storage:b1:2'][0].pockets['worn:shirt'][0].id),'kept-key');
+    await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map');await page.keyboard.press('e');await page.getByRole('button',{name:'Open storage',exact:true}).click();
+    await page.getByRole('button',{name:'Generic shirt, 2 by 2 blocks, Storage unit 2',exact:true}).click();await page.getByRole('button',{name:'Wear generic shirt',exact:true}).click();
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.inventory.containers['worn:shirt'][0].id),'kept-key');
+});
+
+test('dropped clothing has a visible ground marker, an E interaction, durable contents and range restrictions',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup}=SugarCube;const ground=setup.groundItems.current();return {id:ground.id,...setup.equipment.drop('equipped:shoes','equipped:shoes')};});
+    assert.equal(result.ok,true);assert.equal(await page.locator('#local-map').getAttribute('data-ground-count'),'1');
+    await page.keyboard.press('e');await page.getByRole('button',{name:'View items',exact:true}).click();
+    assert.equal(await page.getByRole('button',{name:'Generic shoes, 2 by 1 blocks, Items on the ground',exact:true}).count(),1);
+    await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map');
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.shoes),'none');
+    assert.equal(await page.locator('#local-map').getAttribute('data-ground-count'),'1');
+    await placeInWorld('apartments',40,42);
+    assert.equal(await page.evaluate(id=>SugarCube.setup.inventory.external(id),result.id),null);
+    const remote=await page.evaluate(id=>{const {setup}=SugarCube;return setup.equipment.equip(id,setup.inventory.placements({id})[0].id,id).ok;},result.id);assert.equal(remote,false);
+    await placeInWorld('apartments',30,23);await page.keyboard.press('e');await page.getByRole('button',{name:'View items',exact:true}).click();
+    await page.getByRole('button',{name:'Generic shoes, 2 by 1 blocks, Items on the ground',exact:true}).click();await page.getByRole('button',{name:'Wear generic shoes',exact:true}).click();
+    assert.equal(await page.locator('#local-map').getAttribute('data-ground-count'),'0');
+});
+
+test('backpack contents remain attached when removed, and garments can be nested in another bag without duplication',async()=>{
+    await page.getByLabel('Wearable Storage',{exact:true}).selectOption('backpack');await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;const inv=setup.inventory;inv.ensure().containers['worn:backpack']=[{id:'keep-tools',type:'tools',x:0,y:0}];
+        const moved=setup.equipment.remove('top','worn:backpack',2,0).ok;
+        const dropped=setup.equipment.drop('equipped:storage','equipped:storage').ok;
+        const floor=setup.groundItems.current(),bag=inv.placements(floor)[0];
+        const accessible=inv.worn().map(c=>c.id),nested=structuredClone(bag.pockets['worn:backpack']);
+        const worn=setup.equipment.equip(floor.id,bag.id).ok;State.create(State.passage);
+        return {moved,dropped,accessible,nested,worn,items:inv.placements({id:'worn:backpack'}).map(item=>item.id),time:State.variables.world.elapsedSeconds};});
+    assert.equal(result.moved,true);assert.equal(result.dropped,true);assert.equal(result.accessible.includes('worn:backpack'),false);assert.equal(result.worn,true);assert.equal(result.nested.length,2);assert.equal(result.items.length,2);assert.equal(result.time,0);
+});
+
+test('dragging equipment to the ground drop zone and back onto its matching slot keeps the same garment',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await page.getByRole('button',{name:'Inventory',exact:true}).click();
+    const shoes=await page.getByRole('button',{name:'Equipped Generic shoes',exact:true}).boundingBox(),ground=await page.getByRole('button',{name:'Drop on ground',exact:true}).boundingBox();
+    await page.mouse.move(shoes.x+8,shoes.y+8);await page.mouse.down();await page.mouse.move(ground.x+8,ground.y+8,{steps:8});await page.mouse.up();
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.shoes),'none');
+    const identity=await page.evaluate(()=>SugarCube.setup.inventory.placements(SugarCube.setup.groundItems.current())[0].id);
+    const item=page.getByRole('button',{name:'Generic shoes, 2 by 1 blocks, Ground at your feet',exact:true});await item.scrollIntoViewIfNeeded();
+    const start=await item.boundingBox();await page.mouse.move(start.x+5,start.y+5);await page.mouse.down();
+    const slot=await page.locator('[data-equip-slot="shoes"]').boundingBox();await page.mouse.move(slot.x+12,slot.y+12,{steps:8});await page.mouse.up();
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.shoes),'shoes');
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.wornGarmentIds.shoes),identity);
+    assert.equal(await page.locator('#local-map').getAttribute('data-ground-count'),'0');
 });

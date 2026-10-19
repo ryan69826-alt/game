@@ -37,13 +37,13 @@ setup.interactions = (() => {
         if (!map) return [];
         const seated=setup.vehicleCabin.current();
         if(seated) return [{object:seated.car,distance:0}];
-        return (map.interactables || []).map(object => {
+        return [...(map.interactables || []),...setup.groundItems.objects(map.id)].map(object => {
             const dx = Math.max(object.x - world.x, 0, world.x - (object.x + (object.width || 1) - 1));
             const dy = Math.max(object.y - world.y, 0, world.y - (object.y + (object.height || 1) - 1));
             const atCounter=object.interactionTiles?.some(tile=>tile.x===world.x&&tile.y===world.y);
             return {object, distance: atCounter ? 1 : dx + dy};
         }).filter(target => target.distance <= 1 && actionsFor(target.object, world).length)
-            .filter(target=>setup.rooms.objectVisible(target.object,world))
+            .filter(target=>setup.rooms.objectVisible(target.object,world)&&(!target.object.id.startsWith('ground:')||setup.rooms.cellVisible(map,target.object.x,target.object.y,world)))
             .sort((a, b) => a.distance - b.distance || a.object.name.localeCompare(b.object.name));
     }
     function actionsFor(object, world = State.variables.world) {

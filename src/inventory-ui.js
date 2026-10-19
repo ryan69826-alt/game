@@ -7,7 +7,7 @@ setup.inventoryUI = (() => {
         const inventory = setup.inventory;
         if (externalId && !inventory.openExternal(externalId)) return;
         inventory.ensure();
-        Dialog.setup(externalId?.startsWith('storage:')?'Storage unit & inventory':externalId==='housing-counter'?'Key handover & inventory':externalId?.startsWith('cabin:')?'Cabin & inventory':externalId?'Trunk & inventory':'Inventory', 'character-window inventory-window');
+        Dialog.setup(externalId?.startsWith('ground:')?'Ground & inventory':externalId?.startsWith('storage:')?'Storage unit & inventory':externalId==='housing-counter'?'Key handover & inventory':externalId?.startsWith('cabin:')?'Cabin & inventory':externalId?'Trunk & inventory':'Inventory', 'character-window inventory-window');
         const root = Dialog.body();
         let selected = null, message = 'Drag an item to a free space. You can also select an item and then a destination square. Items cannot overlap or rotate.';
         const drag = setup.inventoryDrag.mount(root,externalId,result => {message=result.message;if(result.ok) selected=null;render();});
@@ -15,6 +15,32 @@ setup.inventoryUI = (() => {
             root.replaceChildren();
             const status = document.createElement('p');status.id = 'inventory-status';status.className = 'world-note';
             status.setAttribute('role', 'status');status.textContent = message;root.append(status);
+            const equipment=document.createElement('section');equipment.className='equipment-panel';
+            const equipmentTitle=document.createElement('h2');equipmentTitle.textContent='Equipped clothing';equipment.append(equipmentTitle);
+            const slots=document.createElement('div');slots.className='equipment-slots';equipment.append(slots);
+            for(const slot of setup.clothing.slots) {
+                const box=document.createElement('div');box.className='equipment-slot';box.dataset.equipSlot=slot;
+                const label=document.createElement('strong');label.textContent=setup.clothing.labels[slot];box.append(label);
+                const item=setup.equipment.preview(slot);
+                if(item) {
+                    const source=document.createElement('div');source.dataset.container=`equipped:${slot}`;
+                    const control=document.createElement('button');control.type='button';control.className='inventory-item';control.dataset.item=item.id;
+                    control.textContent=inventory.items[item.type].name;control.setAttribute('aria-label',`Equipped ${inventory.items[item.type].name}`);
+                    control.addEventListener('click',()=>{if(drag.ignoreClick()) return;selected={container:`equipped:${slot}`,id:item.id};message='Choose a storage square, or Drop on ground. Pocket contents stay inside this garment.';render();});
+                    source.append(control);box.append(source);
+                } else {const empty=document.createElement('span');empty.textContent='Empty · drop clothing here';box.append(empty);}
+                slots.append(box);
+            }
+            const drop=document.createElement('button');drop.type='button';drop.dataset.groundDrop='true';drop.className='ground-drop';
+            drop.textContent=setup.vehicleCabin.current()?'Drop to cabin floor':'Drop on ground';
+            drop.addEventListener('click',()=>{if(drag.ignoreClick()) return;if(!selected){message='Select or drag an item or equipped garment first.';render();return;}const result=setup.equipment.drop(selected.container,selected.id,externalId);message=result.message;if(result.ok)selected=null;render();});
+            equipment.append(drop);root.append(equipment);
+            const source=selected&&!selected.container.startsWith('equipped:')&&inventory.accessible(externalId)?.find(container=>container.id===selected.container);
+            const garment=source&&inventory.placements(source).find(item=>item.id===selected.id&&setup.equipment.slotFor(item.type));
+            if(garment) {
+                const wear=document.createElement('button');wear.type='button';wear.textContent=`Wear ${inventory.items[garment.type].name.toLowerCase()}`;
+                wear.addEventListener('click',()=>{const result=setup.equipment.equip(selected.container,selected.id,externalId);message=result.message;if(result.ok)selected=null;render();});root.append(wear);
+            }
             const consumable=selected&&inventory.worn().find(container=>container.id===selected.container);
             if(consumable&&inventory.placements(consumable).some(item=>item.id===selected.id&&item.type==='coffee')) {
                 const use=document.createElement('button');use.type='button';use.textContent='Drink coffee';
@@ -45,7 +71,7 @@ setup.inventoryUI = (() => {
                     cell.addEventListener('click', () => {
                         if(drag.ignoreClick()) return;
                         if (!selected) {message = 'Select an item first.';status.textContent = message;return;}
-                        const result = inventory.transfer(selected.container, container.id, selected.id, x, y, externalId);
+                        const result = setup.equipment.move(selected.container, container.id, selected.id, x, y, externalId);
                         message = result.message;if (result.ok) selected = null;
                         render();root.querySelector('.inventory-grid button')?.focus();
                     });grid.append(cell);
@@ -56,6 +82,7 @@ setup.inventoryUI = (() => {
                     button.style.gridColumn = `${item.x + 1} / span ${definition.width}`;button.style.gridRow = `${item.y + 1} / span ${definition.height}`;
                     button.style.setProperty('--item-color', definition.color);
                     button.textContent = {water:'Water',tools:'Tools',cloth:'Cloth',apartmentKey:'Key',coffee:'Coffee'}[item.type] || definition.name;button.title=item.type==='apartmentKey'?`Key for ${setup.housing.units().find(unit=>unit.id===item.id.split(':').at(-1))?.name||item.id.split(':').at(-1)}`:definition.name;button.setAttribute('aria-label', `${definition.name}, ${definition.width} by ${definition.height} blocks, ${container.name}`);
+                    if(item.pockets) button.title+=` · Pocket contents: ${Object.values(item.pockets).reduce((sum,list)=>sum+list.length,0)} item(s)`;
                     button.setAttribute('aria-pressed', String(selected?.id === item.id));
                     button.addEventListener('click', () => {
                         if(drag.ignoreClick()) return;
@@ -97,6 +124,8 @@ setup.inventoryUI = (() => {
                 for(const pocket of pockets) drawContainer(pocket,group);
             }
             for(const container of worn.filter(container=>container.id==='worn:backpack')) drawContainer(container,player);
+            const ground=setup.groundItems.current();
+            if(ground&&ground.id!==inventory.external(externalId)?.id&&inventory.placements(ground).length) drawContainer(ground,player);
             if (!worn.length) {
                 const empty = document.createElement('p');empty.className = 'world-note';empty.textContent = 'No carrying space. You have no pockets or bags equipped.';player.append(empty);
             }
