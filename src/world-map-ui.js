@@ -76,7 +76,6 @@
         function refresh(animate = false) {
             const world = State.variables.world, target = cameraTarget();
             document.getElementById('movement-position').textContent = `X ${world.x + 1} · Y ${world.y + 1}`;
-            document.getElementById('movement-turn').textContent = world.turn;
             document.getElementById('position-description').textContent = `You are at: ${map.tileAt(world.x, world.y).label.toLowerCase()}.`;
             setup.interactionUI.refresh();
             cancelAnimationFrame(frame);

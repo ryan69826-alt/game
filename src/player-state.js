@@ -35,4 +35,4 @@ setup.playerState = (() => {
     }
     return {ensure,spend,changeMoney,changeHealth,commit,refresh,formatMoney,startingMoney};
 })();
-$(document).on(':passagedisplay :playerchange',setup.playerState.refresh);
+$(document).on(':passagedisplay :playerchange :timechange',setup.playerState.refresh);

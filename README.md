@@ -3,13 +3,13 @@
 A modular browser RPG prototype built with Twine 2, SugarCube 2.37.3 and Tweego
 2.1.1. For the click-to-play site, see [GitHub Pages deployment](DEPLOYMENT.md).
 All protagonists are adults (age 26). Only the Apartments location is available;
-no story, NPC schedules, time simulation, or trait modifiers have been added.
+no story, NPC schedules, or trait modifiers have been added. The game clock advances with movement only.
 
 ## Current character and equipment
 
 The menu has Character Creation (Continue after starting), Options, and
 Import/Export Saves. The creator has independent gender/genital selections,
-three eye colors, five hair colors, seven hair lengths, and four skin tones.
+three eye colors, five hair colors, seven hair lengths, four skin tones, and four seasonal start dates.
 Body size and breast size controls are removed. Each gender uses one fixed base;
 old saves normalize shape fields to Medium without losing equipment, traits or XP.
 The male artwork is the existing medium model. The female base is prepared from
@@ -59,11 +59,32 @@ placeholder and makes no attack until combat rules are developed.
 
 The player starts with **$99,999** and **100 / 100 health**. Both appear above
 Character in the sidebar and in Stats; the old Apartments navigation tab is gone.
-Rent is **$600 per month**. Renting charges the first month, records the lease,
-and unlocks only that unit's door. Further monthly billing awaits a calendar;
-there is no invented conversion from movement turns to months. Duplicate leases,
-insufficient funds, invalid units, and remote rental calls cannot take payment.
-Money, health, lease, map position and open doors survive reloads/disk saves.
+Rent is **$600 per week**. Renting charges the first week, records the lease,
+and unlocks only that unit's door. The next payment falls exactly seven in-game
+days after signing, then every seven days. Movement collects due rent atomically
+with the clock update. Missed weeks are caught up without duplicate bills;
+insufficient funds leave outstanding rent, and later funds cover it on movement.
+No eviction or penalties are implemented. Duplicate leases, insufficient upfront
+funds, invalid units, and remote rental calls cannot take payment.
+Money, health, lease, due date, arrears, map position and open doors survive saves.
+
+## Game calendar
+
+Creation offers the 2026 Northern Hemisphere spring equinox (Friday March 20),
+summer solstice (Sunday June 21), autumn equinox (Wednesday September 23), and
+winter solstice (Monday December 21). These are fixed Gregorian game dates, with
+08:00:00 as the starting time. The sidebar shows the weekday, full date, and clock
+including seconds. UTC is the neutral game timezone, independent of the browser's
+locale, daylight-saving changes, or real-world elapsed time. Calendar rollover and
+weekdays use the Gregorian calendar rather than a hardcoded weekday counter.
+
+Each successful cardinal movement step advances five seconds, including held-key,
+button and adjacent-map-click movement. Failed moves advance nothing. All
+interactions are free of time costs: doors, map entrance/exit, NPCs, renting,
+inventory transfers and sheets. Real-time waiting and reloads advance nothing.
+Legacy turn-based saves convert each stored turn into five seconds once; turn
+counts are removed. Old monthly leases retain their payment and get a weekly due
+date seven in-game days after migration, without a charge on load.
 
 `setup.playerState.changeMoney(integer)` applies safe currency changes;
 `changeHealth(integer)` applies damage/healing, clamped to 0–100. Both commit a
@@ -92,7 +113,7 @@ dragging scrolls its contents. Selecting an item and then a square with mouse or
 keyboard Tab/Enter also works. Short block labels never wrap; hover titles, accessible
 names and selection messages retain full item names.
 Rectangular items require adjoining squares, cannot overlap or extend past a grid,
-and do not rotate. Transfers and interactions currently spend no movement turns.
+and do not rotate. Transfers and interactions do not advance game time.
 Opening dialogs clears held movement; the world remains visible behind them.
 
 Prototype capacities:
@@ -126,11 +147,11 @@ The compact movement panel above the location title is the only exact-location
 readout. Player coordinates are displayed starting at 1.
 
 Use arrows, WASD, direction buttons, or click an adjacent square. Every successful
-cardinal step spends one turn. Holding repeats every 200 ms. Multiple held
+cardinal step advances five seconds. Holding repeats every 200 ms. Multiple held
 directions alternate at that shared pace; releasing one leaves the others active.
 Direction aliases share a slot. Blocked attempts cost nothing and keep inputs
 active. Dialogs, blur, hidden tabs, and navigation clear held inputs. Movement and
-turn count persist through reloads, Continue, and disk saves.
+elapsed game seconds persist through reloads, Continue, and disk saves.
 
 ## Local development and preview
 
@@ -166,7 +187,7 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
 ## Source and saves
 
 - `story.twee`, `world.twee`: menu, creator, world, sidebar and window markup.
-- `character-data.js`: version-7 serializable schema, defaults and migrations.
+- `character-data.js`: version-8 serializable schema, defaults and migrations.
 - `character-rules.js`, `character-creation-build.js`: traits, XP and allocation UI.
 - `character-ui.js`, `character-display.js`: creator controls/shared preview lifecycle.
 - `character-female.js`, `character-body.js`, `character-preview.js`, `clothing.js`:
@@ -176,7 +197,8 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
 - `world-map-data.js`, `interior-maps.js`, `world-map-art.js`, `world-map-ui.js`:
   outdoor/interior geometry, rotated floors, furnishings, rendering and camera.
 - `world-movement.js`, `world-travel.js`: held-input movement and door transitions.
-- `player-state.js`, `housing.js`: money/health and validated apartment rentals.
+- `calendar-data.js`: seasonal starts, Gregorian clock, formatting and legacy time conversion.
+- `player-state.js`, `housing.js`: money/health, validated rentals and recurring weekly billing.
 - `vehicle-geometry.js`: shared vehicle headings and front/rear/side geometry.
 - `world-interactions.js`, `world-interaction-ui.js`: reach, directional actions,
   prompts and object windows. Definitions can supply custom action text/handlers.
@@ -188,7 +210,7 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
 Old character saves migrate to Medium with shirt/pants/shoes and no backpack;
 other valid selections, traits and XP remain. Removed height/composition fields
 are discarded. Invalid traits are filtered; imported XP is rounded down and capped
-to 250 in skill order. `$world` stores only map ID, position and turn. `$openedObjects`
+to 250 in skill order. `$world` stores only map ID, position and elapsed seconds (v2). `$openedObjects`
 stores door flags; `$inventory` version 2 stores container IDs and item placements. Version-4 equipment
 booleans migrate to category selections. Old shared pocket grids repack into the
 new independent pockets and any equipped backpack. Items too large to fit return
@@ -211,7 +233,8 @@ proportional heads and visible faces, independent clothing layers, old-save norm
 all visual choices, long-hair face/curtain regressions, creator migration,
 traits/XP, responsive layouts, read-only sheets, map geometry/collision,
 movement/held-direction pacing, interaction reach/actions, nose-in parking/headlight orientation, directional car access, oriented six-unit interiors and portal returns,
-rental transactions/access/desk reach, persistent money and bounded health, garment-only layer bounds,
+rental transactions/access/desk reach, weekly due-time and arrears handling, seasonal
+weekdays, calendar rollover and time-free interactions, persistent money/health, garment-only layer bounds,
 block packing/failed transfers, separate single-block pockets, dropdown categories,
 pointer tracking/drop/cancel behavior, legacy item migration, crisp sprite edges,
 no invisible storage, empty-trunk persistence,
@@ -219,7 +242,7 @@ reloads, and portable save round trips. CI runs the same suite before Pages depl
 
 For review: enter each apartment building with E → Open → Enter, then return
 through its exit. Visit the Housing Office beside Apartment 3, approach the desk,
-and use Talk → Rent apartment. Check the $600 first-month charge, enter that unit,
+and use Talk → Rent apartment. Check the $600 first-week charge, enter that unit,
 and verify the lease, health, and balance after reload or disk save/load. Check
 Inventory and the separate pockets as before. Stop here for feedback before
 adding another feature.

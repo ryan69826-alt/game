@@ -33,13 +33,13 @@ setup.interactionUI = (() => {
             root.replaceChildren();
             const title=document.createElement('h2');title.className='interaction-title';title.textContent='Rent an apartment';
             const text=document.createElement('p');text.className='world-note';
-            text.textContent=`Rent is ${setup.playerState.formatMoney(setup.housing.rentPrice)} per month. Pay the first month now. Later monthly payments will begin when a calendar system is added.`;
+            text.textContent=`Rent is ${setup.playerState.formatMoney(setup.housing.rentPrice)} per week. Pay the first week now; later payments are collected automatically every seven in-game days. Unpaid rent remains outstanding if funds run short.`;
             const form=document.createElement('div');form.className='rental-form';
             const label=document.createElement('label');label.htmlFor='rental-unit';label.textContent='Choose an apartment';
             const select=document.createElement('select');select.id=label.htmlFor;
             for(const unit of setup.housing.units()) select.append(new Option(unit.name,unit.id));
             const result=document.createElement('p');result.id='interaction-result';result.setAttribute('role','status');result.setAttribute('aria-live','polite');
-            const confirm=button(`Rent · ${setup.playerState.formatMoney(setup.housing.rentPrice)} first month`,()=>{
+            const confirm=button(`Rent · ${setup.playerState.formatMoney(setup.housing.rentPrice)} first week`,()=>{
                 const outcome=setup.housing.rent(select.value);result.textContent=outcome.message;
                 if(outcome.ok) {confirm.disabled=true;select.disabled=true;}
             });

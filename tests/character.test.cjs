@@ -168,7 +168,7 @@ test('independent identity and appearance survive menu, reload, and disk save ro
     await page.getByRole('spinbutton',{name:'XP allocated to Lockpicking',exact:true}).press('Tab');
     await page.getByRole('spinbutton',{name:'XP allocated to Stealth',exact:true}).fill('100');
     await page.getByRole('spinbutton',{name:'XP allocated to Stealth',exact:true}).press('Tab');
-    for(const [label,choice] of Object.entries({'Gender':'Female','Genitals':'Both','Eye Color':'Green','Hair Color':'Gray','Hair Length':'Floor','Skin Tone':'Dark'})) {
+    for(const [label,choice] of Object.entries({'Gender':'Female','Genitals':'Both','Start date':'2026-06-21','Eye Color':'Green','Hair Color':'Gray','Hair Length':'Floor','Skin Tone':'Dark'})) {
         await page.getByLabel(label,{exact:true}).selectOption(choice);
     }
     await page.locator('#clothing-storage').selectOption('backpack');
@@ -196,7 +196,7 @@ test('old saves without character data open safely; malformed fields normalize',
     await page.evaluate(()=>{SugarCube.State.variables.character={gender:'Unknown',genitals:'Both',heightInches:900,bodyFat:'Fat'};SugarCube.Engine.play('CharacterCreation');});
     await page.waitForSelector('#character-gender');const character=await value();
     assert.equal(character.gender,'Male');assert.equal(character.genitals,'Both');assert.equal(character.bodySize,'Medium');assert.equal(character.heightInches,undefined);assert.equal(character.bodyFat,undefined);assert.deepEqual(character.clothing,{top:'shirt',bottoms:'pants',shoes:'shoes',storage:'none',handheld:'none'});
-    assert.equal(character.breastSize,'Medium');assert.equal(character.version,7);
+    assert.equal(character.breastSize,'Medium');assert.equal(character.version,8);
     assert.deepEqual(character.traits,[]);assert.ok(Object.values(character.skills).every(xp=>xp===0));
 });
 
@@ -271,9 +271,9 @@ test('creator fits narrow screens and large-text preference without horizontal s
         await page.setViewportSize({width,height:844});
         await page.evaluate(()=>document.documentElement.classList.add('large-text'));
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        assert.equal(await page.locator('#character-controls select:visible').count(),11);
+        assert.equal(await page.locator('#character-controls select:visible').count(),12);
         await page.getByLabel('Gender',{exact:true}).selectOption('Female');
-        assert.equal(await page.locator('#character-controls select:visible').count(),11);
+        assert.equal(await page.locator('#character-controls select:visible').count(),12);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         await page.getByLabel('Gender',{exact:true}).selectOption('Male');
         await page.getByRole('link',{name:'Save & return to menu'}).click();
@@ -433,7 +433,7 @@ test('Apartments has a connected 50 by 50 grid with two roads, parking, park, an
     for(const entrance of layout.entrances) assert.deepEqual(entrance,{reached:true,sidewalkConnected:true,door:'entrance',outward:true,inward:false});
 });
 
-test('movement buttons, keyboard, and adjacent map clicks spend one turn, scroll, and persist on reload',async()=>{
+test('movement buttons, keyboard, and adjacent map clicks advance five seconds, scroll, and persist on reload',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await page.waitForSelector('#local-map[data-player-x]');
     const world=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
@@ -442,21 +442,21 @@ test('movement buttons, keyboard, and adjacent map clicks spend one turn, scroll
     const originalOverview=await overview.evaluate(canvas=>canvas.toDataURL());
     await page.keyboard.press('ArrowRight');
     await page.waitForFunction(()=>document.querySelector('#local-map').dataset.animating==='false');
-    assert.deepEqual(await world(),{...initial,x:initial.x+1,turn:1});
+    assert.deepEqual(await world(),{...initial,x:initial.x+1,elapsedSeconds:5});
     assert.notEqual(await local.evaluate(canvas=>canvas.toDataURL()),original);
     assert.notEqual(await overview.evaluate(canvas=>canvas.toDataURL()),originalOverview);
     assert.equal(Number(await local.getAttribute('data-camera-x')),initial.x+1-12);
     await page.getByRole('button',{name:'Move north',exact:true}).click();
     await page.keyboard.press('a');
     await page.waitForFunction(()=>document.querySelector('#local-map').dataset.animating==='false');
-    assert.deepEqual(await world(),{...initial,y:initial.y-1,turn:3});
+    assert.deepEqual(await world(),{...initial,y:initial.y-1,elapsedSeconds:15});
     const target=await local.evaluate(canvas=>{
         const r=canvas.getBoundingClientRect(),world=SugarCube.State.variables.world;
         return {x:(world.x-Number(canvas.dataset.cameraX)+1.5)/25*r.width,
             y:(world.y-Number(canvas.dataset.cameraY)+.5)/35*r.height};
     });
     await local.click({position:target});
-    assert.equal((await world()).turn,4);
+    assert.equal((await world()).elapsedSeconds,20);
     const expected=await world();
     await page.reload();await page.waitForSelector('#local-map[data-player-x]');
     assert.deepEqual(await world(),expected,'the last step survives reload without leaving the location');
@@ -471,30 +471,30 @@ test('movement buttons, keyboard, and adjacent map clicks spend one turn, scroll
     assert.ok(worldBox.y>=mapBox.y+mapBox.height,'world map sits below local map');
 });
 
-test('walls, parked cars, trees, map bounds, and distant clicks do not spend turns',async()=>{
+test('walls, parked cars, trees, map bounds, and distant clicks do not advance time',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     for(const [x,y,dx,dy] of [[30,15,0,-1],[14,32,0,1],[13,35,1,0],[27,21,0,-1],[0,0,-1,0],[49,49,1,0]]) {
         const result=await page.evaluate(({x,y,dx,dy})=>{
-            SugarCube.State.variables.world={mapId:'apartments',x,y,turn:7};
+            SugarCube.State.variables.world={mapId:'apartments',x,y,elapsedSeconds:35};
             const result=SugarCube.setup.worldMovement.move(dx,dy);
             return {result,world:structuredClone(SugarCube.State.variables.world)};
         },{x,y,dx,dy});
-        assert.equal(result.result.moved,false);assert.equal(result.world.turn,7);assert.equal(result.world.x,x);assert.equal(result.world.y,y);
+        assert.equal(result.result.moved,false);assert.equal(result.world.elapsedSeconds,35);assert.equal(result.world.x,x);assert.equal(result.world.y,y);
     }
     await page.evaluate(()=>{delete SugarCube.State.variables.world;SugarCube.Engine.play('Apartments');});
     await page.waitForSelector('#local-map[data-player-x]');
     await page.locator('#local-map').click({position:{x:10,y:10}});
-    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.turn),0);
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),0);
     assert.match(await page.locator('#movement-status').textContent(),/adjacent square/);
     const results=await page.evaluate(()=>{
-        const cases=[undefined,{mapId:'constructor',x:NaN,y:50,turn:-1},{mapId:'apartments',x:30,y:10,turn:4}];
+        const cases=[undefined,{mapId:'constructor',x:NaN,y:50,elapsedSeconds:-1},{mapId:'apartments',x:30,y:10,elapsedSeconds:20}];
         return cases.map(value=>{SugarCube.State.variables.world=value;return structuredClone(SugarCube.setup.worldMovement.ensure());});
     });
     for(const result of results) {assert.equal(result.x,30);assert.equal(result.y,23);assert.equal(result.mapId,'apartments');}
-    assert.equal(results[2].turn,4);
+    assert.equal(results[2].elapsedSeconds,20);
 });
 
-test('movement position and turn round-trip through disk saves',async()=>{
+test('movement position and time round-trip through disk saves',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await page.getByRole('button',{name:'Move north',exact:true}).click();
     const expected=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
@@ -518,12 +518,12 @@ test('held keys move at a controlled pace, stop on release/blur/dialogs, and res
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     const world=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
     const initial=await world();
-    await page.keyboard.down('ArrowRight');assert.equal((await world()).turn,1);
-    await page.clock.runFor(199);assert.equal((await world()).turn,1);
-    await page.clock.runFor(1);assert.equal((await world()).turn,2);
+    await page.keyboard.down('ArrowRight');assert.equal((await world()).elapsedSeconds,5);
+    await page.clock.runFor(199);assert.equal((await world()).elapsedSeconds,5);
+    await page.clock.runFor(1);assert.equal((await world()).elapsedSeconds,10);
     // Native keyboard repeats cannot speed up the game's own timer.
-    await page.keyboard.down('ArrowRight');assert.equal((await world()).turn,2);
-    await page.clock.runFor(400);assert.equal((await world()).turn,4);
+    await page.keyboard.down('ArrowRight');assert.equal((await world()).elapsedSeconds,10);
+    await page.clock.runFor(400);assert.equal((await world()).elapsedSeconds,20);
     await page.keyboard.up('ArrowRight');
     const released=await world();assert.equal(released.x,initial.x+4);
     await page.clock.runFor(800);assert.deepEqual(await world(),released);
@@ -536,12 +536,12 @@ test('held keys move at a controlled pace, stop on release/blur/dialogs, and res
     const paused=await world();await page.clock.runFor(600);assert.deepEqual(await world(),paused);
     await page.keyboard.up('s');await page.keyboard.press('Escape');
     await page.evaluate(()=>{
-        SugarCube.State.variables.world={version:1,mapId:'apartments',x:30,y:16,turn:0};
+        SugarCube.State.variables.world={version:1,mapId:'apartments',x:30,y:16,elapsedSeconds:0};
         SugarCube.Engine.play('Apartments');
     });
     await page.waitForSelector('#local-map[data-player-y="16"]');
     await page.keyboard.down('w');await page.clock.runFor(1000);await page.keyboard.up('w');
-    assert.equal((await world()).turn,1);assert.equal((await world()).y,15);
+    assert.equal((await world()).elapsedSeconds,5);assert.equal((await world()).y,15);
     assert.match(await page.locator('#movement-status').textContent(),/blocks the way/);
 });
 
@@ -552,8 +552,8 @@ test('holding a direction button repeats without an extra release step and clean
     const world=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
     const east=page.getByRole('button',{name:'Move east',exact:true});
     const bounds=await east.boundingBox();await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
-    await page.mouse.down();assert.equal((await world()).turn,1);
-    await page.clock.runFor(600);assert.equal((await world()).turn,4);
+    await page.mouse.down();assert.equal((await world()).elapsedSeconds,5);
+    await page.clock.runFor(600);assert.equal((await world()).elapsedSeconds,20);
     await page.mouse.up();const released=await world();
     await page.clock.runFor(600);assert.deepEqual(await world(),released,'release does not add a click step');
     const south=page.getByRole('button',{name:'Move south',exact:true});
@@ -568,7 +568,7 @@ test('holding a direction button repeats without an extra release step and clean
     const left=await world();await page.clock.runFor(600);assert.deepEqual(await world(),left);
     await page.keyboard.up('s');
     await page.getByRole('link',{name:'Continue',exact:true}).click();
-    await page.keyboard.press('s');assert.equal((await world()).turn,left.turn+1,'no stale or duplicated repeat listeners');
+    await page.keyboard.press('s');assert.equal((await world()).elapsedSeconds,left.elapsedSeconds+5,'no stale or duplicated repeat listeners');
 });
 
 test('held directions alternate at one shared pace and releasing a key resumes the others',async()=>{
@@ -578,17 +578,17 @@ test('held directions alternate at one shared pace and releasing a key resumes t
     const world=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
     const initial=await world();
     await page.keyboard.down('ArrowUp');
-    assert.deepEqual(await world(),{...initial,y:22,turn:1});
+    assert.deepEqual(await world(),{...initial,y:22,elapsedSeconds:5});
     await page.keyboard.down('w'); // An alias must not give north extra turns.
     await page.keyboard.down('ArrowRight');
-    assert.equal((await world()).turn,1,'adding held keys does not add immediate steps');
-    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:31,y:22,turn:2});
-    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:31,y:21,turn:3});
-    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:32,y:21,turn:4});
+    assert.equal((await world()).elapsedSeconds,5,'adding held keys does not add immediate steps');
+    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:31,y:22,elapsedSeconds:10});
+    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:31,y:21,elapsedSeconds:15});
+    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:32,y:21,elapsedSeconds:20});
     await page.keyboard.up('ArrowRight');
-    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:32,y:20,turn:5},'the original Up key resumes when Right is released');
+    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:32,y:20,elapsedSeconds:25},'the original Up key resumes when Right is released');
     await page.keyboard.up('ArrowUp');
-    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:32,y:19,turn:6},'W remains active after the other keys are released');
+    await page.clock.runFor(200);assert.deepEqual(await world(),{...initial,x:32,y:19,elapsedSeconds:30},'W remains active after the other keys are released');
     await page.keyboard.up('w');const released=await world();
     await page.clock.runFor(600);assert.deepEqual(await world(),released);
     await page.keyboard.down('ArrowLeft');await page.keyboard.down('ArrowRight');
@@ -603,18 +603,18 @@ test('a blocked held direction remains active and can resume after another direc
     await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await page.evaluate(()=>{
-        SugarCube.State.variables.world={version:1,mapId:'apartments',x:26,y:20,turn:0};
+        SugarCube.State.variables.world={version:1,mapId:'apartments',x:26,y:20,elapsedSeconds:0};
         SugarCube.Engine.play('Apartments');
     });
     await page.waitForSelector('#local-map[data-player-x="26"]');
     const world=()=>page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
     await page.keyboard.down('d');await page.clock.runFor(400);
-    assert.equal((await world()).turn,0,'the tree blocks east without spending turns');
+    assert.equal((await world()).elapsedSeconds,0,'the tree blocks east without advancing time');
     await page.keyboard.down('s');await page.clock.runFor(200);
-    assert.equal((await world()).y,21);assert.equal((await world()).turn,1);
-    await page.clock.runFor(200);assert.equal((await world()).x,27);assert.equal((await world()).turn,2,'east is still held and now unblocked');
+    assert.equal((await world()).y,21);assert.equal((await world()).elapsedSeconds,5);
+    await page.clock.runFor(200);assert.equal((await world()).x,27);assert.equal((await world()).elapsedSeconds,10,'east is still held and now unblocked');
     await page.keyboard.up('s');await page.clock.runFor(200);
-    assert.equal((await world()).x,28);assert.equal((await world()).turn,3);
+    assert.equal((await world()).x,28);assert.equal((await world()).elapsedSeconds,15);
     await page.keyboard.up('d');const released=await world();
     await page.clock.runFor(600);assert.deepEqual(await world(),released);
 });
@@ -632,10 +632,10 @@ test('interaction reach uses door squares and full car footprints, excluding dia
     assert.ok(await page.getByRole('button',{name:'Interact [E]',exact:true}).isDisabled());
     await page.keyboard.press('e');assert.equal(await page.getByRole('dialog').count(),0);
     assert.match(await page.locator('#movement-status').textContent(),/Nothing to interact/);
-    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.turn),0);
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),0);
 });
 
-test('E opens a door action window over the location and pauses held movement without spending turns',async()=>{
+test('E opens a door action window over the location and pauses held movement without advancing time',async()=>{
     await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});
     await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
@@ -698,14 +698,14 @@ test('opening apartment and car doors updates both maps and persists across move
     const pixels=()=>page.locator('#local-map').evaluate(canvas=>canvas.toDataURL());
     const closed=await pixels();
     const overviewClosed=await page.locator('#world-map').evaluate(canvas=>canvas.toDataURL());
-    const turn=await page.evaluate(()=>SugarCube.State.variables.world.turn);
+    const elapsedSeconds=await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds);
     await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
     await dialog.getByRole('button',{name:'Open',exact:true}).click();
     assert.equal(await dialog.locator('#interaction-result').textContent(),'You open the door.');
     assert.ok(await dialog.getByRole('button',{name:'Open',exact:true}).isDisabled());
     assert.notEqual(await pixels(),closed,'open door is drawn on the map');
     assert.notEqual(await page.locator('#world-map').evaluate(canvas=>canvas.toDataURL()),overviewClosed,'world overview updates too');
-    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.turn),turn);
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),elapsedSeconds);
     await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map[data-player-y="16"]');
     assert.notEqual(await pixels(),closed,'open appearance survives reload');
     await page.keyboard.press('e');assert.ok(await dialog.getByRole('button',{name:'Open',exact:true}).isDisabled());
@@ -776,7 +776,7 @@ test('trunk blocks support UI transfers, reject insufficient space, and persist 
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await page.evaluate(()=>{SugarCube.State.variables.world.x=12;SugarCube.State.variables.world.y=30;SugarCube.Engine.play('Apartments');});
     await page.waitForSelector('#local-map[data-player-y="30"]');
-    const turn=await page.evaluate(()=>SugarCube.State.variables.world.turn);
+    const elapsedSeconds=await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds);
     await page.keyboard.press('e');
     const actions=page.getByRole('dialog',{name:'Interact',exact:true});
     assert.equal(await actions.getByRole('button',{name:'Look through window',exact:true}).count(),0);
@@ -799,7 +799,7 @@ test('trunk blocks support UI transfers, reject insufficient space, and persist 
     await trunk.getByRole('button',{name:/Cleaning cloth,/}).click();
     await shirt.locator('[data-x="0"][data-y="0"]').click();
     assert.equal(await trunk.locator('.inventory-item').count(),0);
-    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.turn),turn);
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),elapsedSeconds);
     const expected=await page.evaluate(()=>structuredClone(SugarCube.State.variables.inventory));
     await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
     await page.reload();await page.waitForSelector('#local-map[data-player-y="30"]');
@@ -958,7 +958,7 @@ test('detailed sprite rendering uses crisp opaque pixels at native preview resol
 test('legacy female size fields normalize to the fixed base without affecting equipment or skills',async()=>{
     const result=await page.evaluate(()=>SugarCube.setup.character.normalize({gender:'Female',bodySize:'Large',breastSize:'Small',
         clothing:{top:'none',bottoms:'pants',shoes:'none',storage:'backpack',handheld:'none'},skills:{Focus:150},traits:['Nerd']}));
-    assert.equal(result.version,7);assert.equal(result.bodySize,'Medium');assert.equal(result.breastSize,'Medium');
+    assert.equal(result.version,8);assert.equal(result.bodySize,'Medium');assert.equal(result.breastSize,'Medium');
     assert.equal(result.clothing.storage,'backpack');assert.equal(result.clothing.top,'none');
     assert.equal(result.skills.Focus,150);assert.deepEqual(result.traits,['Nerd']);
 });
@@ -1058,7 +1058,7 @@ test('legacy Combat is removed without changing Athleticism; Melee Combat is ind
         const first=setup.character.normalize({version:6,skills:{Athleticism:75,Combat:100,Focus:50}});
         return {first,second:setup.character.normalize(first),categories:setup.characterRules.skillCategories.flatMap(category=>category.skills)};
     });
-    assert.equal(result.first.version,7);assert.equal(result.first.skills.Athleticism,75);assert.equal(result.first.skills.Focus,50);
+    assert.equal(result.first.version,8);assert.equal(result.first.skills.Athleticism,75);assert.equal(result.first.skills.Focus,50);
     assert.equal(result.first.skills.Combat,undefined);assert.equal(result.first.skills['Melee Combat'],0);assert.deepEqual(result.second,result.first);
     assert.equal(new Set(result.categories).size,18);assert.equal(result.categories.length,18);
     const melee=page.getByRole('spinbutton',{name:'XP allocated to Melee Combat',exact:true});
@@ -1167,9 +1167,9 @@ test('renting through Talk unlocks only the selected apartment and survives relo
     assert.deepEqual(await dialog.locator('.interaction-actions button').allTextContents(),['Rent apartment','Back']);
     await dialog.getByRole('button',{name:'Rent apartment',exact:true}).click();
     assert.equal(await dialog.getByLabel('Choose an apartment').locator('option').count(),24);
-    await dialog.getByLabel('Choose an apartment').selectOption('3-2');await dialog.getByRole('button',{name:'Rent · $600 first month',exact:true}).click();
+    await dialog.getByLabel('Choose an apartment').selectOption('3-2');await dialog.getByRole('button',{name:'Rent · $600 first week',exact:true}).click();
     assert.match(await dialog.locator('#interaction-result').textContent(),/Apartment 3 · Unit 2/);
-    assert.equal(await page.locator('#player-money').textContent(),'$99,399');assert.ok(await dialog.getByRole('button',{name:'Rent · $600 first month',exact:true}).isDisabled());
+    assert.equal(await page.locator('#player-money').textContent(),'$99,399');assert.ok(await dialog.getByRole('button',{name:'Rent · $600 first week',exact:true}).isDisabled());
     await page.keyboard.press('Escape');await walkTo(8,1);await openPortal('Exit','apartments');
     await walkTo(30,30);await openPortal('Enter','apartment-3');
     // Unit 2 is west of this hallway after rotating the north-facing building.
@@ -1195,4 +1195,100 @@ test('renting through Talk unlocks only the selected apartment and survives relo
     const [chooser]=await Promise.all([page.waitForEvent('filechooser'),page.getByText('Load…',{exact:true}).click()]);await chooser.setFiles(save);
     await page.waitForFunction(old=>document.getElementById('local-map')!==old,previous);await page.waitForSelector('#local-map[data-map-id="apartment-3"]');
     assert.deepEqual(await page.evaluate(()=>({world:structuredClone(SugarCube.State.variables.world),player:structuredClone(SugarCube.State.variables.player),housing:structuredClone(SugarCube.State.variables.housing)})),expected);
+});
+
+test('four seasonal start dates use real 2026 weekdays and keep their selection through the menu',async()=>{
+    const select=page.getByLabel('Start date',{exact:true});assert.equal(await select.locator('option').count(),4);
+    const cases=[['2026-03-20','Spring equinox','Friday, March 20, 2026'],
+        ['2026-06-21','Summer solstice','Sunday, June 21, 2026'],
+        ['2026-09-23','Autumn equinox','Wednesday, September 23, 2026'],
+        ['2026-12-21','Winter solstice','Monday, December 21, 2026']];
+    for(const [date,season,weekday] of cases) {
+        assert.equal(await select.locator(`option[value="${date}"]`).textContent(),`${season} — ${weekday}`);
+        await select.selectOption(date);assert.equal((await value()).startDate,date);
+        const clock=await page.evaluate(()=>({date:SugarCube.setup.gameClock.formatDate(SugarCube.setup.gameClock.now()),time:SugarCube.setup.gameClock.formatTime(SugarCube.setup.gameClock.now())}));
+        assert.deepEqual(clock,{date:weekday,time:'08:00:00'});
+    }
+    await page.getByRole('link',{name:'Save & return to menu'}).click();await page.reload();
+    await page.getByRole('link',{name:'Character Creation',exact:true}).click();assert.equal(await select.inputValue(),'2026-12-21');
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    assert.equal(await page.locator('#player-date').textContent(),'Monday, December 21, 2026');assert.equal(await page.locator('#player-time').textContent(),'08:00:00');
+    assert.equal(await page.locator('#movement-turn').count(),0);
+    await page.keyboard.press('d');assert.equal(await page.locator('#player-time').textContent(),'08:00:05');
+});
+
+test('game time crosses midnight and year boundaries independently of the browser timezone',async()=>{
+    await page.getByLabel('Start date',{exact:true}).selectOption('2026-12-21');
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.evaluate(()=>{
+        const {State}=SugarCube;
+        State.variables.world.elapsedSeconds=(Date.parse('2026-12-31T23:59:55Z')-Date.parse('2026-12-21T08:00:00Z'))/1000;
+        SugarCube.Engine.play('Apartments');
+    });
+    await page.waitForFunction(()=>document.getElementById('player-time')?.textContent==='23:59:55');
+    assert.equal(await page.locator('#player-date').textContent(),'Thursday, December 31, 2026');
+    await page.keyboard.press('d');assert.equal(await page.locator('#player-date').textContent(),'Friday, January 1, 2027');
+    assert.equal(await page.locator('#player-time').textContent(),'00:00:00');
+    const expected=await page.locator('#player-date').textContent();await page.reload();await page.waitForSelector('#player-date');
+    assert.equal(await page.locator('#player-date').textContent(),expected);assert.equal(await page.locator('#player-time').textContent(),'00:00:00');
+});
+
+test('opening doors, changing maps, talking, renting, and real-time waiting never advance game time',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await walkTo(42,31);const elapsed=await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds);
+    await openPortal('Enter','housing-office');assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),elapsed);
+    await walkTo(8,7);const atDesk=await page.evaluate(()=>SugarCube.setup.gameClock.now());
+    await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
+    await dialog.getByRole('button',{name:'Talk',exact:true}).click();await dialog.getByRole('button',{name:'Rent apartment',exact:true}).click();
+    await dialog.getByRole('button',{name:'Rent · $600 first week',exact:true}).click();
+    assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),atDesk);
+    await page.keyboard.press('Escape');await page.clock.install();await page.clock.fastForward(3600000);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),atDesk);
+    assert.equal(await page.locator('#player-time').textContent(),await page.evaluate(()=>SugarCube.setup.gameClock.formatTime(SugarCube.setup.gameClock.now())));
+});
+
+test('weekly rent charges once at the exact due time, catches up, and retains unpaid rent without duplicating bills',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const results=await page.evaluate(()=>{
+        const {setup,State}=SugarCube,week=setup.housing.weekSeconds;
+        State.variables.world={...State.variables.world,mapId:'housing-office',x:8,y:7};
+        const rented=setup.housing.rent('1-1');const first={...State.variables.housing};
+        State.variables.world={...State.variables.world,mapId:'apartments',x:30,y:23,elapsedSeconds:week-10};
+        setup.worldMovement.move(1,0);const before=State.variables.player.money;
+        setup.worldMovement.move(-1,0);const due={money:State.variables.player.money,...State.variables.housing};
+        setup.housing.collectDue();setup.housing.collectDue();const repeat=State.variables.player.money;
+        State.variables.world.elapsedSeconds=3*week-5;setup.worldMovement.move(1,0);
+        const catchup={money:State.variables.player.money,...State.variables.housing};
+        State.variables.player.money=100;State.variables.world.elapsedSeconds=4*week-5;setup.worldMovement.move(-1,0);
+        const unpaid={money:State.variables.player.money,...State.variables.housing};
+        setup.worldMovement.move(1,0);const stillOwed=State.variables.housing.arrears;
+        const stamp=setup.gameClock.now();setup.playerState.changeMoney(500);const afterIncome=setup.gameClock.now();setup.worldMovement.move(-1,0);
+        return {rented,week,first,before,due,repeat,catchup,unpaid,stillOwed,stamp,afterIncome,
+            settled:{money:State.variables.player.money,...State.variables.housing}};
+    });
+    assert.ok(results.rented.ok);assert.equal(results.first.weeklyRent,600);assert.equal(results.before,99399);
+    assert.equal(results.due.money,98799);assert.equal(results.due.nextRentAt,results.first.nextRentAt+results.week);assert.equal(results.repeat,98799);
+    assert.equal(results.catchup.money,97599);assert.equal(results.catchup.nextRentAt,results.first.nextRentAt+3*results.week);
+    assert.equal(results.unpaid.money,100);assert.equal(results.unpaid.arrears,600);assert.equal(results.stillOwed,600);
+    assert.equal(results.stamp,results.afterIncome);assert.equal(results.settled.money,0);assert.equal(results.settled.arrears,0);
+    assert.equal(results.settled.rentedUnit,'1-1');
+    await page.reload();await page.waitForSelector('#player-money');assert.equal(await page.locator('#player-money').textContent(),'$0');
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.housing.arrears),0);
+});
+
+test('legacy turns and monthly leases migrate once without resetting time or charging on load',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;
+        State.variables.world={version:1,mapId:'apartments',x:30,y:23,turn:17};
+        State.variables.housing={version:1,rentedUnit:'2-3',monthlyRent:600,monthsPaid:1};
+        const world=setup.worldMovement.ensure(),first=setup.housing.ensure();
+        const again=setup.worldMovement.ensure(),lease=setup.housing.ensure();
+        return {world,again,first,lease,now:setup.gameClock.now(),money:State.variables.player.money,
+            invalid:setup.character.normalize({startDate:'2026-02-30'}).startDate};
+    });
+    assert.equal(result.world.version,2);assert.equal(result.world.turn,undefined);assert.equal(result.world.elapsedSeconds,85);assert.deepEqual(result.again,result.world);
+    assert.equal(result.first.version,2);assert.equal(result.first.rentedUnit,'2-3');assert.equal(result.first.weeklyRent,600);
+    assert.equal(result.first.monthlyRent,undefined);assert.equal(result.first.nextRentAt,result.now+604800);assert.deepEqual(result.lease,result.first);
+    assert.equal(result.money,99999);assert.equal(result.invalid,'2026-03-20');
 });

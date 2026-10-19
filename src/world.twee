@@ -11,6 +11,7 @@
 <div class="sidebar-character"><<include "CharacterArtwork">></div>
 <p class="sidebar-identity"><span data-character-summary></span><span class="sidebar-age">Age 26</span></p>
 <p id="preview-status" class="preview-status" role="status" aria-live="polite"></p>
+<div class="sidebar-clock" aria-label="Game date and time"><time id="player-date"></time><time id="player-time"></time></div>
 <div class="sidebar-vitals" aria-label="Money and health">
 <div><span>Money</span><output id="player-money"></output></div>
 <div><label for="player-health-bar">Health</label><output id="player-health"></output></div>
@@ -36,9 +37,9 @@
 <section class="movement-panel" aria-labelledby="movement-title">
 <div class="movement-info">
 <div class="movement-heading"><h2 id="movement-title">Move around</h2><button id="interact-button" type="button" disabled>Interact [E]</button></div>
-<p id="movement-help">Hold arrows, WASD, or a button. One square per turn.</p>
+<p id="movement-help">Hold arrows, WASD, or a button. Each square takes 5 seconds.</p>
 <p id="position-description"></p>
-<div class="movement-readout"><span id="movement-position"></span><span>Turn <output id="movement-turn">0</output></span></div>
+<div class="movement-readout"><span id="movement-position"></span></div>
 <p id="interaction-hint" class="interaction-hint"></p>
 </div>
 <div class="movement-pad" role="group" aria-label="Movement controls">

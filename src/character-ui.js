@@ -6,6 +6,7 @@ $(document).on(':passagedisplay', () => {
     const preview=setup.characterDisplay.mount(character);
     const groups=[
         ['Identity',[['gender','Gender'],['genitals','Genitals']]],
+        ['Starting date',[['startDate','Start date']]],
         ['Appearance',[['eyeColor','Eye Color'],['hairColor','Hair Color'],['hairLength','Hair Length'],['skinTone','Skin Tone']]]
     ];
     function update() {
@@ -21,7 +22,7 @@ $(document).on(':passagedisplay', () => {
             const row=document.createElement('div');row.className='character-field';
             const labelNode=document.createElement('label');labelNode.htmlFor=`character-${key}`;labelNode.textContent=label;row.append(labelNode);
             const input=document.createElement('select');input.id=labelNode.htmlFor;input.name=key;
-            for(const value of setup.character.choices[key]) input.append(new Option(value,value));
+            for(const value of setup.character.choices[key]) input.append(new Option(key==='startDate'?setup.gameClock.startLabel(value):value,value));
             row.append(input);input.value=character[key];
             input.addEventListener('change',()=>{character[key]=input.value;update();});
             grid.append(row);
