@@ -3,7 +3,9 @@ setup.inventory = (() => {
     const items = {
         water: {name: 'Water bottle', width: 1, height: 2, color: '#83c3d9'},
         tools: {name: 'Tool kit', width: 2, height: 2, color: '#d6aa70'},
-        cloth: {name: 'Cleaning cloth', width: 1, height: 1, color: '#b4bfba'}
+        cloth: {name: 'Cleaning cloth', width: 1, height: 1, color: '#b4bfba'},
+        apartmentKey:{name:'Apartment key',width:1,height:1,color:'#d6bc78'},
+        coffee:{name:'Canned coffee',width:1,height:1,color:'#b78a63'}
     };
     function fitsItems(container, item, x, y, placements, ignoreId) {
         const size = items[item.type];
@@ -92,10 +94,17 @@ setup.inventory = (() => {
                 {id: `${container.id}:tools`, type: 'tools', x: 2, y: 0},
                 {id: `${container.id}:cloth`, type: 'cloth', x: 5, y: 3}
             ];
+            if(objectId==='parked-car-2') state.containers[container.id].push({id:`${container.id}:coffee`,type:'coffee',x:5,y:0});
         }
         // Opening an empty trunk never restocks it.
         State.create(State.passage);
         return container;
+    }
+    const external=objectId=>objectId==='housing-counter'?setup.housing.counter():trunk(objectId);
+    function openExternal(objectId) {
+        if(objectId!=='housing-counter') return openTrunk(objectId);
+        const container=external(objectId);if(!container) return null;
+        ensure().containers[container.id] ||= [];State.create(State.passage);return container;
     }
     function placements(container) {
         return ensure().containers[container.id] || [];
@@ -106,14 +115,15 @@ setup.inventory = (() => {
     function transfer(fromId, toId, itemId, x, y, trunkId) {
         const accessible = worn();
         if (trunkId) {
-            const rear = trunk(trunkId);
-            if (!rear) return {ok: false, message: 'Stand behind the car to access its trunk.'};
+            const rear = external(trunkId);
+            if (!rear) return {ok: false, message: 'That storage is out of reach. Return to the car trunk or receptionist.'};
             accessible.push(rear);
         }
         const from = accessible.find(container => container.id === fromId), to = accessible.find(container => container.id === toId);
         if (!from || !to) return {ok: false, message: 'That storage is not accessible.'};
         const item = placements(from).find(item => item.id === itemId);
         if (!item) return {ok: false, message: 'That item is no longer here.'};
+        if(toId===setup.housing.trayId&&item.type!=='apartmentKey') return {ok:false,message:'The receptionist tray is only for apartment keys.'};
         if (!fits(to, item, x, y, fromId === toId ? itemId : null)) return {ok: false, message: 'Not enough adjoining free blocks at that square.'};
         const state = ensure();
         state.containers[fromId] = placements(from).filter(other => other.id !== itemId);
@@ -121,5 +131,13 @@ setup.inventory = (() => {
         State.create(State.passage);
         return {ok: true, message: `${items[item.type].name} moved to ${to.name.toLowerCase()}.`};
     }
-    return {items, ensure, worn, trunk, openTrunk, placements, fits, transfer};
+    function consume(containerId,itemId) {
+        const container=worn().find(container=>container.id===containerId);
+        const item=container&&placements(container).find(item=>item.id===itemId&&item.type==='coffee');
+        if(!item) return {ok:false,message:'Carry the coffee in your pockets or bag before drinking it.'};
+        ensure().containers[container.id]=placements(container).filter(entry=>entry.id!==itemId);
+        setup.rest.changeTiredness(-10);
+        return {ok:true,message:'You drink the coffee. Tiredness decreases by 10; your awake-time schedule is unchanged.'};
+    }
+    return {items, ensure, worn, trunk, openTrunk, external,openExternal,placements, fits, transfer,consume};
 })();

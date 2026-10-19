@@ -54,19 +54,55 @@ world map always shows the district and the building you are inside.
 The north-facing Housing Office stands immediately right of Apartment 3, linked
 by sidewalk. Its receptionist is behind a blocking desk; approach the service
 positions on the front side and press E. The first screen has Talk and Attack.
-Talk → Rent apartment lets you choose any of the 24 units. Attack is an explicit
+Talk → Rent apartment lists only six units: 1–2, 1–5, 2–3, 3–1, 3–4, and 4–6. Attack is an explicit
 placeholder and makes no attack until combat rules are developed.
 
 The player starts with **$99,999** and **100 / 100 health**. Both appear above
 Character in the sidebar and in Stats; the old Apartments navigation tab is gone.
 Rent is **$600 per week**. Renting charges the first week, records the lease,
-and unlocks only that unit's door. The next payment falls exactly seven in-game
+and puts a matching physical key on the receptionist's tray. The next payment falls exactly seven in-game
 days after signing, then every seven days. Movement collects due rent atomically
 with the clock update. Missed weeks are caught up without duplicate bills;
 insufficient funds leave outstanding rent, and later funds cover it on movement.
 No eviction or penalties are implemented. Duplicate leases, insufficient upfront
 funds, invalid units, and remote rental calls cannot take payment.
 Money, health, lease, due date, arrears, map position and open doors survive saves.
+
+## Keys, room visibility, sounds and rest
+
+Use **Collect apartment key** after renting to open the key tray alongside worn
+storage. Drag the 1×1 key into a real pocket or bag; collection never bypasses
+capacity. The key stays at reception if storage is full, and cannot be retrieved
+remotely. Only a carried matching key opens a locked apartment door from the hall.
+Open doors remain passable if the key is subsequently put down; doors can be
+closed, and a person inside can open the latch to leave. Existing leases are
+preserved, with one key waiting at reception rather than silently entering a bag.
+No key respawns after collection, storage transfers, or reloads.
+
+Closed-room interiors, furniture, and interior objects are concealed. A room is
+visible while inside or at its open doorway; moving away conceals it again.
+Bathrooms have their own doors and visibility. Door numbers remain visible from
+the hall. The district overview continues to show roofs rather than interiors.
+
+The Sounds description follows the current room and activity. Sitting produces
+bed-frame creaks; waking produces bedding sounds. `setup.rooms.setActivity(mapId,
+roomId, activity)` supports quiet, music, conversation, plumbing and work sounds
+for future NPC/event systems; changes persist and do not cost time.
+
+Beds offer **Sit**, **Nap for 1 hour**, and **Sleep** with a 1–10 hour choice.
+Sitting takes no time. Rest advances the game clock and processes any rent due.
+Tiredness starts at 0, rises by 1 per 900 awake game seconds, and caps at 100.
+Fatigue is `floor(tiredness × 0.4) + exertion`, capped at 40; higher means worse.
+Each hour of sleep/nap recovers 10 tiredness and 4 fatigue and resets the awake
+counter on waking. Reaching 40 fatigue collapses the player for one game hour
+and stops held movement. No health damage, eviction or other penalty is invented.
+`setup.rest.exert(cost)` supplies fatigue costs for future actions; an action that
+would reach 40 fails and triggers collapse. Invalid costs/durations are rejected.
+
+Parked Car 2's trunk contains one canned coffee as a test consumable. Carry it,
+select it in Inventory, and use **Drink coffee** to reduce tiredness by 10 without
+resetting the 15-minute awake schedule. It is consumed once and costs no time.
+No item or key adds invisible carrying capacity.
 
 ## Game calendar
 
@@ -79,9 +115,9 @@ locale, daylight-saving changes, or real-world elapsed time. Calendar rollover a
 weekdays use the Gregorian calendar rather than a hardcoded weekday counter.
 
 Each successful cardinal movement step advances five seconds, including held-key,
-button and adjacent-map-click movement. Failed moves advance nothing. All
+button and adjacent-map-click movement. Failed moves advance nothing. Other
 interactions are free of time costs: doors, map entrance/exit, NPCs, renting,
-inventory transfers and sheets. Real-time waiting and reloads advance nothing.
+inventory transfers and sheets. Sleep, naps and passing out deliberately advance time. Real-time waiting and reloads advance nothing.
 Legacy turn-based saves convert each stored turn into five seconds once; turn
 counts are removed. Old monthly leases retain their payment and get a weekly due
 date seven in-game days after migration, without a charge on load.
@@ -89,8 +125,8 @@ date seven in-game days after migration, without a charge on load.
 `setup.playerState.changeMoney(integer)` applies safe currency changes;
 `changeHealth(integer)` applies damage/healing, clamped to 0–100. Both commit a
 save moment and refresh the sidebar. No hunger or thirst systems are present.
-Food/drink consumption and other stat bonuses are deferred until their rules are
-defined; health is ready for those effects without a hunger/thirst dependency.
+Canned coffee currently reduces tiredness. Other food/drink and stat bonuses
+remain open for later definition, without a hunger/thirst dependency.
 
 ## Block inventories and cars
 
@@ -198,7 +234,8 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
   outdoor/interior geometry, rotated floors, furnishings, rendering and camera.
 - `world-movement.js`, `world-travel.js`: held-input movement and door transitions.
 - `calendar-data.js`: seasonal starts, Gregorian clock, formatting and legacy time conversion.
-- `player-state.js`, `housing.js`: money/health, validated rentals and recurring weekly billing.
+- `player-state.js`, `housing.js`: money/health, six listings, physical keys and weekly billing.
+- `room-sense.js`, `rest.js`: room visibility/sounds, tiredness/fatigue, beds and collapse.
 - `vehicle-geometry.js`: shared vehicle headings and front/rear/side geometry.
 - `world-interactions.js`, `world-interaction-ui.js`: reach, directional actions,
   prompts and object windows. Definitions can supply custom action text/handlers.
@@ -243,6 +280,8 @@ reloads, and portable save round trips. CI runs the same suite before Pages depl
 For review: enter each apartment building with E → Open → Enter, then return
 through its exit. Visit the Housing Office beside Apartment 3, approach the desk,
 and use Talk → Rent apartment. Check the $600 first-week charge, enter that unit,
-and verify the lease, health, and balance after reload or disk save/load. Check
+collect the key into worn storage, and verify the lease, key and balance after
+reload or disk save/load. Approach the unit door, open it, enter, and use E beside
+the bed to try Sit, Nap and Sleep. Check that other rooms remain hidden. Check
 Inventory and the separate pockets as before. Stop here for feedback before
 adding another feature.

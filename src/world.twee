@@ -16,6 +16,8 @@
 <div><span>Money</span><output id="player-money"></output></div>
 <div><label for="player-health-bar">Health</label><output id="player-health"></output></div>
 <progress id="player-health-bar" aria-label="Health" max="100" value="100"></progress>
+<div><span>Tiredness</span><output id="player-tiredness"></output></div>
+<div><span>Fatigue</span><output id="player-fatigue"></output></div>
 </div>
 <nav class="sidebar-nav" aria-label="Game pages">
 <<link "Character">><<run setup.worldWindows.open("Character")>><</link>>
@@ -53,6 +55,7 @@
 </section>
 <header class="world-heading"><p id="location-eyebrow" class="eyebrow">URBAN AREA · RESIDENTIAL</p><h1 id="location-title">Apartments</h1><p id="location-subtitle" class="world-subtitle">A small corner of the city.</p></header>
 <section class="location-description" aria-label="Location description"><p id="location-description"></p><p id="housing-summary" class="world-note"></p></section>
+<section class="room-sounds" aria-labelledby="sounds-title"><h2 id="sounds-title">Sounds</h2><p id="room-sounds"></p></section>
 
 
 </div>

@@ -8,7 +8,7 @@ setup.interactions = (() => {
         return State.variables.openedObjects?.[`${mapId}:${objectId}`] === true;
     }
     function openDoor(object) {
-        if(object.unitId && !setup.housing.canEnter(object.unitId)) return 'This apartment is locked. Rent it at the housing office first.';
+        if(object.unitId && !setup.housing.canEnter(object.unitId)&&setup.rooms.current().unit?.id!==object.unitId) return {ok:false,message:'This apartment is locked. Carry its matching key in a pocket or bag to open it.'};
         const stored = State.variables.openedObjects;
         State.variables.openedObjects = {...(stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {}),
             [`${State.variables.world.mapId}:${object.id}`]: true};
@@ -17,6 +17,10 @@ setup.interactions = (() => {
         return 'You open the door.';
     }
     const open = {id: 'open', label: 'Open', enabled: object => !isOpen(object.id), result: openDoor};
+    const close={id:'close',label:'Close',enabled:object=>isOpen(object.id),unavailableMessage:'The door is already closed.',result:object=>{
+        State.variables.openedObjects={...State.variables.openedObjects,[`${State.variables.world.mapId}:${object.id}`]:false};
+        State.create(State.passage);$(document).trigger(':interactionchange');return 'You close the door.';
+    }};
     const types = {
         door: [{id: 'knock', label: 'Knock', result: 'You knock on the door.'}, open],
         car: [{id: 'look-inside', label: 'Look through window', result: 'You look through the window. No one is inside.'}, {...open, label: 'Open door'}],
@@ -31,14 +35,20 @@ setup.interactions = (() => {
             const atCounter=object.interactionTiles?.some(tile=>tile.x===world.x&&tile.y===world.y);
             return {object, distance: atCounter ? 1 : dx + dy};
         }).filter(target => target.distance <= 1 && actionsFor(target.object, world).length)
+            .filter(target=>setup.rooms.objectVisible(target.object,world))
             .sort((a, b) => a.distance - b.distance || a.object.name.localeCompare(b.object.name));
     }
     function actionsFor(object, world = State.variables.world) {
+        if(object.kind==='bed') return [
+            {id:'sit',label:'Sit',result:()=>setup.rest.sit(object.id)},
+            {id:'nap',label:'Nap for 1 hour',result:()=>setup.rest.sleep(object.id,1)},
+            {id:'sleep',label:'Sleep',result:()=>({message:'Choose how long to sleep.',sleepBedId:object.id})}
+        ];
         if(object.role==='housing') return [
             {id:'talk',label:'Talk',result:()=>({message:'How can I help you?',conversation:'housing'})},
             {id:'attack',label:'Attack',result:'Combat is not implemented yet. No attack is made.'}
         ];
-        if(object.kind==='door' && object.destination) return [...types.door,{
+        if(object.kind==='door' && object.destination) return [...types.door,close,{
             id:'enter',label:object.exit?'Exit':'Enter',
             enabled:()=>isOpen(object.id),unavailableMessage:'Open the door first.',result:()=>setup.worldTravel.enter(object)
         }];
@@ -49,6 +59,7 @@ setup.interactions = (() => {
             if (edge === 'rear') return [{id: 'trunk', label: 'Open trunk', result: () => 'You open the trunk.'}];
             return [];
         }
+        if(object.kind==='door') return [...types.door,close];
         return object.actions || (Object.hasOwn(types, object.kind) ? types[object.kind] : [inspect]);
     }
     function run(objectId, actionId) {

@@ -15,7 +15,8 @@ setup.worldWindows = (() => {
         const vitals=root.querySelector('#player-stats');
         if(vitals) {
             const player=setup.playerState.ensure();
-            for(const [name,value] of Object.entries({Health:`${player.health} / ${player.maxHealth}`,Money:setup.playerState.formatMoney(player.money)})) {
+            const rest=setup.rest.ensure();
+            for(const [name,value] of Object.entries({Health:`${player.health} / ${player.maxHealth}`,Money:setup.playerState.formatMoney(player.money),Tiredness:`${rest.tiredness} / 100`,Fatigue:`${setup.rest.fatigue(rest)} / 40`})) {
                 const term=document.createElement('dt');term.textContent=name;
                 const description=document.createElement('dd');description.textContent=value;vitals.append(term,description);
             }

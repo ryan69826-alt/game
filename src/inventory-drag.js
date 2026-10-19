@@ -18,7 +18,7 @@ setup.inventoryDrag = (() => {
             const columns=Number(grid.dataset.columns),rows=Number(grid.dataset.rows);
             const x=Math.round((event.clientX-active.offsetX-rect.left)/((rect.width+gap)/columns));
             const y=Math.round((event.clientY-active.offsetY-rect.top)/((rect.height+gap)/rows));
-            const container=setup.inventory.worn().concat(trunkId?[setup.inventory.trunk(trunkId)].filter(Boolean):[]).find(value=>value.id===grid.dataset.storageId);
+            const container=setup.inventory.worn().concat(trunkId?[setup.inventory.external(trunkId)].filter(Boolean):[]).find(value=>value.id===grid.dataset.storageId);
             const item=setup.inventory.placements({id:active.from}).find(item=>item.id===active.id);
             const valid=!!(container && item && setup.inventory.fits(container,item,x,y,active.from===container.id?item.id:null));
             return {grid,container,x,y,valid};

@@ -3,9 +3,9 @@ setup.inventoryUI = (() => {
     function open(trunkId) {
         if (!State.variables.worldStarted || !document.querySelector('.world-sidebar')) return;
         const inventory = setup.inventory;
-        if (trunkId && !inventory.openTrunk(trunkId)) return;
+        if (trunkId && !inventory.openExternal(trunkId)) return;
         inventory.ensure();
-        Dialog.setup(trunkId ? 'Trunk & inventory' : 'Inventory', 'character-window inventory-window');
+        Dialog.setup(trunkId==='housing-counter'?'Key handover & inventory':trunkId ? 'Trunk & inventory' : 'Inventory', 'character-window inventory-window');
         const root = Dialog.body();
         let selected = null, message = 'Drag an item to a free space. You can also select an item and then a destination square. Items cannot overlap or rotate.';
         const drag = setup.inventoryDrag.mount(root,trunkId,result => {message=result.message;if(result.ok) selected=null;render();});
@@ -13,6 +13,11 @@ setup.inventoryUI = (() => {
             root.replaceChildren();
             const status = document.createElement('p');status.id = 'inventory-status';status.className = 'world-note';
             status.setAttribute('role', 'status');status.textContent = message;root.append(status);
+            const consumable=selected&&inventory.worn().find(container=>container.id===selected.container);
+            if(consumable&&inventory.placements(consumable).some(item=>item.id===selected.id&&item.type==='coffee')) {
+                const use=document.createElement('button');use.type='button';use.textContent='Drink coffee';
+                use.addEventListener('click',()=>{const result=inventory.consume(selected.container,selected.id);message=result.message;if(result.ok) selected=null;render();});root.append(use);
+            }
             if(inventory.ensure().notices?.length) {
                 const notice=document.createElement('p');notice.className='world-note inventory-migration';
                 notice.textContent='Pocket layout updated. Items that no longer fit were returned to trunks: '+inventory.ensure().notices.join('; ');root.append(notice);
@@ -48,7 +53,7 @@ setup.inventoryUI = (() => {
                     button.className = 'inventory-item';button.dataset.item = item.id;
                     button.style.gridColumn = `${item.x + 1} / span ${definition.width}`;button.style.gridRow = `${item.y + 1} / span ${definition.height}`;
                     button.style.setProperty('--item-color', definition.color);
-                    button.textContent = {water:'Water',tools:'Tools',cloth:'Cloth'}[item.type] || definition.name;button.title=definition.name;button.setAttribute('aria-label', `${definition.name}, ${definition.width} by ${definition.height} blocks, ${container.name}`);
+                    button.textContent = {water:'Water',tools:'Tools',cloth:'Cloth',apartmentKey:'Key',coffee:'Coffee'}[item.type] || definition.name;button.title=item.type==='apartmentKey'?`Apartment key ${item.id.split(':').at(-1)}`:definition.name;button.setAttribute('aria-label', `${definition.name}, ${definition.width} by ${definition.height} blocks, ${container.name}`);
                     button.setAttribute('aria-pressed', String(selected?.id === item.id));
                     button.addEventListener('click', () => {
                         if(drag.ignoreClick()) return;
@@ -61,7 +66,7 @@ setup.inventoryUI = (() => {
             }
             if (trunkId) {
                 const column = document.createElement('div');column.className = 'inventory-column';layout.append(column);
-                const container = inventory.trunk(trunkId);
+                const container = inventory.external(trunkId);
                 if (container) drawContainer(container, column);
             }
             const player = document.createElement('div');player.className = 'inventory-column';layout.append(player);

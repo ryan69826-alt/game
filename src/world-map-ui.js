@@ -60,6 +60,7 @@
             ctx.clearRect(0, 0, local.width, local.height);
             ctx.drawImage(terrain, camera.x * tileSize, camera.y * tileSize, local.width, local.height, 0, 0, local.width, local.height);
             drawOpenDoors(ctx, 1, camera.x, camera.y);
+            local.dataset.hiddenCells=setup.rooms.mask(ctx,map,world,camera);
             marker(ctx, (world.x - camera.x + .5) * tileSize, (world.y - camera.y + .5) * tileSize, 5);
             const small = overview.getContext('2d'), scale = overview.width / districtTerrain.width;
             small.imageSmoothingEnabled = false;small.drawImage(districtTerrain, 0, 0, overview.width, overview.height);
@@ -78,6 +79,7 @@
             document.getElementById('movement-position').textContent = `X ${world.x + 1} · Y ${world.y + 1}`;
             document.getElementById('position-description').textContent = `You are at: ${map.tileAt(world.x, world.y).label.toLowerCase()}.`;
             setup.interactionUI.refresh();
+            setup.rooms.refresh();
             cancelAnimationFrame(frame);
             if (!animate || document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 camera = target;local.dataset.animating = 'false';draw();return;
@@ -97,7 +99,7 @@
             const status = document.getElementById('movement-status');
             const world = State.variables.world;
             const entrance = map.tileAt(world.x, world.y).kind === 'entrance';
-            const feedback = result.moved ? (entrance ? 'Press E to interact with the door.' : '') : result.reason;
+            const feedback = result.collapsed?result.reason:result.moved ? (entrance ? 'Press E to interact with the door.' : '') : result.reason;
             if (status.textContent !== feedback) status.textContent = feedback;
             refresh(result.moved);
             return result.moved;
@@ -131,7 +133,7 @@
             const active = [...new Set([...heldInputs.values()].map(input => input.direction))];
             lastDirection = active[(active.indexOf(lastDirection) + 1) % active.length];
             step(...directions[lastDirection]);
-            repeatTimer = setTimeout(repeatStep, repeatDelay);
+            if(heldInputs.size) repeatTimer = setTimeout(repeatStep, repeatDelay);
         }
         function startHold(direction, source, key, button = null) {
             const id = `${source}:${key}`;
@@ -140,7 +142,7 @@
             heldInputs.set(id, {direction, key, button});
             if (wasEmpty) {
                 lastDirection = direction;step(...directions[direction]);
-                repeatTimer = setTimeout(repeatStep, repeatDelay);
+                if(heldInputs.size) repeatTimer = setTimeout(repeatStep, repeatDelay);
             }
         }
         for (const button of document.querySelectorAll('[data-move]')) {
@@ -177,6 +179,7 @@
         document.addEventListener('visibilitychange', visibilityChange);
         window.addEventListener('blur', stopHold);
         $(document).on(':dialogopening.worldMovement', stopHold);
+        $(document).on(':restcollapse.worldMovement', stopHold);
         $(document).on(':interactionchange.worldMovement', draw);
         local.addEventListener('click', event => {
             if (Dialog.isOpen()) return;
@@ -191,6 +194,7 @@
             document.removeEventListener('keydown', keydown);document.removeEventListener('keyup', keyup);
             document.removeEventListener('visibilitychange', visibilityChange);window.removeEventListener('blur', stopHold);
             $(document).off(':dialogopening.worldMovement', stopHold);
+            $(document).off(':restcollapse.worldMovement', stopHold);
             $(document).off(':interactionchange.worldMovement', draw);
         };
     });

@@ -1140,21 +1140,21 @@ test('housing receptionist reach crosses the desk only at its service positions;
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     const result=await page.evaluate(()=>{
         const {setup,State}=SugarCube,map=setup.worldMaps['housing-office'],npc=map.interactables.find(o=>o.role==='housing');
-        const remote=setup.housing.rent('1-1');
+        const remote=setup.housing.rent('1-2');
         State.variables.world={...State.variables.world,mapId:map.id,x:8,y:7};
         const counter=setup.interactions.nearby().map(t=>t.object.id);
         const blocked=setup.worldMovement.move(0,1);
         const actions=setup.interactions.actionsFor(npc).map(a=>a.id),attack=setup.interactions.run(npc.id,'attack');
         const invalid=setup.housing.rent('missing');State.variables.player.money=599;
-        const insufficient=setup.housing.rent('1-1');const before=State.variables.player.money;
-        State.variables.player.money=99999;const valid=setup.housing.rent('1-1'),again=setup.housing.rent('1-2');
+        const insufficient=setup.housing.rent('1-2');const before=State.variables.player.money;
+        State.variables.player.money=99999;const valid=setup.housing.rent('1-2'),again=setup.housing.rent('1-2');
         return {remote,counter,blocked,actions,attack,invalid,insufficient,before,valid,again,money:State.variables.player.money,
             unit:State.variables.housing.rentedUnit,health:State.variables.player.health,npcBlocked:!map.tileAt(npc.x,npc.y).walkable};
     });
     assert.equal(result.remote.ok,false);assert.deepEqual(result.counter,['housing-receptionist']);assert.equal(result.blocked.moved,false);
     assert.deepEqual(result.actions,['talk','attack']);assert.match(result.attack.message,/not implemented/);assert.ok(result.npcBlocked);
     assert.equal(result.invalid.ok,false);assert.equal(result.insufficient.ok,false);assert.equal(result.before,599);
-    assert.equal(result.valid.ok,true);assert.equal(result.again.ok,false);assert.equal(result.money,99399);assert.equal(result.unit,'1-1');assert.equal(result.health,100);
+    assert.equal(result.valid.ok,true);assert.equal(result.again.ok,false);assert.equal(result.money,99399);assert.equal(result.unit,'1-2');assert.equal(result.health,100);
 });
 
 test('renting through Talk unlocks only the selected apartment and survives reloads and disk saves inside it',async()=>{
@@ -1166,17 +1166,20 @@ test('renting through Talk unlocks only the selected apartment and survives relo
     await dialog.getByRole('button',{name:'Talk',exact:true}).click();
     assert.deepEqual(await dialog.locator('.interaction-actions button').allTextContents(),['Rent apartment','Back']);
     await dialog.getByRole('button',{name:'Rent apartment',exact:true}).click();
-    assert.equal(await dialog.getByLabel('Choose an apartment').locator('option').count(),24);
-    await dialog.getByLabel('Choose an apartment').selectOption('3-2');await dialog.getByRole('button',{name:'Rent · $600 first week',exact:true}).click();
-    assert.match(await dialog.locator('#interaction-result').textContent(),/Apartment 3 · Unit 2/);
+    assert.equal(await dialog.getByLabel('Choose an apartment').locator('option').count(),6);
+    await dialog.getByLabel('Choose an apartment').selectOption('3-4');await dialog.getByRole('button',{name:'Rent · $600 first week',exact:true}).click();
+    assert.match(await dialog.locator('#interaction-result').textContent(),/Apartment 3 · Unit 4/);
     assert.equal(await page.locator('#player-money').textContent(),'$99,399');assert.ok(await dialog.getByRole('button',{name:'Rent · $600 first week',exact:true}).isDisabled());
+    await dialog.getByRole('button',{name:'Collect apartment key',exact:true}).click();
+    await page.getByRole('button',{name:'Apartment key, 1 by 1 blocks, Receptionist key tray',exact:true}).click();
+    await page.getByRole('button',{name:'Empty block 1, 1 in Shirt pocket',exact:true}).click();
     await page.keyboard.press('Escape');await walkTo(8,1);await openPortal('Exit','apartments');
     await walkTo(30,30);await openPortal('Enter','apartment-3');
     // Unit 2 is west of this hallway after rotating the north-facing building.
-    await walkTo(11,23);await page.keyboard.press('e');await dialog.getByRole('button',{name:'Open',exact:true}).click();
+    await walkTo(11,14);await page.keyboard.press('e');await dialog.getByRole('button',{name:'Open',exact:true}).click();
     assert.equal(await dialog.locator('#interaction-result').textContent(),'You open the door.');await page.keyboard.press('Escape');
     await page.keyboard.press('a');await page.keyboard.press('a');
-    assert.match(await page.locator('#position-description').textContent(),/unit 2 living area/);
+    assert.match(await page.locator('#position-description').textContent(),/unit 4 living area/);
     const blocked=await page.evaluate(()=>{
         const {setup,State}=SugarCube;const old={...State.variables.world};State.variables.world.x=13;State.variables.world.y=23;
         const open=setup.interactions.run('unit-door-3-1','open'),step=setup.worldMovement.move(1,0);State.variables.world=old;
@@ -1185,7 +1188,7 @@ test('renting through Talk unlocks only the selected apartment and survives relo
     assert.match(blocked.open.message,/locked/);assert.equal(blocked.step.moved,false);assert.equal(blocked.otherOpen,false);
     await page.reload();await page.waitForSelector('#local-map[data-map-id="apartment-3"]');
     const expected=await page.evaluate(()=>({world:structuredClone(SugarCube.State.variables.world),player:structuredClone(SugarCube.State.variables.player),housing:structuredClone(SugarCube.State.variables.housing)}));
-    assert.equal(expected.world.x,9);assert.equal(expected.housing.rentedUnit,'3-2');assert.equal(expected.player.money,99399);
+    assert.equal(expected.world.x,9);assert.equal(expected.housing.rentedUnit,'3-4');assert.equal(expected.player.money,99399);
     await page.getByRole('button',{name:'Saves',exact:true}).click();
     const [download]=await Promise.all([page.waitForEvent('download'),page.getByText('Save…',{exact:true}).click()]);
     const save=join(temp,'rented-apartment.save');await download.saveAs(save);await page.locator('#ui-dialog-close').click();
@@ -1252,7 +1255,7 @@ test('weekly rent charges once at the exact due time, catches up, and retains un
     const results=await page.evaluate(()=>{
         const {setup,State}=SugarCube,week=setup.housing.weekSeconds;
         State.variables.world={...State.variables.world,mapId:'housing-office',x:8,y:7};
-        const rented=setup.housing.rent('1-1');const first={...State.variables.housing};
+        const rented=setup.housing.rent('1-2');const first={...State.variables.housing};
         State.variables.world={...State.variables.world,mapId:'apartments',x:30,y:23,elapsedSeconds:week-10};
         setup.worldMovement.move(1,0);const before=State.variables.player.money;
         setup.worldMovement.move(-1,0);const due={money:State.variables.player.money,...State.variables.housing};
@@ -1271,7 +1274,7 @@ test('weekly rent charges once at the exact due time, catches up, and retains un
     assert.equal(results.catchup.money,97599);assert.equal(results.catchup.nextRentAt,results.first.nextRentAt+3*results.week);
     assert.equal(results.unpaid.money,100);assert.equal(results.unpaid.arrears,600);assert.equal(results.stillOwed,600);
     assert.equal(results.stamp,results.afterIncome);assert.equal(results.settled.money,0);assert.equal(results.settled.arrears,0);
-    assert.equal(results.settled.rentedUnit,'1-1');
+    assert.equal(results.settled.rentedUnit,'1-2');
     await page.reload();await page.waitForSelector('#player-money');assert.equal(await page.locator('#player-money').textContent(),'$0');
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.housing.arrears),0);
 });
@@ -1288,7 +1291,168 @@ test('legacy turns and monthly leases migrate once without resetting time or cha
             invalid:setup.character.normalize({startDate:'2026-02-30'}).startDate};
     });
     assert.equal(result.world.version,2);assert.equal(result.world.turn,undefined);assert.equal(result.world.elapsedSeconds,85);assert.deepEqual(result.again,result.world);
-    assert.equal(result.first.version,2);assert.equal(result.first.rentedUnit,'2-3');assert.equal(result.first.weeklyRent,600);
+    assert.equal(result.first.version,3);assert.equal(result.first.rentedUnit,'2-3');assert.equal(result.first.weeklyRent,600);
     assert.equal(result.first.monthlyRent,undefined);assert.equal(result.first.nextRentAt,result.now+604800);assert.deepEqual(result.lease,result.first);
     assert.equal(result.money,99999);assert.equal(result.invalid,'2026-03-20');
+});
+
+async function placeInWorld(mapId,x,y) {
+    const previous=await page.locator('#local-map').elementHandle();
+    await page.evaluate(({mapId,x,y})=>{SugarCube.State.variables.world={...SugarCube.State.variables.world,mapId,x,y};SugarCube.Engine.play('Apartments');},{mapId,x,y});
+    await page.waitForFunction(old=>document.getElementById('local-map')!==old,previous);
+    await page.waitForSelector(`#local-map[data-map-id="${mapId}"][data-player-x="${x}"]`);
+}
+
+test('only six units can be rented; a physical key stays on the tray when pockets are full',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;State.variables.world={...State.variables.world,mapId:'housing-office',x:8,y:7};
+        const inventory=setup.inventory.ensure();
+        for(const pocket of setup.inventory.worn()) inventory.containers[pocket.id]=[{id:`test-cloth:${pocket.id}`,type:'cloth',x:0,y:0}];
+        const hidden=setup.housing.rent('1-1'),moneyBefore=State.variables.player.money;
+        const rented=setup.housing.rent('1-2'),tray=setup.housing.counter(),key=setup.inventory.placements(tray)[0];
+        const denied=setup.inventory.transfer(tray.id,'worn:shirt',key.id,0,0,'housing-counter');
+        const beforeKey=setup.housing.canEnter('1-2');
+        // Simulate freeing a pocket; successful placement must be explicit.
+        setup.inventory.ensure().containers['worn:shirt']=[];
+        const moved=setup.inventory.transfer(tray.id,'worn:shirt',key.id,0,0,'housing-counter');
+        const afterKey=setup.housing.canEnter('1-2');setup.housing.ensure();setup.housing.counter();
+        const keyCount=Object.values(setup.inventory.ensure().containers).flat().filter(item=>item.type==='apartmentKey').length;
+        State.variables.world.mapId='apartments';State.variables.world.x=30;State.variables.world.y=23;
+        const remote=setup.inventory.transfer('worn:shirt',tray.id,key.id,0,0,'housing-counter');
+        return {ids:setup.housing.listings().map(u=>u.id),hidden,moneyBefore,rented,denied,beforeKey,moved,afterKey,keyCount,remote,
+            elapsed:State.variables.world.elapsedSeconds,money:State.variables.player.money};
+    });
+    assert.deepEqual(result.ids,['1-2','1-5','2-3','3-1','3-4','4-6']);assert.equal(result.hidden.ok,false);assert.equal(result.moneyBefore,99999);
+    assert.ok(result.rented.ok);assert.equal(result.denied.ok,false);assert.equal(result.beforeKey,false);assert.equal(result.moved.ok,true);assert.equal(result.afterKey,true);
+    assert.equal(result.keyCount,1);assert.equal(result.remote.ok,false);assert.equal(result.money,99399);assert.equal(result.elapsed,0);
+});
+
+test('a key only opens its matching door while carried; open doors remain passable after the key is put down',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;State.variables.world={...State.variables.world,mapId:'housing-office',x:8,y:7};
+        setup.housing.rent('1-2');const tray=setup.housing.counter(),key=setup.inventory.placements(tray)[0];
+        State.variables.world={...State.variables.world,mapId:'apartment-1',x:13,y:5};
+        const without=setup.interactions.run('unit-door-1-2','open');
+        State.variables.world={...State.variables.world,mapId:'housing-office',x:8,y:7};
+        setup.inventory.transfer(tray.id,'worn:shirt',key.id,0,0,'housing-counter');
+        State.variables.world={...State.variables.world,mapId:'apartment-1',x:11,y:5};
+        const wrong=setup.interactions.run('unit-door-1-1','open');
+        State.variables.world.x=13;const right=setup.interactions.run('unit-door-1-2','open');
+        setup.inventory.ensure().containers['worn:shirt']=[];setup.inventory.ensure().containers[tray.id]=[key];
+        const step=setup.worldMovement.move(1,0);
+        return {without,wrong,right,step,opened:setup.interactions.isOpen('unit-door-1-2'),keyCount:Object.values(State.variables.inventory.containers).flat().filter(item=>item.id===key.id).length};
+    });
+    assert.equal(result.without.ok,false);assert.match(result.without.message,/matching key/);assert.equal(result.wrong.ok,false);
+    assert.equal(result.right.ok,true);assert.ok(result.opened&&result.step.moved);assert.equal(result.keyCount,1);
+});
+
+test('room masking conceals furniture, reveals only a nearby open room, and hides it again away from the doorway',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await placeInWorld('apartment-1',13,5);
+    const bedPixel=()=>page.locator('#local-map').evaluate(canvas=>Array.from(canvas.getContext('2d').getImageData(16*16+8,3*16+8,1,1).data));
+    const hidden=await bedPixel();assert.deepEqual(hidden,[16,28,33,255]);
+    const access=await page.evaluate(()=>{
+        SugarCube.State.variables.openedObjects={'apartment-1:unit-door-1-2':true};
+        const {setup,State}=SugarCube,map=setup.worldMaps['apartment-1'];
+        return map.units.map(unit=>({id:unit.id,visible:setup.rooms.cellVisible(map,unit.anchor.x,unit.anchor.y,State.variables.world)}));
+    });
+    assert.deepEqual(access.filter(unit=>unit.visible).map(unit=>unit.id),['1-2']);
+    await placeInWorld('apartment-1',13,5);assert.notDeepEqual(await bedPixel(),hidden);
+    await placeInWorld('apartment-1',12,5);assert.deepEqual(await bedPixel(),hidden);
+    await placeInWorld('apartment-1',18,3);assert.notDeepEqual(await bedPixel(),hidden);
+    const bath=await page.evaluate(()=>{
+        const {setup,State}=SugarCube,map=setup.worldMaps['apartment-1'],unit=map.units.find(unit=>unit.id==='1-2');
+        State.variables.world.x=19;State.variables.world.y=3;
+        const before=setup.rooms.cellVisible(map,22,3);setup.interactions.run('bathroom-door-1-2','open');
+        const open=setup.rooms.cellVisible(map,22,3);State.variables.world.x=21;
+        setup.interactions.run('bathroom-door-1-2','close');
+        return {before,open,inside:setup.rooms.cellVisible(map,22,3),living:setup.rooms.cellVisible(map,unit.anchor.x,unit.anchor.y),
+            bedHidden:!setup.interactions.nearby().some(target=>target.object.kind==='bed')};
+    });
+    assert.deepEqual(bath,{before:false,open:true,inside:true,living:false,bedHidden:true});
+});
+
+test('room sounds respond to activity changes and persist without advancing time',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartment-1',18,3);
+    const before=await page.evaluate(()=>SugarCube.setup.gameClock.now());assert.match(await page.locator('#room-sounds').textContent(),/ventilation/i);
+    await page.evaluate(()=>SugarCube.setup.rooms.setActivity('apartment-1','1-2','music'));
+    assert.match(await page.locator('#room-sounds').textContent(),/Music plays/);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),before);
+    await page.reload();await page.waitForSelector('#room-sounds');assert.match(await page.locator('#room-sounds').textContent(),/Music plays/);
+    await placeInWorld('apartment-1',12,5);assert.match(await page.locator('#room-sounds').textContent(),/footsteps echo/);
+});
+
+test('awake tiredness rises exactly every 15 minutes and reductions do not reset that schedule',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;
+        setup.rest.advanceAwake(899);const before=setup.rest.ensure().tiredness;
+        setup.rest.advanceAwake(1);const minute15=setup.rest.ensure().tiredness;
+        setup.rest.changeTiredness(-1);const afterItem=setup.rest.ensure().tiredness;
+        setup.rest.advanceAwake(899);const beforeNext=setup.rest.ensure().tiredness;setup.rest.advanceAwake(1);
+        const minute30=setup.rest.ensure().tiredness;
+        State.variables.rest={version:1,tiredness:50,exertion:0,awakeSeconds:1800};
+        return {before,minute15,afterItem,beforeNext,minute30,scaled:setup.rest.fatigue(),invalid:setup.rest.advanceAwake(-1),clock:State.variables.world.elapsedSeconds};
+    });
+    assert.deepEqual([result.before,result.minute15,result.afterItem,result.beforeNext,result.minute30],[0,1,0,0,1]);
+    assert.equal(result.scaled,20);assert.equal(result.clock,1800);assert.equal(result.invalid.ok,false);
+});
+
+test('beds provide sit, one-hour nap, and 1–10 hour sleep; recovery, awake reset and rent all use game time',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartment-1',18,3);
+    await page.evaluate(()=>{SugarCube.State.variables.rest={version:1,tiredness:80,exertion:0,awakeSeconds:800};});
+    await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
+    assert.deepEqual(await dialog.locator('.interaction-actions button').allTextContents(),['Sit','Nap for 1 hour','Sleep']);
+    const time=await page.evaluate(()=>SugarCube.setup.gameClock.now());
+    await dialog.getByRole('button',{name:'Sit',exact:true}).click();assert.match(await page.locator('#room-sounds').textContent(),/creaks/);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),time);
+    await dialog.getByRole('button',{name:'Nap for 1 hour',exact:true}).click();
+    assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),time+3600);
+    assert.equal(await page.locator('#player-tiredness').textContent(),'70 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'28 / 40');
+    assert.match(await page.locator('#room-sounds').textContent(),/wake/);
+    await dialog.getByRole('button',{name:'Sleep',exact:true}).click();assert.equal(await dialog.getByLabel('Sleep for',{exact:true}).locator('option').count(),10);
+    await dialog.getByLabel('Sleep for',{exact:true}).selectOption('8');await dialog.getByRole('button',{name:'Sleep for 8 hours',exact:true}).click();
+    assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),time+9*3600);
+    assert.equal(await page.locator('#player-tiredness').textContent(),'0 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'0 / 40');
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.rest.awakeSeconds),0);
+    const invalid=await page.evaluate(()=>[0,11,1.5].map(hours=>SugarCube.setup.rest.sleep('bed-1-2',hours).ok));assert.deepEqual(invalid,[false,false,false]);
+    await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#player-time');assert.equal(await page.locator('#player-time').textContent(),'17:00:00');
+    const due=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;State.variables.housing={version:3,rentedUnit:'1-2',keyIssued:true,weeklyRent:600,nextRentAt:setup.gameClock.now()+1800,arrears:0};
+        const before=State.variables.player.money;const outcome=setup.rest.sleep('bed-1-2',1);return {before,after:State.variables.player.money,outcome};
+    });
+    assert.ok(due.outcome.ok);assert.equal(due.after,due.before-600);
+});
+
+test('collapse at maximum fatigue advances one hour, recovers, stops held movement, and action costs can trigger it',async()=>{
+    await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.evaluate(()=>{SugarCube.State.variables.rest={version:1,tiredness:99,exertion:0,awakeSeconds:899};});
+    await page.keyboard.down('d');
+    const world=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));assert.equal(world.x,31);assert.equal(world.elapsedSeconds,3605);
+    assert.match(await page.locator('#movement-status').textContent(),/collapse/);assert.equal(await page.locator('#player-tiredness').textContent(),'90 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'36 / 40');
+    await page.clock.runFor(1200);assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),world);await page.keyboard.up('d');
+    const action=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;State.variables.rest={version:1,tiredness:0,exertion:0,awakeSeconds:0};const before=setup.gameClock.now();
+        const result=setup.rest.exert(40);return {result,elapsed:setup.gameClock.now()-before,fatigue:setup.rest.fatigue()};
+    });
+    assert.equal(action.result.ok,false);assert.ok(action.result.collapsed);assert.equal(action.elapsed,3600);assert.equal(action.fatigue,36);
+});
+
+test('carried coffee is consumed once, lowers tiredness, and leaves the awake schedule and clock unchanged',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await placeInWorld('apartments',15,30);
+    const coffee=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;const trunk=setup.inventory.openTrunk('parked-car-2');const item=setup.inventory.placements(trunk).find(item=>item.type==='coffee');
+        const denied=setup.inventory.consume(trunk.id,item.id);setup.inventory.transfer(trunk.id,'worn:shirt',item.id,0,0,'parked-car-2');
+        State.variables.rest={version:1,tiredness:50,exertion:0,awakeSeconds:899};return {id:item.id,denied};
+    });
+    assert.equal(coffee.denied.ok,false);await page.getByRole('button',{name:'Inventory',exact:true}).click();
+    await page.getByRole('button',{name:'Canned coffee, 1 by 1 blocks, Shirt pocket',exact:true}).click();
+    const before=await page.evaluate(()=>SugarCube.setup.gameClock.now());await page.getByRole('button',{name:'Drink coffee',exact:true}).click();
+    assert.equal(await page.locator('#player-tiredness').textContent(),'40 / 100');assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),before);
+    const after=await page.evaluate(id=>({repeat:SugarCube.setup.inventory.consume('worn:shirt',id),awake:SugarCube.State.variables.rest.awakeSeconds,count:Object.values(SugarCube.State.variables.inventory.containers).flat().filter(item=>item.id===id).length}),coffee.id);
+    assert.equal(after.repeat.ok,false);assert.equal(after.awake,899);assert.equal(after.count,0);
 });

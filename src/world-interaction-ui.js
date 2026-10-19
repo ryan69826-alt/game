@@ -37,19 +37,20 @@ setup.interactionUI = (() => {
             const form=document.createElement('div');form.className='rental-form';
             const label=document.createElement('label');label.htmlFor='rental-unit';label.textContent='Choose an apartment';
             const select=document.createElement('select');select.id=label.htmlFor;
-            for(const unit of setup.housing.units()) select.append(new Option(unit.name,unit.id));
+            for(const unit of setup.housing.listings()) select.append(new Option(unit.name,unit.id));
             const result=document.createElement('p');result.id='interaction-result';result.setAttribute('role','status');result.setAttribute('aria-live','polite');
             const confirm=button(`Rent · ${setup.playerState.formatMoney(setup.housing.rentPrice)} first week`,()=>{
                 const outcome=setup.housing.rent(select.value);result.textContent=outcome.message;
-                if(outcome.ok) {confirm.disabled=true;select.disabled=true;}
+                if(outcome.ok) {confirm.disabled=true;select.disabled=true;handover.hidden=false;}
             });
             const rented=setup.housing.ensure().rentedUnit;
+            const handover=button('Collect apartment key',()=>setup.inventoryUI.open('housing-counter'));handover.hidden=!rented;
             if(rented) {
                 select.value=rented;select.disabled=true;confirm.disabled=true;
                 result.textContent=`You already rent ${setup.housing.units().find(unit=>unit.id===rented).name}.`;
             }
             form.append(label,select,confirm);
-            root.append(title,text,form,result,button('Back to talk',()=>showTalk(object)));
+            root.append(title,text,form,result,handover,button('Back to talk',()=>showTalk(object)));
             select.focus();
         }
         function showObject(object, focus = false) {
@@ -63,8 +64,9 @@ setup.interactionUI = (() => {
                     const outcome = setup.interactions.run(object.id, action.id);
                     if(outcome.travelled) return;
                     if(outcome.ok&&outcome.conversation==='housing') {showTalk(object);return;}
+                    if(outcome.ok&&outcome.sleepBedId) {showSleep(object);return;}
                     if (outcome.ok && outcome.trunkId) {setup.inventoryUI.open(outcome.trunkId);return;}
-                    if(action.id==='open') {
+                    if(action.id==='open'||action.id==='close') {
                         // Opening a portal enables Enter/Exit in the same window.
                         showObject(object,true);document.getElementById('interaction-result').textContent=outcome.message;
                     } else {
@@ -77,6 +79,19 @@ setup.interactionUI = (() => {
             root.append(title, description, actions, result);
             if (targets.length > 1) root.append(button('Back to nearby objects', () => showObjects(true)));
             if (focus) actions.querySelector('button')?.focus();
+        }
+        function showSleep(object) {
+            root.replaceChildren();
+            const title=document.createElement('h2');title.className='interaction-title';title.textContent='Sleep';
+            const help=document.createElement('p');help.className='world-note';help.textContent='Each hour of rest recovers 10 tiredness and 4 fatigue. Choose up to 10 hours.';
+            const label=document.createElement('label');label.htmlFor='sleep-hours';label.textContent='Sleep for';
+            const select=document.createElement('select');select.id=label.htmlFor;
+            for(let hour=1;hour<=10;hour++) select.append(new Option(`${hour} hour${hour===1?'':'s'}`,hour));select.value='8';
+            const result=document.createElement('p');result.id='interaction-result';result.setAttribute('role','status');
+            const confirm=button('Sleep for 8 hours',()=>{const outcome=setup.rest.sleep(object.id,Number(select.value));result.textContent=outcome.message;});
+            select.addEventListener('change',()=>{confirm.textContent=`Sleep for ${select.value} hour${select.value==='1'?'':'s'}`;});
+            const form=document.createElement('div');form.className='rental-form';form.append(label,select,confirm);
+            root.append(title,help,form,result,button('Back to bed',()=>showObject(object,true)));select.focus();
         }
         function showObjects(focus = false) {
             root.replaceChildren();

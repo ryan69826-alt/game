@@ -13,20 +13,20 @@ setup.worldMovement = (() => {
     }
     function move(dx, dy) {
         const world = ensure(), map = setup.worldMaps[world.mapId];
+        if(setup.rest.fatigue()>=40) {const outcome=setup.rest.collapse();setup.rest.commit();return {moved:false,collapsed:true,reason:outcome.message};}
         if (!Number.isInteger(dx) || !Number.isInteger(dy) || Math.abs(dx) + Math.abs(dy) !== 1) return {moved: false, reason: 'Choose one adjacent square.'};
         const target = map.tileAt(world.x + dx, world.y + dy);
         if (!target.walkable) return {moved: false, reason: target.kind === 'boundary' ? `You have reached the edge of ${map.name}.` : `${target.label} blocks the way.`};
-        const door=map.interactables.find(object=>object.unitId&&object.x===world.x+dx&&object.y===world.y+dy);
-        if(door && (!setup.housing.canEnter(door.unitId)||!setup.interactions.isOpen(door.id)))
-            return {moved:false,reason:setup.housing.canEnter(door.unitId)?'The apartment door is closed. Press E to open it.':'This apartment is locked. Rent it at the housing office first.'};
+        const door=map.interactables.find(object=>object.kind==='door'&&!object.destination&&object.x===world.x+dx&&object.y===world.y+dy);
+        if(door&&!setup.interactions.isOpen(door.id)) return {moved:false,reason:'The door is closed. Press E to interact; apartment doors need their matching key.'};
         world.x += dx;world.y += dy;
-        world.elapsedSeconds=Math.min(setup.gameClock.maxElapsedSeconds,world.elapsedSeconds+setup.gameClock.stepSeconds);
+        const rest=setup.rest.advanceAwake(setup.gameClock.stepSeconds);
         setup.housing.collectDue();
         // Create a SugarCube moment without rebuilding the DOM. This also saves
         // the step to the browser session, so a reload retains the last move.
         State.create(State.passage);
         $(document).trigger(':timechange');
-        return {moved: true, reason: `You move onto ${target.label.toLowerCase()}.`};
+        return {moved: true,collapsed:!!rest.collapsed, reason:rest.collapsed?rest.message:`You move onto ${target.label.toLowerCase()}.`};
     }
     return {ensure, move};
 })();

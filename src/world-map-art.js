@@ -67,6 +67,8 @@ setup.worldMapArt=(()=>{
         for(const unit of map.units||[]) {
             terrainContext.fillStyle='#e2e5d6';terrainContext.font='bold 12px monospace';terrainContext.textAlign='center';
             terrainContext.fillText(String(unit.number),(unit.anchor.x+.5)*tileSize,(unit.anchor.y+.5)*tileSize+4);
+            const hall=[[0,1],[1,0],[0,-1],[-1,0]].map(([dx,dy])=>({x:unit.door.x+dx,y:unit.door.y+dy})).find(p=>map.tileAt(p.x,p.y).kind==='hall');
+            if(hall) terrainContext.fillText(String(unit.number),(hall.x+.5)*tileSize,(hall.y+.5)*tileSize+4);
         }
         for(const npc of (map.interactables||[]).filter(object=>object.kind==='npc')) {
             const x=(npc.x+.5)*tileSize,y=(npc.y+.5)*tileSize;

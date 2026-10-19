@@ -11,10 +11,12 @@ setup.interiorMaps = (() => {
             tile('wall',`${building.name} wall`,false)));
         const furniture=[],units=[],interactables=[];
         const put=(x,y,kind,label,walkable=true)=>cells[y][x]=tile(kind,label,walkable);
-        function furnish(x,y,w,h,label,style) {
+        function furnish(x,y,w,h,label,style,unitId) {
             for(let yy=y;yy<y+h;yy++) for(let xx=x;xx<x+w;xx++) put(xx,yy,'furniture',label,false);
             const a=point(x,y),b=point(x+w-1,y+h-1);
-            furniture.push({x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),width:Math.abs(a.x-b.x)+1,height:Math.abs(a.y-b.y)+1,label,style});
+            const object={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),width:Math.abs(a.x-b.x)+1,height:Math.abs(a.y-b.y)+1,label,style};
+            furniture.push(object);
+            if(style==='bed') interactables.push({...object,id:`bed-${unitId}`,kind:'bed',name:'Bed',unitId,description:'A bed with a firm mattress and clean bedding.'});
         }
         for(let y=1;y<28;y++) for(let x=11;x<=13;x++) put(x,y,'hall',`${building.name} hallway`);
         put(12,28,'entrance',`${building.name} exit`);
@@ -28,16 +30,21 @@ setup.interiorMaps = (() => {
                 const edge=x===bathX || x===bathX+3 || y===y0 || y===y0+3;
                 put(x,y,edge?'wall':'bathroom',`${name} bathroom${edge?' wall':''}`,!edge);
             }
-            put(side===0?bathX+3:bathX,y0+2,'bathroom',`${name} bathroom doorway`);
+            put(side===0?bathX+3:bathX,y0+2,'entrance',`${name} bathroom doorway`);
             furnish(bathX+1,y0+1,1,1,'Toilet','bath');
-            furnish(side===0?6:16,y0+1,2,3,'Bed','bed');
+            furnish(side===0?6:16,y0+1,2,3,'Bed','bed',unitId);
             furnish(side===0?1:21,y0+6,3,1,'Kitchen counter','kitchen');
             furnish(side===0?6:16,y0+6,2,1,'Dining table','table');
             put(doorX,doorY,'entrance',`${name} door`);
             const door=point(doorX,doorY),anchor=point(side===0?5:19,y0+4);
-            const unit={id:unitId,name,building:index,number,mapId,door,anchor};units.push(unit);
+            function rectangle(x,y,w,h) {const a=point(x,y),b=point(x+w-1,y+h-1);return {x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),width:Math.abs(a.x-b.x)+1,height:Math.abs(a.y-b.y)+1};}
+            const bathroomDoor=point(side===0?bathX+3:bathX,y0+2);
+            const unit={id:unitId,name,building:index,number,mapId,door,anchor,
+                bounds:rectangle(left,y0,9,8),bathroom:rectangle(bathX+1,y0+1,2,2),bathroomDoor};units.push(unit);
+            interactables.push({id:`bathroom-door-${unitId}`,kind:'door',name:'Bathroom door',...bathroomDoor,width:1,height:1,
+                interiorOf:unitId,description:'A small bathroom door.'});
             interactables.push({id:`unit-door-${unitId}`,kind:'door',name:`Unit ${number} door`,...door,width:1,height:1,
-                unitId,description:`${name}. Rent this apartment at the housing office to unlock its door.`});
+                unitId,description:`${name}. A matching key is needed to open this door from the hallway.`});
         }
         const exit=point(12,28),spawn=point(12,26);
         const outside={x:building.door.x+({west:-1,east:1}[building.facing]||0),
