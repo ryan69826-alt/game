@@ -92,17 +92,24 @@ for future NPC/event systems; changes persist and do not cost time.
 Beds offer **Sit**, **Nap for 1 hour**, and **Sleep** with a 1–10 hour choice.
 Sitting takes no time. Rest advances the game clock and processes any rent due.
 Tiredness starts at 0, rises by 1 per 900 awake game seconds, and caps at 100.
-Fatigue is `floor(tiredness × 0.4) + exertion`, capped at 100; tiredness alone
-contributes at most 40. Higher means worse. Sleep and unconsciousness reduce
-tiredness by 1 per five minutes (12 per hour), resetting the awake counter on
-waking. Fatigue from tiredness falls alongside it; exertion recovers by 4 per
-rest hour. Reaching 100 tiredness or 100 fatigue triggers collapse and stops held
-movement. The player remains unconscious until tiredness is at most 80: from
-100, this takes 100 minutes. A fatigue-only collapse below 80 tiredness has a
-minimum five-minute recovery. No health damage, eviction or other penalty is
-invented. `setup.rest.exert(cost)` supplies fatigue costs for future actions;
-an action that would reach 100 fails and triggers collapse. Invalid costs and
-durations are rejected.
+Fatigue is capped at 100 and cannot fall below `floor(tiredness × 0.4)`;
+tiredness alone contributes at most 40. Higher means worse. Fatigue falls by 1
+per game minute whenever no fatigue-increasing activity is happening, including
+walking, sleep and unconsciousness. Partial minutes carry across updates and
+saves; a fatigue-increasing action resets that recovery minute. Lowering
+tiredness lowers the floor, and subsequent recovery brings fatigue down to it.
+Sleep and unconsciousness reduce tiredness by 1 per five minutes (12 per hour),
+resetting the awake counter on waking. Reaching 100 tiredness or 100 fatigue
+triggers collapse and stops held movement. The player remains unconscious until
+tiredness is at most 80: from 100, this takes 100 minutes. A fatigue-only collapse
+when already at or below 80 tiredness lasts one recovery minute, waking at 99
+fatigue. Fatigue never increases while unconscious. No health damage, eviction
+or other penalty is invented. `setup.rest.exert(cost, durationSeconds = 0)`
+supplies fatigue costs and optional game-time duration for future actions; a
+positive-cost activity suspends passive recovery for that duration. An action
+that would reach 100 fails and triggers collapse. Invalid costs and durations
+are rejected. Existing saves migrate their tiredness plus exertion to total
+fatigue without discarding progress.
 
 Parked Car 2's trunk contains one canned coffee as a test consumable. Carry it,
 select it in Inventory, and use **Drink coffee** to reduce tiredness by 10 without

@@ -83,7 +83,7 @@ setup.interactionUI = (() => {
         function showSleep(object) {
             root.replaceChildren();
             const title=document.createElement('h2');title.className='interaction-title';title.textContent='Sleep';
-            const help=document.createElement('p');help.className='world-note';help.textContent='Tiredness falls by 1 every 5 minutes asleep (12 per hour). Fatigue from tiredness falls with it; exertion recovers by 4 per hour. Choose up to 10 hours.';
+            const help=document.createElement('p');help.className='world-note';help.textContent='Tiredness falls by 1 every 5 minutes asleep (12 per hour). Fatigue falls by 1 per minute, stopping at the floor set by tiredness. Choose up to 10 hours.';
             const label=document.createElement('label');label.htmlFor='sleep-hours';label.textContent='Sleep for';
             const select=document.createElement('select');select.id=label.htmlFor;
             for(let hour=1;hour<=10;hour++) select.append(new Option(`${hour} hour${hour===1?'':'s'}`,hour));select.value='8';
