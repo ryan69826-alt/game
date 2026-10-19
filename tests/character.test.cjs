@@ -482,7 +482,7 @@ test('movement buttons, keyboard, and adjacent map clicks advance five seconds, 
 
 test('walls, parked cars, trees, map bounds, and distant clicks do not advance time',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    for(const [x,y,dx,dy] of [[30,15,0,-1],[14,32,0,1],[13,35,1,0],[27,21,0,-1],[0,0,0,-1],[49,49,1,0]]) {
+    for(const [x,y,dx,dy] of [[30,15,0,-1],[14,32,0,1],[13,35,1,0],[27,21,0,-1],[0,0,0,-1],[49,49,0,1]]) {
         const result=await page.evaluate(({x,y,dx,dy})=>{
             SugarCube.State.variables.world={mapId:'apartments',x,y,elapsedSeconds:35};
             const result=SugarCube.setup.worldMovement.move(dx,dy);
@@ -2233,4 +2233,63 @@ test('A1 street terminates in a clear turning bulb, keeps bays outside it and pr
     assert.equal(result.westRoad,false);assert.equal(result.bulb,true);assert.equal(result.curb,'pavement');assert.equal(result.bays,true);assert.equal(result.cars,true);assert.equal(result.east,true);assert.equal(result.exit,undefined);
     assert.deepEqual(result.ids,Array.from({length:7},(_,i)=>`a1-car-${i+1}`));
     await placeInWorld('a1',10,46);await walkTo(3,46);await walkTo(20,46);
+});
+
+test('cul-de-sac asphalt joins the full road width without curb or grass gaps at its approach',async()=>{
+    const result=await page.evaluate(()=>{const map=SugarCube.setup.worldMaps.a1;return Array.from({length:11},(_,i)=>i+10).flatMap(x=>Array.from({length:9},(_,i)=>map.tileAt(x,i+42).kind));});
+    assert.ok(result.every(kind=>['road','parking'].includes(kind)));
+});
+
+test('D1 connects east of Apartments with five shops, a north parking lot and a reachable southern train',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',49,46);
+    await page.getByRole('button',{name:'Move east',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="d1"]');
+    assert.deepEqual(await page.evaluate(()=>({x:SugarCube.State.variables.world.x,y:SugarCube.State.variables.world.y,time:SugarCube.State.variables.world.elapsedSeconds})),{x:0,y:46,time:5});
+    const result=await page.evaluate(()=>{const map=SugarCube.setup.worldMaps.d1,queue=[map.spawn],seen=new Set();
+        for(let i=0;i<queue.length;i++){const p=queue[i],key=`${p.x},${p.y}`;if(seen.has(key)||!map.tileAt(p.x,p.y).walkable)continue;seen.add(key);for(const [dx,dy]of[[0,1],[1,0],[0,-1],[-1,0]])queue.push({x:p.x+dx,y:p.y+dy});}
+        return {shops:map.shops.map(shop=>shop.name),north:map.shops.every(shop=>shop.y+shop.height<44)&&map.parking.y+map.parking.height<44,
+            south:map.platform.y>48&&map.train.y>48,reachable:map.shops.every(shop=>seen.has(`${shop.door.x},22`))&&seen.has('45,69'),
+            blocked:!map.tileAt(map.train.x,map.train.y).walkable&&!map.tileAt(15,72).walkable,
+            crossingClear:map.cars.every(car=>car.x+car.width<=43||car.x>47),tunnels:map.tunnels.length};});
+    assert.deepEqual(result.shops,['Discount store','Food stall','Laundry','Barbershop','Electronic repair store']);assert.equal(result.north,true);assert.equal(result.south,true);assert.equal(result.reachable,true);assert.equal(result.blocked,true);assert.equal(result.crossingClear,true);assert.equal(result.tunnels,2);
+    await page.getByRole('button',{name:'Move west',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="apartments"]');assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),10);
+});
+
+test('all D1 enclosed shops can be entered and exited while the food stall uses an outdoor counter',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const shops=await page.evaluate(()=>SugarCube.setup.worldMaps.d1.shops);
+    for(const shop of shops) {
+        await placeInWorld('d1',shop.door.x,22);await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
+        if(shop.stall){await dialog.getByRole('button',{name:'Inspect',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/Food purchases/);await page.keyboard.press('Escape');continue;}
+        await dialog.getByRole('button',{name:'Open',exact:true}).click();await dialog.getByRole('button',{name:'Enter',exact:true}).click();await page.waitForSelector(`#local-map[data-map-id="${shop.id}"]`);
+        assert.equal(await page.locator('#world-map').getAttribute('data-location-id'),'d1');assert.match(await page.locator('#room-sounds').textContent(),/Ceiling lights/);
+        await placeInWorld(shop.id,5,8);await page.keyboard.press('e');await dialog.getByRole('button',{name:'Exit',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="d1"]');
+        assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.y),22);
+    }
+});
+
+test('station train lists B6 H4 and F3 as unavailable future stops with no waits, fares or state changes',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('d1',45,69);
+    const before=await page.evaluate(()=>({world:structuredClone(SugarCube.State.variables.world),money:SugarCube.setup.playerState.ensure().money,known:[...SugarCube.State.variables.worldDiscovery.discovered]}));
+    assert.match(await page.locator('#room-sounds').textContent(),/train.*ventilation/);
+    await page.keyboard.press('e');await page.getByRole('button',{name:'Board train',exact:true}).click();
+    for(const label of ['B6 · Transit Area','H4 · Transit Area','F3 · Central Transit Hub'])assert.equal(await page.getByRole('button',{name:label+' · Not open yet',exact:true}).isDisabled(),true);
+    assert.deepEqual(await page.evaluate(()=>({world:structuredClone(SugarCube.State.variables.world),money:SugarCube.setup.playerState.ensure().money,known:[...SugarCube.State.variables.worldDiscovery.discovered]})),before);
+    assert.deepEqual(await page.evaluate(()=>['b6','h4','f3'].map(id=>SugarCube.setup.transit.available(id))),[false,false,false]);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.transit.ride('b6').ok),false);
+});
+
+test('train travel supports a registered future station without waits or fares and revalidates reach',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    assert.equal(await page.evaluate(()=>SugarCube.setup.transit.ride('b6').ok),false);
+    await placeInWorld('d1',45,69);
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;const before={time:State.variables.world.elapsedSeconds,money:setup.playerState.ensure().money};
+        const source=setup.worldMaps.d1;
+        // A test-only station verifies the reusable route; shipped B6 stays unbuilt.
+        setup.worldMaps.b6={...source,id:'b6',worldArea:'b6',station:{id:'b6',arrival:{x:45,y:69}},interactables:source.interactables.map(o=>o.kind==='train'?{...o,stationId:'b6'}:o)};
+        const outbound=setup.transit.ride('b6');return {outbound,before,after:{time:State.variables.world.elapsedSeconds,money:State.variables.player.money}};});
+    assert.equal(result.outbound.ok,true);assert.equal(result.outbound.travelled,true);assert.deepEqual(result.after,result.before);
+    await page.waitForSelector('#local-map[data-map-id="b6"]');
+    assert.equal(await page.evaluate(()=>SugarCube.setup.transit.ride('d1').ok),true);await page.waitForSelector('#local-map[data-map-id="d1"]');
+    await placeInWorld('d1',45,46);assert.equal(await page.evaluate(()=>SugarCube.setup.transit.ride('b6').ok),false);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.transit.ride('unknown').ok),false);
 });

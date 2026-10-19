@@ -28,8 +28,8 @@ setup.neighborhoodDistrict=()=>{
         const distance=Math.hypot(x-culDeSac.x,y-culDeSac.y);
         if(distance<=culDeSac.radius)return tile('road','Cul-de-sac turning area');
         if(x>=culDeSac.neckX&&y>=44&&y<=48)return tile('road','Neighborhood road');
+        if(x>=culDeSac.neckX&&(y>=42&&y<=43||y>=49&&y<=50))return tile(x<culDeSac.parkingStartX?'road':'parking',x<culDeSac.parkingStartX?'Cul-de-sac approach':'Parallel parking lane');
         if(distance<=culDeSac.curbRadius)return tile('pavement','Cul-de-sac sidewalk');
-        if(x>=culDeSac.parkingStartX&&(y>=42&&y<=43||y>=49&&y<=50))return tile('parking','Parallel parking lane');
         if(x>=16&&(y===41||y===51))return tile('pavement','Neighborhood sidewalk');
         if(buildings.some(building=>x===building.door.x&&(building.facing==='south'?y>=38&&y<=40:y>=52&&y<=56)))return tile('path','House front path');
         return tile('ground','Small residential yard');

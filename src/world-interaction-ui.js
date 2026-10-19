@@ -63,6 +63,7 @@ setup.interactionUI = (() => {
                 const control = button(action.label, () => {
                     const outcome = setup.interactions.run(object.id, action.id);
                     if(outcome.travelled) return;
+                    if(outcome.ok&&outcome.transit) {setup.transitUI.open();return;}
                     if(outcome.ok&&outcome.externalId) {setup.inventoryUI.open(outcome.externalId);return;}
                     if(outcome.ok&&outcome.conversation==='housing') {showTalk(object);return;}
                     if(outcome.ok&&outcome.sleepBedId) {showSleep(object);return;}

@@ -81,6 +81,8 @@ setup.rooms = (() => {
         if(bathroom) return 'The extractor fan hums softly.';
         if(unit) return activities.quiet;
         if(map.id==='housing-office') return 'The ceiling lights give off a faint electrical hum.';
+        if(map.ambientSound) return map.ambientSound;
+        const ambient=map.ambientSounds?.find(ambient=>inside(ambient.bounds,world.x,world.y));if(ambient) return ambient.text;
         if(map.interior) return 'A low ventilation hum carries through the quiet hallway.';
         const trees=map.trees||[];
         return trees.some(([x,y])=>Math.hypot(x-world.x,y-world.y)<=8)?(map.treeSounds||'A breeze rustles leaves in the nearby park.'):'A faint breeze brushes across the quiet grounds.';

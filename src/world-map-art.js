@@ -4,7 +4,7 @@ setup.worldMapArt=(()=>{
         const tileSize=16;
         const terrain = document.createElement('canvas');terrain.width = map.width * tileSize;terrain.height = map.height * tileSize;
         const terrainContext = terrain.getContext('2d');
-        const colors = {fence:'#87969a',shutter:'#9e9ca4',kiosk:'#72c4c4',ground: '#293e35', park: '#416444', road: '#3b4750', parking: '#47525a',
+        const colors = {track:'#29353d',platform:'#a4a18b',train:'#779aa3',tunnel:'#162029',fence:'#87969a',shutter:'#9e9ca4',kiosk:'#72c4c4',ground: '#293e35', park: '#416444', road: '#3b4750', parking: '#47525a',
             pavement: '#66736c', path: '#889182', building: '#536b70', entrance: '#dfb777', tree: '#204b35', car: '#47525a', median: '#416444', wall:'#26373f',floor:'#5b665c',hall:'#7c8270',bathroom:'#7f9995',furniture:'#65584b',npc:'#5c9bb1'};
         for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) {
             const {kind} = map.tileAt(x, y), px = x * tileSize, py = y * tileSize;
@@ -20,6 +20,16 @@ setup.worldMapArt=(()=>{
                 if (x >= (map.roads.horizontal.markingsStartX || 0) && y === centerY && x % 3 === 0 && (x < map.roads.vertical.x || x >= map.roads.vertical.x + map.roads.vertical.width)) terrainContext.fillRect(px + 3, py + 7, 10, 2);
                 if (x === centerX && y % 3 === 0 && y < map.roads.horizontal.y) terrainContext.fillRect(px + 7, py + 3, 2, 10);
             }
+        }
+        if(map.rail) {
+            const rail=map.rail,x=rail.x*tileSize,y=rail.y*tileSize,w=rail.width*tileSize;
+            terrainContext.fillStyle='#685d4e';for(let xx=x;xx<x+w;xx+=12)terrainContext.fillRect(xx,y+8,3,56);
+            terrainContext.fillStyle='#b4bdba';terrainContext.fillRect(x,y+16,w,3);terrainContext.fillRect(x,y+52,w,3);
+            for(const tunnel of map.tunnels||[]) {const tx=tunnel.x*tileSize,ty=tunnel.y*tileSize,tw=tunnel.width*tileSize,th=tunnel.height*tileSize;terrainContext.fillStyle='#4b5a61';terrainContext.fillRect(tx,ty,tw,th);terrainContext.fillStyle='#101a22';terrainContext.fillRect(tx+8,ty+18,tw-16,th-28);terrainContext.fillStyle='#7e918f';terrainContext.fillRect(tx+8,ty+9,tw-16,4);}
+        }
+        if(map.platform) {
+            const platform=map.platform;terrainContext.fillStyle='#d9bf6c';
+            for(let x=platform.x*tileSize;x<(platform.x+platform.width)*tileSize;x+=8)terrainContext.fillRect(x,(platform.y+platform.height)*tileSize-5,4,3);
         }
         // Draw complete bays and vehicles once, rather than a mark per tile.
         terrainContext.strokeStyle = '#b2bdb2';terrainContext.lineWidth = 1;
@@ -71,6 +81,17 @@ setup.worldMapArt=(()=>{
             terrainContext.fillStyle=furnitureColors[item.style]||'#907451';terrainContext.fillRect(3,3,w-6,h-6);
             if(item.style==='bed') {terrainContext.fillStyle='#d6d7c4';terrainContext.fillRect(4,4,w-8,8);}
             terrainContext.restore();
+        }
+        if(map.train) {
+            const train=map.train,x=train.x*tileSize,y=train.y*tileSize,w=train.width*tileSize,h=train.height*tileSize,carWidth=Math.floor(w/3);
+            terrainContext.fillStyle='#0f2028';terrainContext.fillRect(x,y,w,h);
+            for(let car=0;car<3;car++) {
+                const cx=x+car*carWidth;terrainContext.fillStyle='#779aa3';terrainContext.fillRect(cx+3,y+5,carWidth-6,h-10);
+                terrainContext.fillStyle='#a9c1c4';terrainContext.fillRect(cx+7,y+12,carWidth-14,h-24);
+                terrainContext.fillStyle='#263f4b';for(let wx=cx+12;wx<cx+carWidth-14;wx+=22){terrainContext.fillRect(wx,y+7,14,8);terrainContext.fillRect(wx,y+h-15,14,8);}
+                terrainContext.fillStyle='#d3bb77';terrainContext.fillRect(cx+Math.floor(carWidth/2)-5,y+3,10,15);
+            }
+            terrainContext.fillStyle='#dde5cf';terrainContext.fillRect(x+4,y+20,3,7);terrainContext.fillRect(x+w-7,y+20,3,7);
         }
         for(const unit of map.units||[]) {
             terrainContext.fillStyle='#e2e5d6';terrainContext.font='bold 12px monospace';terrainContext.textAlign='center';

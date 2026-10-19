@@ -68,3 +68,5 @@ setup.worldMaps = (() => {
 setup.storageDistrict();
 
 setup.neighborhoodDistrict();
+
+setup.transitDistrict();

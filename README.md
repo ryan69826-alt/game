@@ -2,7 +2,7 @@
 
 A modular browser RPG prototype built with Twine 2, SugarCube 2.37.3 and Tweego
 2.1.1. For the click-to-play site, see [GitHub Pages deployment](DEPLOYMENT.md).
-The protagonist is an adult woman (age 26). Apartments, B1 Warehouse / Storage, and A1 Low Density Housing are available;
+The protagonist is an adult woman (age 26). Apartments, B1 Warehouse / Storage, A1 Low Density Housing, and D1 Transit & Shops are available;
 no story, NPC schedules, or trait modifiers have been added. The game clock advances with movement only.
 
 ## Current character and equipment
@@ -414,6 +414,25 @@ vehicle repair. No repair action, fee, NPC activity or new tool is added.
 `self-storage.js` owns lease/access rules in `$selfStorage` and persistent unit
 containers use `$inventory.containers['storage:b1:UNIT']`. Region-edge connections
 live in each map's `exits` metadata and are resolved by `world-travel.js`.
+
+## Transit & Shops (D1)
+
+Walk east off Apartments to enter D1; walking west returns along the aligned road.
+A shopping center and parking lot sit north of the road, with a discount store,
+food stall, laundry, barbershop and electronic repair store. Four shops have
+explorable interiors; the food stall is an outdoor counter. Shop services remain
+placeholders for later development.
+
+South of the road, a pedestrian approach leads to a train platform. Approach the
+stationary train and use E → Board train to see destinations. B6, H4 and F3 are
+listed as unavailable future stops; no remote platforms are playable yet. The
+tracks lead into tunnel mouths at both ends. Train travel has no schedule, fare
+or time cost, and becomes available as destination stations are built. A station
+must have a registered, walkable arrival point, and boarding rechecks proximity.
+
+`transit-district.js` owns D1 geometry and shop interiors; `transit.js` owns the
+station registry, destination availability and boarding window. The train sound
+is limited to the platform area, with no unmodeled crowds or traffic.
 
 ## District plan and discovery
 
