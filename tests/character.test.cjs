@@ -1812,7 +1812,9 @@ test('repeated Shift events do not stall held sprinting; breath passes five and 
     await page.clock.runFor(200);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),36);
     assert.equal(await page.locator('#player-time').textContent(),'08:00:55');assert.equal(await page.locator('#player-endurance').textContent(),'24 / 25');
     assert.match(await page.locator('#movement-status').textContent(),/Out of breath/);
-    await page.clock.runFor(100);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),37);assert.equal(await page.locator('#player-time').textContent(),'08:00:57');
+    await page.clock.runFor(100);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),36);
+    await page.clock.runFor(900);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),41);assert.equal(await page.locator('#player-endurance').textContent(),'19 / 25');
+    await page.clock.runFor(100);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),42);assert.equal(await page.locator('#player-time').textContent(),'08:01:22');
     await page.keyboard.up('d');await page.keyboard.up('Shift');assert.equal(await page.evaluate(()=>SugarCube.setup.skills.earned('Endurance')),1);
 });
 
@@ -2292,4 +2294,48 @@ test('train travel supports a registered future station without waits or fares a
     assert.equal(await page.evaluate(()=>SugarCube.setup.transit.ride('d1').ok),true);await page.waitForSelector('#local-map[data-map-id="d1"]');
     await placeInWorld('d1',45,46);assert.equal(await page.evaluate(()=>SugarCube.setup.transit.ride('b6').ok),false);
     assert.equal(await page.evaluate(()=>SugarCube.setup.transit.ride('unknown').ok),false);
+});
+
+
+test('exhaustion persists across reload and forces walking until endurance is strictly below eighty percent',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',10,46);
+    const first=await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.endurance={used:24,sprintSteps:0,recoverySeconds:0};
+        const sprint=setup.worldMovement.move(1,0,true),walk=setup.worldMovement.move(-1,0,true);
+        return {sprint:sprint.sprinted,walk:walk.sprinted,state:structuredClone(setup.endurance.ensure()),can:setup.endurance.canSprint()};});
+    assert.equal(first.sprint,true);assert.equal(first.walk,false);assert.equal(first.state.used,24);assert.equal(first.state.exhausted,true);assert.equal(first.can,false);
+    await page.reload();await page.waitForSelector('#local-map');
+    assert.equal(await page.evaluate(()=>SugarCube.setup.endurance.canSprint()),false);
+    const steps=await page.evaluate(()=>{const {setup,State}=SugarCube;return Array.from({length:6},(_,i)=>{const before=State.variables.world.elapsedSeconds,result=setup.worldMovement.move(i%2?-1:1,0,true);return {sprinted:result.sprinted,used:setup.endurance.ensure().used,seconds:State.variables.world.elapsedSeconds-before,can:setup.endurance.canSprint()};});});
+    assert.deepEqual(steps.map(step=>step.used),[23,22,21,20,19,20]);
+    assert.deepEqual(steps.map(step=>step.sprinted),[false,false,false,false,false,true]);
+    assert.deepEqual(steps.map(step=>step.seconds),[5,5,5,5,5,2]);
+    assert.equal(steps[3].can,false);assert.equal(steps[4].can,true);
+});
+
+test('exhaustion threshold scales with skill capacity and legacy maximum saves enter recovery',async()=>{
+    const checks=await page.evaluate(()=>{const {setup,State}=SugarCube;return [0,50,350].map(xp=>{
+        State.variables.character.skills.Endurance=xp;const max=setup.endurance.capacity();State.variables.endurance={version:1,used:max,sprintSteps:0,recoverySeconds:0};
+        const initial=setup.endurance.canSprint();setup.endurance.recover((max-max*.8)*5);const boundary={used:setup.endurance.ensure().used,can:setup.endurance.canSprint()};
+        setup.endurance.recover(4);const partial=setup.endurance.canSprint();setup.endurance.recover(1);return {max,initial,boundary,partial,ready:setup.endurance.canSprint()};});});
+    assert.deepEqual(checks.map(check=>check.max),[25,30,55]);
+    for(const check of checks){assert.equal(check.initial,false);assert.equal(check.boundary.used,check.max*.8);assert.equal(check.boundary.can,false);assert.equal(check.partial,false);assert.equal(check.ready,true);}
+});
+
+test('housing and storage sidewalks align at the boundary and remain continuous through the street flare',async()=>{
+    const result=await page.evaluate(()=>{const {setup}=SugarCube,a1=setup.worldMaps.a1,b1=setup.worldMaps.b1;
+        return {edges:[41,51].map(y=>[a1.tileAt(99,y).kind,b1.tileAt(0,y).kind,setup.worldTravel.edge({mapId:'a1',x:99,y},1,0)]),
+            paths:[[41,42,43],[51,50,49]].map(rows=>{const points=[...Array.from({length:4},(_,x)=>[x,rows[0]]),[3,rows[1]],[4,rows[1]],[5,rows[1]],[6,rows[1]],[6,rows[2]],[7,rows[2]]];return points.every(([x,y])=>b1.tileAt(x,y).kind==='pavement');}),
+            road:[42,43,44,45,46,47,48,49,50].every(y=>b1.tileAt(0,y).kind==='road')};});
+    for(const [i,edge] of result.edges.entries())assert.deepEqual(edge,['pavement','pavement',{mapId:'b1',x:0,y:i?51:41}]);
+    assert.deepEqual(result.paths,[true,true]);assert.equal(result.road,true);
+});
+
+test('D1 compact parking has a clear road driveway and continuous outer sidewalks to the shops',async()=>{
+    const result=await page.evaluate(()=>{const map=SugarCube.setup.worldMaps.d1;
+        return {size:map.parking.width*map.parking.height,driveway:Array.from({length:19},(_,i)=>map.tileAt(45,26+i).kind),
+            aisles:[42,48].every(x=>map.tileAt(x,32).kind==='parking'),
+            paths:[15,74].every(x=>Array.from({length:18},(_,i)=>map.tileAt(x,26+i)).every(tile=>tile.walkable&&tile.kind==='pavement')&&map.tileAt(x,25).kind==='path'),
+            cars:map.interactables.filter(o=>o.kind==='car').map(o=>o.id)};});
+    assert.ok(result.size<80*14*.6);assert.ok(result.driveway.every(kind=>kind==='road'));assert.equal(result.aisles,true);assert.equal(result.paths,true);
+    assert.deepEqual(result.cars,Array.from({length:8},(_,i)=>`d1-car-${i+1}`));
 });

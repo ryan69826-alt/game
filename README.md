@@ -207,7 +207,9 @@ Hold **Shift** with movement keys, or toggle **Sprint [Shift]** for keyboard,
 pointer buttons and map clicks. Sprint steps repeat every 100 ms instead of
 200 ms, cost 2 game seconds instead of 5, and increase endurance used by 1.
 Blocked steps cost no time, endurance, or XP. At the limit the player walks
-instead, recovering breath; holding Sprint can resume running as breath allows.
+instead and cannot use endurance again until usage falls strictly below 80% of
+maximum (19 or less at the base 25). This recovery state survives saves/reloads;
+holding Sprint resumes running once the threshold is crossed.
 Endurance use recovers by 1 per five non-sprinting game seconds, including
 walking, waiting, sleep and unconsciousness. Partial recovery seconds survive
 saves. Starting a sprint resets the partial recovery interval.
@@ -412,14 +414,17 @@ vehicle repair. No repair action, fee, NPC activity or new tool is added.
 
 `storage-district.js` registers geometry through `world-map-data.js`;
 `self-storage.js` owns lease/access rules in `$selfStorage` and persistent unit
-containers use `$inventory.containers['storage:b1:UNIT']`. Region-edge connections
-live in each map's `exits` metadata and are resolved by `world-travel.js`.
+containers use `$inventory.containers['storage:b1:UNIT']`. The western street and
+sidewalks flare to meet A1's wider curb lanes without an abrupt boundary offset.
+Region-edge connections live in each map's `exits` metadata and are resolved by `world-travel.js`.
 
 ## Transit & Shops (D1)
 
 Walk east off Apartments to enter D1; walking west returns along the aligned road.
-A shopping center and parking lot sit north of the road, with a discount store,
-food stall, laundry, barbershop and electronic repair store. Four shops have
+A shopping center and compact parking lot sit north of the road, connected by a
+central driveway. Sidewalks flank the lot from the road to the shop frontage.
+The shops are a discount store, food stall, laundry, barbershop and electronic
+repair store. Four shops have
 explorable interiors; the food stall is an outdoor counter. Shop services remain
 placeholders for later development.
 

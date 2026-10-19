@@ -39,6 +39,11 @@ setup.storageDistrict = () => {
             if((x===53||x===61||y===30||y===38)&&!(x===57&&y===38)) return tile('wall','Storage front office wall',false);
             return tile('floor','Automated storage office');
         }
+        // Flare the western curb to meet A1's wider street and sidewalks.
+        const curbOffset=x<3?2:x<6?1:0;
+        if(x===3&&(y===41||y===51)||x===6&&(y===42||y===50))return tile('pavement','Housing sidewalk transition');
+        if(x<6&&y>=44-curbOffset&&y<=48+curbOffset)return tile('road','Housing road approach');
+        if(x<6&&(y===43-curbOffset||y===49+curbOffset))return tile('pavement','Housing sidewalk transition');
         if(y>=44&&y<=48) return tile('road','Storage district road');
         if(y===43||y===49) return tile('pavement','Roadside pavement');
         if(x>=8&&x<=49&&y>=24&&y<=42) return tile('path','Self-storage courtyard');
