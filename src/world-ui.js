@@ -3,7 +3,6 @@ $(document).on(':passagedisplay', () => {
     if (!document.querySelector('.world-sidebar')) return;
     const character = State.variables.character;
     setup.characterDisplay.mount(character);
-    document.querySelector('[data-character-summary]').textContent = `${character.gender} · Fixed base model`;
     for (const link of document.querySelectorAll('.sidebar-nav a')) {
         if (link.dataset.passage === State.passage) link.setAttribute('aria-current', 'page');
     }

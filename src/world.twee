@@ -6,26 +6,23 @@
 
 :: WorldSidebar [nobr]
 <aside class="world-sidebar" aria-label="Character sidebar">
-<div class="sidebar-brand">◈ <span>NEON MERIDIAN</span></div>
 <figure class="world-map-panel">
 <div class="map-heading"><span>WORLD MAP</span><span id="world-map-count"></span></div>
 <div class="map-viewport"><canvas id="world-map" width="300" height="300" role="img" aria-label="World map showing the current area"></canvas></div>
 <<button "Expand world map">><<run setup.worldAtlas.open()>><</button>>
 <figcaption><span class="location-dot" aria-hidden="true"></span> Apartments <span>Current area</span></figcaption>
 </figure>
-<p class="sidebar-eyebrow">YOUR CHARACTER</p>
 <div class="sidebar-character"><<include "CharacterArtwork">></div>
-<p class="sidebar-identity"><span data-character-summary></span><span class="sidebar-age">Age 26</span></p>
 <p id="preview-status" class="preview-status" role="status" aria-live="polite"></p>
 <div class="sidebar-clock" aria-label="Game date and time"><time id="player-date"></time><time id="player-time"></time></div>
 <div class="sidebar-vitals" aria-label="Money and health">
 <div><span>Money</span><output id="player-money"></output></div>
 <div><label for="player-health-bar">Health</label><output id="player-health"></output></div>
 <progress id="player-health-bar" aria-label="Health" max="100" value="100"></progress>
-<div><span>Tiredness</span><output id="player-tiredness"></output></div>
-<div><span>Fatigue</span><output id="player-fatigue"></output></div>
 <div><label for="player-endurance-bar">Endurance used</label><output id="player-endurance"></output></div>
 <progress id="player-endurance-bar" aria-label="Endurance used" max="25" value="0"></progress>
+<div><span>Tiredness</span><output id="player-tiredness"></output></div>
+<div><span>Fatigue</span><output id="player-fatigue"></output></div>
 </div>
 <nav class="sidebar-nav" aria-label="Game pages">
 <<link "Character">><<run setup.worldWindows.open("Character")>><</link>>

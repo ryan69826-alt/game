@@ -2180,7 +2180,7 @@ test('A1 has five modest houses north and four south, reachable entries and para
         for(let i=0;i<queue.length;i++){const p=queue[i],key=`${p.x},${p.y}`;if(seen.has(key)||!map.tileAt(p.x,p.y).walkable)continue;seen.add(key);for(const [dx,dy] of [[0,1],[1,0],[0,-1],[-1,0]])queue.push({x:p.x+dx,y:p.y+dy});}
         return {north:map.buildings.filter(b=>b.facing==='south').length,south:map.buildings.filter(b=>b.facing==='north').length,
             entries:map.buildings.every(b=>seen.has(`${b.door.x},${b.door.y}`)),bays:map.parkingBays.every(b=>b.width>b.height&&b.parallel),
-            road:[41,42,43,44,45,46,47,48,49,50,51].map(y=>map.tileAt(0,y).kind),cars:map.cars.every(c=>['east','west'].includes(c.facing)&&!map.tileAt(c.x,c.y).walkable),
+            road:[41,42,43,44,45,46,47,48,49,50,51].map(y=>map.tileAt(50,y).kind),cars:map.cars.every(c=>['east','west'].includes(c.facing)&&!map.tileAt(c.x,c.y).walkable),
             interiors:map.buildings.map(b=>{const house=setup.worldMaps[`a1-house-${b.number}`];return {width:house.width,height:house.height,rooms:house.rooms.map(r=>r.kind).sort(),spawn:house.tileAt(house.spawn.x,house.spawn.y).walkable};})};});
     assert.equal(result.north,5);assert.equal(result.south,4);assert.equal(result.entries,true);assert.equal(result.bays,true);assert.equal(result.cars,true);
     assert.deepEqual(result.road,['pavement','parking','parking','road','road','road','road','road','parking','parking','pavement']);
@@ -2220,4 +2220,17 @@ test('house doors hide other rooms, reveal a nearby open bedroom, and support be
     await walkTo(3,2);await page.keyboard.press('e');await dialog.getByRole('button',{name:'Sit',exact:true}).click();assert.match(await page.locator('#room-sounds').textContent(),/bed frame creaks/);
     await page.keyboard.press('Escape');await placeInWorld('a1-house-1',10,3);assert.match(await page.locator('#room-sounds').textContent(),/extractor/);
     await placeInWorld('a1-house-1',7,3);assert.match(await page.locator('#location-description').textContent(),/spare side room/);
+});
+
+test('A1 street terminates in a clear turning bulb, keeps bays outside it and preserves all car identities',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup}=SugarCube,map=setup.worldMaps.a1;
+        return {westRoad:Array.from({length:map.height},(_,y)=>map.tileAt(0,y)).some(t=>['road','parking'].includes(t.kind)),
+            bulb:[[10,39],[3,46],[10,46],[10,53],[17,46]].every(([x,y])=>map.tileAt(x,y).kind==='road'),
+            curb:map.tileAt(2,46).kind,bays:map.parkingBays.every(b=>b.x>=map.culDeSac.parkingStartX),
+            cars:map.cars.every(car=>map.parkingBays.some(b=>car.x===b.x+1&&car.y===b.y)),ids:map.interactables.filter(o=>o.kind==='car').map(o=>o.id),
+            east:[44,45,46,47,48].every(y=>map.tileAt(99,y).kind==='road'),exit:map.exits.west};});
+    assert.equal(result.westRoad,false);assert.equal(result.bulb,true);assert.equal(result.curb,'pavement');assert.equal(result.bays,true);assert.equal(result.cars,true);assert.equal(result.east,true);assert.equal(result.exit,undefined);
+    assert.deepEqual(result.ids,Array.from({length:7},(_,i)=>`a1-car-${i+1}`));
+    await placeInWorld('a1',10,46);await walkTo(3,46);await walkTo(20,46);
 });

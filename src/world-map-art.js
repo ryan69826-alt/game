@@ -17,7 +17,7 @@ setup.worldMapArt=(()=>{
                 const centerY = map.roads.horizontal.y + Math.floor(map.roads.horizontal.height / 2);
                 const centerX = map.roads.vertical.x + Math.floor(map.roads.vertical.width / 2);
                 terrainContext.fillStyle = '#98a99b';
-                if (y === centerY && x % 3 === 0 && (x < map.roads.vertical.x || x >= map.roads.vertical.x + map.roads.vertical.width)) terrainContext.fillRect(px + 3, py + 7, 10, 2);
+                if (x >= (map.roads.horizontal.markingsStartX || 0) && y === centerY && x % 3 === 0 && (x < map.roads.vertical.x || x >= map.roads.vertical.x + map.roads.vertical.width)) terrainContext.fillRect(px + 3, py + 7, 10, 2);
                 if (x === centerX && y % 3 === 0 && y < map.roads.horizontal.y) terrainContext.fillRect(px + 7, py + 3, 2, 10);
             }
         }

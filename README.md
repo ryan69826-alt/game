@@ -307,6 +307,10 @@ The description takes 60% of the main area and maps take 40%, beside the charact
 sidebar. The scrolling local map occupies the right-side panel; the world atlas
 of area icons sits above the character in the left sidebar.
 Both maps fit desktop viewport heights; narrow screens stack them below the text.
+The sidebar starts with the map, followed by the portrait; redundant branding,
+character headings, gender/model text and age captions are omitted.
+Endurance sits directly beneath health; shorter desktop viewports reduce the
+full-body portrait height so both meters remain visible without sidebar scrolling.
 The compact movement panel above the location title is the only exact-location
 readout. Player coordinates are displayed starting at 1.
 
@@ -352,7 +356,10 @@ dragging onto the visible local map drops at the player's feet.
 Walk west beyond B1 to enter A1 and east to return. The 100×90 local map shares
 road rows 44–48 with B1/C1. Five modest houses stand north of the road and four
 south, with entrances facing the street. The road retains five driving squares
-and adds two-square curb parking strips on each side, plus sidewalks. Long bays
+and adds two-square curb parking strips on each side, plus sidewalks. Its western
+end is a turning cul-de-sac with a surrounding sidewalk, rather than a road off
+the map. Parking starts beyond the bulb, and the center line ends before it.
+Car identities and contents survive relocation of the former westernmost bay. Long bays
 and east/west-facing cars represent parallel parking; existing vehicle locks,
 side/rear interactions, separate inventories and cabin behavior still apply.
 
