@@ -24,9 +24,9 @@ setup.rest = (() => {
         rest.fatigue=clamp(rest.fatigue-Math.floor(elapsed/60),floor(rest),100);
         rest.recoverySeconds=elapsed%60;
     }
-    function recover(hours,unitId=null) {
+    function recover(hours,unitId=null,tirednessInterval=300) {
         const rest=ensure(),seconds=addTime(Math.round(hours*3600));
-        rest.tiredness=clamp(rest.tiredness-Math.floor(seconds/300),0,100);
+        rest.tiredness=clamp(rest.tiredness-Math.floor(seconds/tirednessInterval),0,100);
         recoverFatigue(rest,seconds);
         rest.awakeSeconds=0;rest.activity=unitId?{kind:'wake',unitId}:null;
         return seconds;
@@ -78,11 +78,24 @@ setup.rest = (() => {
         recover(hours,bed.unitId);commit();
         return {ok:true,message:`You rest for ${hours} hour${hours===1?'':'s'} and wake at ${setup.gameClock.formatStamp(setup.gameClock.now())}.`};
     }
+    function comfort() {
+        return setup.interactions.nearby().find(target=>target.object.kind==='bed'||target.object.comfortable===true)?.object||null;
+    }
+    function sleepAnywhere(hours) {
+        if(!Number.isInteger(hours)||hours<1||hours>10) return {ok:false,message:'Choose 1–10 hours to sleep.'};
+        const object=comfort();
+        recover(hours,object?.unitId||null,object?300:450);commit();
+        return {ok:true,message:`You lie down ${object?'on '+object.name.toLowerCase():'on the ground'} and sleep for ${hours} hour${hours===1?'':'s'}. You wake at ${setup.gameClock.formatStamp(setup.gameClock.now())}.`};
+    }
+    function passTime() {
+        const result=exert(0,900);
+        return result.collapsed?result:{ok:true,message:`You pass 15 minutes. It is now ${setup.gameClock.formatStamp(setup.gameClock.now())}.`};
+    }
     function refresh() {
         if(!document.getElementById('player-tiredness')) return;
         const rest=ensure();document.getElementById('player-tiredness').textContent=`${Number(rest.tiredness.toFixed(1))} / 100`;
         document.getElementById('player-fatigue').textContent=`${Number(fatigue(rest).toFixed(1))} / 100`;
     }
-    return {ensure,fatigue,advanceAwake,collapse,commit,exert,changeTiredness,sit,sleep,refresh};
+    return {ensure,fatigue,advanceAwake,collapse,commit,exert,changeTiredness,sit,sleep,comfort,sleepAnywhere,passTime,refresh};
 })();
 $(document).on(':passagedisplay :timechange :playerchange',setup.rest.refresh);

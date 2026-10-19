@@ -24,10 +24,10 @@ setup.worldMaps = (() => {
             facing: parkingBays.find(bay => bay.x === x && bay.y === y).facing}));
     const interactables = [
         ...buildings.map((building, index) => ({id: `apartment-door-${index + 1}`, kind: 'door',
-            name: `${building.name} door`, ...building.door, width: 1, height: 1,
+            name: `${building.name} door`, ...building.door, width: 1, height: 1,lockId:`building-${index+1}`,lockLevel:1,
             destination:{mapId:interiorMaps[index].id,...interiorMaps[index].spawn},
             description: 'A single-floor building with six apartments. Its entrance faces the central park.'})),
-        {id:'housing-office-door',kind:'door',name:'Housing office door',...housingOffice.door,width:1,height:1,
+        {id:'housing-office-door',kind:'door',name:'Housing office door',...housingOffice.door,width:1,height:1,lockId:'housing-office',lockLevel:1,
             destination:{mapId:officeMap.id,...officeMap.spawn},description:'The housing office handles rentals for all four apartment buildings.'},
         ...cars.map((car, index) => ({id: `parked-car-${index + 1}`, kind: 'car',
             name: `Parked car ${index + 1}`, x: car.x, y: car.y, width: car.width, height: car.height, facing: car.facing,

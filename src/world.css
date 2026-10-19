@@ -127,3 +127,5 @@ html:has(#ui-dialog-body.character-window) #ui-overlay{background:#050c10;opacit
 .pockets-heading { font-size: .85rem; margin-bottom: 6px; }
 .pocket-group .inventory-container h3 { font-size: .65rem; font-weight: normal; text-transform: capitalize; min-height: 2.5em; margin-top: 0; }
 .pocket-group .storage-count { font-size: .6rem; white-space: nowrap; }
+
+.movement-actions{display:flex;flex-wrap:wrap;gap:6px}

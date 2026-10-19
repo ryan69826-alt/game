@@ -42,15 +42,15 @@ setup.interiorMaps = (() => {
             const unit={id:unitId,name,building:index,number,mapId,door,anchor,
                 bounds:rectangle(left,y0,9,8),bathroom:rectangle(bathX+1,y0+1,2,2),bathroomDoor};units.push(unit);
             interactables.push({id:`bathroom-door-${unitId}`,kind:'door',name:'Bathroom door',...bathroomDoor,width:1,height:1,
-                interiorOf:unitId,description:'A small bathroom door.'});
+                interiorOf:unitId,lockId:`bathroom-${unitId}`,lockLevel:1,description:'A small bathroom door.'});
             interactables.push({id:`unit-door-${unitId}`,kind:'door',name:`Unit ${number} door`,...door,width:1,height:1,
-                unitId,description:`${name}. A matching key is needed to open this door from the hallway.`});
+                unitId,lockId:`unit-${unitId}`,lockLevel:1+(index+number-2)%5,description:`${name}. Unlock with its matching key or try lockpicking.`});
         }
         const exit=point(12,28),spawn=point(12,26);
         const outside={x:building.door.x+({west:-1,east:1}[building.facing]||0),
             y:building.door.y+({north:-1,south:1}[building.facing]||0)};
         interactables.push({id:`exit-${mapId}`,kind:'door',name:'Exit to courtyard',...exit,width:1,height:1,
-            exit:true,destination:{mapId:'apartments',...outside},description:'The exit leads back toward the central park.'});
+            exit:true,lockId:`building-${index}`,lockLevel:1,destination:{mapId:'apartments',...outside},description:'The exit leads back toward the central park.'});
         const rotatedWidth=turns%2?height:width,rotatedHeight=turns%2?width:height;
         const rotated=Array.from({length:rotatedHeight},()=>Array(rotatedWidth));
         for(let y=0;y<height;y++) for(let x=0;x<width;x++) {const p=point(x,y);rotated[p.y][p.x]=cells[y][x];}
@@ -75,7 +75,7 @@ setup.interiorMaps = (() => {
         return {id:'housing-office',name:'Housing Office',width,height,spawn,interior:true,facing:'north',
             exteriorAnchor:{...building.door},buildings:[],cars:[],parkingBays:[],furniture,units:[],
             subtitle:'Apartment rentals',description:'A compact housing office with waiting seats and filing cabinets. The receptionist works behind the front desk. Approach the desk and press E to interact.',
-            interactables:[receptionist,{id:'office-exit',kind:'door',name:'Exit to courtyard',x:8,y:0,width:1,height:1,exit:true,
+            interactables:[receptionist,{id:'office-exit',kind:'door',name:'Exit to courtyard',x:8,y:0,width:1,height:1,exit:true,lockId:'housing-office',lockLevel:1,
                 destination:{mapId:'apartments',x:building.door.x,y:building.door.y-1},description:'The north-facing entrance leads back outside.'}],
             tileAt(x,y) {
                 if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=width||y>=height) return tile('boundary','Edge of the office',false);

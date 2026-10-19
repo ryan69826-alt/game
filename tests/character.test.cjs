@@ -718,7 +718,7 @@ test('opening apartment and car doors updates both maps and persists across move
     assert.notEqual(await pixels(),carClosed);
     await page.keyboard.press('Escape');await page.getByRole('button',{name:'Move south',exact:true}).click();
     const expected=await page.evaluate(()=>structuredClone(SugarCube.State.variables.openedObjects));
-    assert.deepEqual(expected,{'apartments:apartment-door-1':true,'apartments:parked-car-1':true});
+    assert.deepEqual(expected,{'apartments:apartment-door-1':true,'lock:building-1':true,'apartments:parked-car-1':true});
     await page.getByRole('button',{name:'Saves',exact:true}).click();
     const [download]=await Promise.all([page.waitForEvent('download'),page.getByText('Save…',{exact:true}).click()]);
     const save=join(temp,'interactions.save');await download.saveAs(save);await page.locator('#ui-dialog-close').click();
@@ -1157,7 +1157,7 @@ test('housing receptionist reach crosses the desk only at its service positions;
     assert.equal(result.valid.ok,true);assert.equal(result.again.ok,false);assert.equal(result.money,99399);assert.equal(result.unit,'1-2');assert.equal(result.health,100);
 });
 
-test('renting through Talk unlocks only the selected apartment and survives reloads and disk saves inside it',async()=>{
+test('renting through Talk provides a key to explicitly unlock the selected apartment and survives reloads and disk saves inside it',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await walkTo(42,31);await openPortal('Enter','housing-office');
     await walkTo(8,7);await page.keyboard.press('e');
@@ -1177,6 +1177,8 @@ test('renting through Talk unlocks only the selected apartment and survives relo
     await walkTo(30,30);await openPortal('Enter','apartment-3');
     // Unit 2 is west of this hallway after rotating the north-facing building.
     await walkTo(11,14);await page.keyboard.press('e');await dialog.getByRole('button',{name:'Open',exact:true}).click();
+    assert.match(await dialog.locator('#interaction-result').textContent(),/locked/);
+    await dialog.getByRole('button',{name:'Unlock',exact:true}).click();await dialog.getByRole('button',{name:'Open',exact:true}).click();
     assert.equal(await dialog.locator('#interaction-result').textContent(),'You open the door.');await page.keyboard.press('Escape');
     await page.keyboard.press('a');await page.keyboard.press('a');
     assert.match(await page.locator('#position-description').textContent(),/unit 4 living area/);
@@ -1339,7 +1341,7 @@ test('a key only opens its matching door while carried; open doors remain passab
         setup.inventory.transfer(tray.id,'worn:shirt',key.id,0,0,'housing-counter');
         State.variables.world={...State.variables.world,mapId:'apartment-1',x:11,y:5};
         const wrong=setup.interactions.run('unit-door-1-1','open');
-        State.variables.world.x=13;const right=setup.interactions.run('unit-door-1-2','open');
+        State.variables.world.x=13;setup.interactions.run('unit-door-1-2','unlock');const right=setup.interactions.run('unit-door-1-2','open');
         setup.inventory.ensure().containers['worn:shirt']=[];setup.inventory.ensure().containers[tray.id]=[key];
         const step=setup.worldMovement.move(1,0);
         return {without,wrong,right,step,opened:setup.interactions.isOpen('unit-door-1-2'),keyCount:Object.values(State.variables.inventory.containers).flat().filter(item=>item.id===key.id).length};
@@ -1528,4 +1530,114 @@ test('sleep and unconsciousness recover fatigue every minute without going below
     });
     assert.deepEqual(result.hour,{tiredness:38,fatigue:20});assert.deepEqual(result.floor,{tiredness:26,fatigue:10});
     assert.deepEqual(result.collapse,{seconds:60,tiredness:60,fatigue:99});
+});
+
+test('T opens personal actions, pauses held movement, and Pass Time advances exactly fifteen game minutes',async()=>{
+    await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.evaluate(()=>{SugarCube.State.variables.rest={version:2,tiredness:50,fatigue:50,awakeSeconds:0,recoverySeconds:0};});
+    await page.keyboard.down('d');await page.keyboard.press('t');
+    const dialog=page.getByRole('dialog',{name:'Actions',exact:true});await dialog.waitFor({state:'visible'});
+    assert.deepEqual(await dialog.locator('.interaction-actions button').allTextContents(),['Pass Time','Lay down to sleep']);
+    const before=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
+    await page.clock.runFor(1000);await page.keyboard.up('d');
+    assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),before);
+    await dialog.getByRole('button',{name:'Pass Time',exact:true}).click();
+    assert.match(await dialog.locator('#action-result').textContent(),/pass 15 minutes/);
+    const after=await page.evaluate(()=>({world:structuredClone(SugarCube.State.variables.world),tiredness:SugarCube.State.variables.rest.tiredness,fatigue:SugarCube.setup.rest.fatigue()}));
+    assert.equal(after.world.elapsedSeconds,before.elapsedSeconds+900);assert.equal(after.world.x,before.x);assert.equal(after.world.y,before.y);
+    assert.equal(after.tiredness,51);assert.equal(after.fatigue,35);
+    await page.keyboard.press('Escape');await page.clock.runFor(1000);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),before.x);
+    await page.clock.resume();await page.reload();await page.waitForSelector('#actions-button');assert.equal(await page.locator('#player-time').textContent(),'08:15:05');
+    await page.getByRole('button',{name:'Actions [T]',exact:true}).click();await dialog.waitFor({state:'visible'});
+});
+
+test('sleep anywhere checks nearby comfort, recovers more slowly on the ground, and retains fatigue and billing rules',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.evaluate(()=>{SugarCube.State.variables.rest={version:2,tiredness:80,fatigue:50,awakeSeconds:100,recoverySeconds:0};});
+    await page.keyboard.press('t');const dialog=page.getByRole('dialog',{name:'Actions',exact:true});
+    await dialog.getByRole('button',{name:'Lay down to sleep',exact:true}).click();assert.match(await dialog.textContent(),/7½ minutes/);
+    await dialog.getByLabel('Sleep for',{exact:true}).selectOption('1');await dialog.getByRole('button',{name:'Sleep for 1 hour',exact:true}).click();
+    assert.equal(await page.locator('#player-tiredness').textContent(),'72 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'28 / 100');
+    assert.equal(await page.locator('#player-time').textContent(),'09:00:00');assert.match(await dialog.locator('#action-result').textContent(),/on the ground/);
+    await page.keyboard.press('Escape');await placeInWorld('apartment-1',18,3);
+    await page.evaluate(()=>{SugarCube.State.variables.rest={version:2,tiredness:80,fatigue:50,awakeSeconds:100,recoverySeconds:0};});
+    await page.keyboard.press('t');await dialog.getByRole('button',{name:'Lay down to sleep',exact:true}).click();assert.match(await dialog.textContent(),/Comfortable sleep/);
+    await dialog.getByLabel('Sleep for',{exact:true}).selectOption('1');await dialog.getByRole('button',{name:'Sleep for 1 hour',exact:true}).click();
+    assert.equal(await page.locator('#player-tiredness').textContent(),'68 / 100');assert.equal(await page.locator('#player-fatigue').textContent(),'27 / 100');
+    const result=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;
+        State.variables.world={...State.variables.world,mapId:'apartments',x:30,y:23};
+        State.variables.housing={version:3,rentedUnit:'1-2',keyIssued:true,weeklyRent:600,nextRentAt:setup.gameClock.now()+1800,arrears:0};
+        const before=State.variables.player.money;setup.rest.sleepAnywhere(1);
+        return {awake:State.variables.rest.awakeSeconds,cost:before-State.variables.player.money,invalid:[0,11,1.5].map(hours=>setup.rest.sleepAnywhere(hours).ok)};
+    });
+    assert.equal(result.awake,0);assert.equal(result.cost,600);assert.deepEqual(result.invalid,[false,false,false]);
+});
+
+test('lockpicking chance scales through zero, half, and guaranteed success across all five lock levels',async()=>{
+    const result=await page.evaluate(()=>{
+        const chance=SugarCube.setup.doorLocks.chance;
+        return Array.from({length:5},(_,index)=>{const level=index+1;return {level,values:[0,level/2,level*.75,level,level*1.5,level*2,10].map(skill=>chance(skill,level))};});
+    });
+    for(const row of result) assert.deepEqual(row.values,[0,0,25,50,75,100,100]);
+});
+
+test('door keys unlock separately from opening, allow relocking, and an unlocked room stays unlocked without its key',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await placeInWorld('apartment-1',13,5);
+    const result=await page.evaluate(()=>{
+        const {setup,State}=SugarCube,door=setup.worldMaps['apartment-1'].interactables.find(object=>object.id==='unit-door-1-2');
+        const before=State.variables.world.elapsedSeconds;
+        const without=setup.interactions.run(door.id,'unlock');
+        setup.inventory.ensure().containers['worn:shirt']=[{id:'apartment-key:1-1',type:'apartmentKey',x:0,y:0}];
+        const wrong=setup.interactions.run(door.id,'unlock');
+        setup.inventory.ensure().containers['worn:shirt']=[{id:'apartment-key:1-2',type:'apartmentKey',x:0,y:0}];
+        const beforeUnlock=setup.interactions.run(door.id,'open');const unlock=setup.interactions.run(door.id,'unlock');
+        const stillClosed=!setup.interactions.isOpen(door.id),unlocked=!setup.doorLocks.isLocked(door);
+        const opened=setup.interactions.run(door.id,'open');const lockOpen=setup.interactions.run(door.id,'lock');
+        setup.interactions.run(door.id,'close');const relocked=setup.interactions.run(door.id,'lock');
+        const blocked=setup.interactions.run(door.id,'open');setup.interactions.run(door.id,'unlock');
+        setup.inventory.ensure().containers['worn:shirt']=[];
+        setup.interactions.run(door.id,'open');setup.interactions.run(door.id,'close');
+        const remainsUnlocked=!setup.doorLocks.isLocked(door);const noKeyLock=setup.interactions.run(door.id,'lock');
+        return {without,wrong,beforeUnlock,unlock,stillClosed,unlocked,opened,lockOpen,relocked,blocked,remainsUnlocked,noKeyLock,elapsed:State.variables.world.elapsedSeconds-before};
+    });
+    assert.equal(result.without.ok,false);assert.equal(result.wrong.ok,false);assert.equal(result.beforeUnlock.ok,false);
+    assert.ok(result.unlock.ok&&result.stillClosed&&result.unlocked&&result.opened.ok);assert.equal(result.lockOpen.ok,false);
+    assert.ok(result.relocked.ok);assert.equal(result.blocked.ok,false);assert.ok(result.remainsUnlocked);assert.equal(result.noKeyLock.ok,false);assert.equal(result.elapsed,0);
+    await page.reload();await page.waitForSelector('#local-map');
+    assert.equal(await page.evaluate(()=>SugarCube.setup.doorLocks.isLocked(SugarCube.setup.worldMaps['apartment-1'].interactables.find(object=>object.id==='unit-door-1-2'))),false);
+});
+
+test('all doors offer lock actions, lockpicking changes access without opening, and both sides of a portal share their lock',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartment-1',11,5);
+    await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
+    assert.match(await dialog.textContent(),/Lock level 1 \/ 5/);assert.ok(await dialog.getByRole('button',{name:'Lockpick · 0% chance',exact:true}).isEnabled());
+    await dialog.getByRole('button',{name:'Lockpick · 0% chance',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/fail to pick/);
+    await page.keyboard.press('Escape');
+    const result=await page.evaluate(()=>{
+        const {setup,State}=SugarCube;const worldBefore=State.variables.world.elapsedSeconds;
+        State.variables.character.skills.Lockpicking=50;
+        const partial=setup.interactions.run('unit-door-1-1','lockpick');
+        const partialState=setup.doorLocks.isLocked(setup.worldMaps['apartment-1'].interactables.find(object=>object.id==='unit-door-1-1'));
+        State.variables.doorLocks['unit-1-1']=true;State.variables.character.skills.Lockpicking=150;
+        const picked=setup.interactions.run('unit-door-1-1','lockpick');const closed=!setup.interactions.isOpen('unit-door-1-1');
+        const unlocked=!setup.doorLocks.isLocked(setup.worldMaps['apartment-1'].interactables.find(object=>object.id==='unit-door-1-1'));
+        const open=setup.interactions.run('unit-door-1-1','open');
+        const all=Object.values(setup.worldMaps).flatMap(map=>map.interactables.filter(object=>object.kind==='door').map(object=>setup.interactions.actionsFor(object).map(action=>action.id)));
+        State.variables.world={...State.variables.world,mapId:'apartment-1',x:12,y:27};
+        const lock=setup.interactions.run('exit-apartment-1','lock');
+        State.variables.world={...State.variables.world,mapId:'apartments',x:30,y:16};
+        const blocked=setup.interactions.run('apartment-door-1','open');
+        const pickedEntrance=setup.interactions.run('apartment-door-1','lockpick');
+        const entranceOpen=setup.interactions.run('apartment-door-1','open');
+        State.variables.world={...State.variables.world,mapId:'apartment-1',x:12,y:27};
+        const mirroredOpen=setup.interactions.isOpen('exit-apartment-1');setup.interactions.run('exit-apartment-1','close');
+        return {partial,partialState,picked,closed,unlocked,open,all,lock,blocked,pickedEntrance,entranceOpen,mirroredOpen,mirroredClosed:!setup.interactions.isOpen('apartment-door-1','apartments'),elapsed:State.variables.world.elapsedSeconds-worldBefore};
+    });
+    assert.equal(result.partial.chance,50);assert.equal(result.partialState,!result.partial.ok);
+    assert.ok(result.picked.ok&&result.closed&&result.unlocked&&result.open.ok);assert.equal(result.picked.chance,100);
+    for(const actions of result.all) for(const id of ['unlock','lock','lockpick']) assert.ok(actions.includes(id));
+    assert.ok(result.lock.ok);assert.equal(result.blocked.ok,false);assert.ok(result.pickedEntrance.ok&&result.entranceOpen.ok&&result.mirroredOpen&&result.mirroredClosed);assert.equal(result.elapsed,0);
 });

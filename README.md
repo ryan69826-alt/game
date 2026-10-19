@@ -73,9 +73,10 @@ Money, health, lease, due date, arrears, map position and open doors survive sav
 Use **Collect apartment key** after renting to open the key tray alongside worn
 storage. Drag the 1×1 key into a real pocket or bag; collection never bypasses
 capacity. The key stays at reception if storage is full, and cannot be retrieved
-remotely. Only a carried matching key opens a locked apartment door from the hall.
-Open doors remain passable if the key is subsequently put down; doors can be
-closed, and a person inside can open the latch to leave. Existing leases are
+remotely. A carried matching key enables **Unlock** at the apartment door.
+Unlock first, then choose **Open**. Closing leaves the door unlocked until
+**Lock** is selected. Open doors remain passable if the key is subsequently put
+down; a person inside can use the latch to unlock and leave. Existing leases are
 preserved, with one key waiting at reception rather than silently entering a bag.
 No key respawns after collection, storage transfers, or reloads.
 
@@ -115,6 +116,37 @@ Parked Car 2's trunk contains one canned coffee as a test consumable. Carry it,
 select it in Inventory, and use **Drink coffee** to reduce tiredness by 10 without
 resetting the 15-minute awake schedule. It is consumed once and costs no time.
 No item or key adds invisible carrying capacity.
+
+## Personal actions and locks
+
+Press **T** or click **Actions [T]** in the movement panel to open an overlay.
+It pauses held movement, like the interaction window. **Pass Time** advances
+15 game minutes, updating tiredness, fatigue, the calendar and rent. Ordinary
+interactions continue to cost no time.
+
+**Lay down to sleep** offers 1–10 hours anywhere. At a bed within reach (the same
+reach check used by bed interactions), sleep restores 1 tiredness per 5 minutes.
+Without a comfortable object, recovery is 1.5 times slower: 1 per 450 seconds,
+or 8 per hour. Fatigue still recovers by 1 per minute above its tiredness floor.
+Comfort is checked again when confirming sleep. Existing bed nap/sleep and
+unconsciousness retain their normal 5-minute tiredness recovery rate.
+
+Every building, apartment and bathroom door offers **Unlock**, **Lock**, and
+**Lockpick** alongside its existing interactions. Apartments start locked;
+common entrances and bathrooms start unlocked. Apartment keys must be carried
+in worn storage. Interior latches permit locking/unlocking from inside without
+a key. A closed, unlocked door can be locked again with its key or inside latch.
+Building entrances share both open/closed and lock state across their two sides.
+Old saves preserve already-open doors as unlocked. Lock states persist in saves.
+
+Lock levels are integers 1–5: common entrances and bathrooms use level 1;
+apartment units cycle through levels 1–5 as prototype defaults. Each door shows
+its difficulty, your Lockpicking level, and your chance before an attempt. For
+skill/lock ratio `r`, chance is `clamp((r - 0.5) × 100, 0, 50)` below equal level,
+and `clamp(50 + (r - 1) × 50, 50, 100)` at or above equal level. This gives 0%
+at half level, 50% at equal level, and 100% at double level. Each attempt rolls
+independently; success unlocks without opening, and failure leaves the lock
+intact. No tools, XP rewards, damage or extra time costs are introduced.
 
 ## Game calendar
 

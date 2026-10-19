@@ -38,7 +38,7 @@
 
 <section class="movement-panel" aria-labelledby="movement-title">
 <div class="movement-info">
-<div class="movement-heading"><h2 id="movement-title">Move around</h2><button id="interact-button" type="button" disabled>Interact [E]</button></div>
+<div class="movement-heading"><h2 id="movement-title">Move around</h2><div class="movement-actions"><button id="actions-button" type="button">Actions [T]</button><button id="interact-button" type="button" disabled>Interact [E]</button></div></div>
 <p id="movement-help">Hold arrows, WASD, or a button. Each square takes 5 seconds.</p>
 <p id="position-description"></p>
 <div class="movement-readout"><span id="movement-position"></span></div>

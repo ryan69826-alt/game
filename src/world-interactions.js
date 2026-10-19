@@ -5,20 +5,25 @@
 setup.interactions = (() => {
     const inspect = {id: 'inspect', label: 'Inspect', result: object => object.description || `You examine ${object.name.toLowerCase()}.`};
     function isOpen(objectId, mapId = State.variables.world?.mapId) {
-        return State.variables.openedObjects?.[`${mapId}:${objectId}`] === true;
+        const object=setup.worldMaps[mapId]?.interactables.find(object=>object.id===objectId);
+        const shared=object?.lockId&&State.variables.openedObjects?.[`lock:${object.lockId}`];
+        return typeof shared==='boolean'?shared:State.variables.openedObjects?.[`${mapId}:${objectId}`]===true;
+    }
+    function setOpen(object,opened) {
+        const stored=State.variables.openedObjects;
+        State.variables.openedObjects={...(stored&&typeof stored==='object'&&!Array.isArray(stored)?stored:{}),
+            [`${State.variables.world.mapId}:${object.id}`]:opened,...(object.lockId?{[`lock:${object.lockId}`]:opened}:{})};
     }
     function openDoor(object) {
-        if(object.unitId && !setup.housing.canEnter(object.unitId)&&setup.rooms.current().unit?.id!==object.unitId) return {ok:false,message:'This apartment is locked. Carry its matching key in a pocket or bag to open it.'};
-        const stored = State.variables.openedObjects;
-        State.variables.openedObjects = {...(stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {}),
-            [`${State.variables.world.mapId}:${object.id}`]: true};
+        if(object.kind==='door'&&setup.doorLocks.isLocked(object)) return {ok:false,message:'This door is locked. Unlock it with the matching key or try lockpicking first.'};
+        setOpen(object,true);
         State.create(State.passage);
         $(document).trigger(':interactionchange');
         return 'You open the door.';
     }
     const open = {id: 'open', label: 'Open', enabled: object => !isOpen(object.id), result: openDoor};
     const close={id:'close',label:'Close',enabled:object=>isOpen(object.id),unavailableMessage:'The door is already closed.',result:object=>{
-        State.variables.openedObjects={...State.variables.openedObjects,[`${State.variables.world.mapId}:${object.id}`]:false};
+        setOpen(object,false);
         State.create(State.passage);$(document).trigger(':interactionchange');return 'You close the door.';
     }};
     const types = {
@@ -48,7 +53,7 @@ setup.interactions = (() => {
             {id:'talk',label:'Talk',result:()=>({message:'How can I help you?',conversation:'housing'})},
             {id:'attack',label:'Attack',result:'Combat is not implemented yet. No attack is made.'}
         ];
-        if(object.kind==='door' && object.destination) return [...types.door,close,{
+        if(object.kind==='door' && object.destination) return [...types.door,close,...setup.doorLocks.actions(object),{
             id:'enter',label:object.exit?'Exit':'Enter',
             enabled:()=>isOpen(object.id),unavailableMessage:'Open the door first.',result:()=>setup.worldTravel.enter(object)
         }];
@@ -59,7 +64,7 @@ setup.interactions = (() => {
             if (edge === 'rear') return [{id: 'trunk', label: 'Open trunk', result: () => 'You open the trunk.'}];
             return [];
         }
-        if(object.kind==='door') return [...types.door,close];
+        if(object.kind==='door') return [...types.door,close,...setup.doorLocks.actions(object)];
         return object.actions || (Object.hasOwn(types, object.kind) ? types[object.kind] : [inspect]);
     }
     function run(objectId, actionId) {

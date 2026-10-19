@@ -18,7 +18,7 @@ setup.worldMovement = (() => {
         const target = map.tileAt(world.x + dx, world.y + dy);
         if (!target.walkable) return {moved: false, reason: target.kind === 'boundary' ? `You have reached the edge of ${map.name}.` : `${target.label} blocks the way.`};
         const door=map.interactables.find(object=>object.kind==='door'&&!object.destination&&object.x===world.x+dx&&object.y===world.y+dy);
-        if(door&&!setup.interactions.isOpen(door.id)) return {moved:false,reason:'The door is closed. Press E to interact; apartment doors need their matching key.'};
+        if(door&&!setup.interactions.isOpen(door.id)) return {moved:false,reason:'The door is closed. Press E to interact; unlock locked doors with a key or lockpicking.'};
         world.x += dx;world.y += dy;
         const rest=setup.rest.advanceAwake(setup.gameClock.stepSeconds);
         setup.housing.collectDue();

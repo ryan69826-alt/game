@@ -56,7 +56,7 @@ setup.interactionUI = (() => {
         function showObject(object, focus = false) {
             root.replaceChildren();
             const title = document.createElement('h2');title.className = 'interaction-title';title.textContent = object.name;
-            const description = document.createElement('p');description.className = 'world-note';description.textContent = object.description || 'Choose an interaction.';
+            const description = document.createElement('p');description.className = 'world-note';description.textContent = (object.description || 'Choose an interaction.')+(object.kind==='door'?` Lock level ${setup.doorLocks.difficulty(object)} / 5 · ${setup.doorLocks.isLocked(object)?'Locked':'Unlocked'} · Your lockpicking level: ${setup.doorLocks.skill()}.`:'');
             const actions = document.createElement('div');actions.className = 'interaction-actions';
             const result = document.createElement('p');result.id = 'interaction-result';result.setAttribute('role', 'status');result.setAttribute('aria-live', 'polite');
             for (const action of setup.interactions.actionsFor(object)) {
@@ -66,7 +66,7 @@ setup.interactionUI = (() => {
                     if(outcome.ok&&outcome.conversation==='housing') {showTalk(object);return;}
                     if(outcome.ok&&outcome.sleepBedId) {showSleep(object);return;}
                     if (outcome.ok && outcome.trunkId) {setup.inventoryUI.open(outcome.trunkId);return;}
-                    if(action.id==='open'||action.id==='close') {
+                    if(['open','close','unlock','lock','lockpick'].includes(action.id)) {
                         // Opening a portal enables Enter/Exit in the same window.
                         showObject(object,true);document.getElementById('interaction-result').textContent=outcome.message;
                     } else {
