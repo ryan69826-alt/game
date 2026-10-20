@@ -6,10 +6,10 @@ setup.clothing = (() => {
     const choices = {...Object.fromEntries(slots.map(slot=>[slot,['none']])),top: ['none','shirt'], bottoms: ['none','pants'], shoes: ['none','shoes'], storage: ['none','backpack'], handheld: ['none']};
     const definitions = {
         none: {name: 'None', pockets: []},
-        shirt: {name: 'Generic shirt', pockets: [{id: 'worn:shirt', name: 'Shirt pocket', columns: 1, rows: 1}]},
-        pants: {name: 'Generic pants', pockets: ['Front left','Front right','Back left','Back right'].map((name,index) =>
+        shirt: {name: 'Generic shirt', warmth:4, pockets: [{id: 'worn:shirt', name: 'Shirt pocket', columns: 1, rows: 1}]},
+        pants: {name: 'Generic pants', warmth:5, pockets: ['Front left','Front right','Back left','Back right'].map((name,index) =>
             ({id: `worn:pants:${index+1}`, name: `Pants · ${name.toLowerCase()} pocket`, columns: 1, rows: 1}))},
-        shoes: {name: 'Generic shoes', pockets: []},
+        shoes: {name: 'Generic shoes', warmth:3, pockets: []},
         backpack: {name: 'Backpack', pockets: [{id: 'worn:backpack', name: 'Backpack', columns: 4, rows: 4}]}
     };
     const slotLabel=slot=>({bottoms:'Bottom',storage:'Back'}[slot]||labels[slot]);

@@ -723,8 +723,9 @@ adding another feature.
 
 Temperature is the first environmental input for character attributes. **How you
 feel**, below Sounds, describes cold, comfort or heat; exact temperatures are not
-shown in the player interface. This initial step does not assign clothing warmth,
-body-heat accumulation, health damage or other attribute penalties.
+shown in the player interface. Equipped clothing now determines insulation, as
+described below. Body-heat accumulation, health damage and other attribute
+penalties are not part of this step.
 
 The prototype uses **Fahrenheit** and a temperate Northern Hemisphere climate:
 the seasonal morning baseline averages 25°F in mid-January and 75°F in mid-July.
@@ -746,4 +747,46 @@ without a seed derive one from their existing character, so reloading before the
 next saved action does not reroll the forecast. Forecasts
 can be queried in any order without rerolling dates or breaking year boundaries.
 `attribute-effects.js` translates temperatures into player-facing sensations and
-updates on passage display and game-time changes. Raw values remain in simulation.
+updates on passage display, game-time changes and clothing changes. Raw values
+remain in simulation.
+
+
+## Weighted clothing warmth
+
+`warmth.js` calculates the weighted average of **equipped** clothing insulation:
+
+| Weight | Slots |
+| --- | --- |
+| 3 | Top, Bottom, Over Top |
+| 2 | Under Top, Under Bottom, Feet, Hands, Shoes |
+| 1 | Hat, Face Wear, Wrists, Ankles |
+
+The denominator stays **23**. Empty weighted slots contribute **zero**, so taking
+off a major garment lowers insulation rather than raising the remaining outfit's
+average. Waist, Back, Handheld and augmentations do not contribute. Stored or
+dropped clothes and their pocket contents do not contribute either.
+
+Garment warmth values are 1–10, defined beside the item in `clothing.js`. Initial
+placeholder values are **shirt 4, pants 5, shoes 3**. A completely covered outfit
+with all values 10 averages 10; an unclothed player averages zero. The current
+shirt/pants/shoes outfit averages `(4×3 + 5×3 + 3×2) / 23`, including its empty slots.
+Old saves automatically use the item definitions; no inventory reset is needed.
+
+The world requirement scales linearly from **10 at 30°F** to **0 at 100°F**, capped
+at those limits. These provisional endpoints live in `setup.warmth.climate`.
+The hidden difference is `clothing average − world requirement`. Keep the full
+precision for calculation, then round the final difference to the nearest integer
+(symmetrically away from zero at half values) to apply these feeling bands:
+
+| Rounded difference | Feeling |
+| --- | --- |
+| ≤ −4 | Freezing |
+| −3 to −2 | Cold |
+| −1 to +1 | Comfortable |
+| +2 to +3 | Warm |
+| ≥ +4 | Overheating |
+
+**How you feel** shows a description, with no numeric warmth, temperature or
+difference displayed. Removing, wearing or changing clothing refreshes it
+immediately without passing time. Movement, waiting and sleep refresh it through
+the same game-time temperature system.

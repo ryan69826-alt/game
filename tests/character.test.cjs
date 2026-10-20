@@ -2677,6 +2677,39 @@ test('temperature sensations sit below Sounds, hide exact values, refresh with g
     const moved=await page.evaluate(()=>{const before=SugarCube.setup.weather.temperature();SugarCube.setup.worldMovement.move(1,0);return {before,after:SugarCube.setup.weather.temperature(),text:document.getElementById('attribute-effects').textContent,expected:SugarCube.setup.attributeEffects.temperatureFeeling(SugarCube.setup.weather.temperature())};});assert.notEqual(moved.before,moved.after);assert.equal(moved.text,moved.expected);
     await page.evaluate(()=>{delete SugarCube.State.variables.weather;SugarCube.Engine.play('Apartments');});await page.waitForSelector('#attribute-effects');
     const migratedSeed=await page.evaluate(()=>SugarCube.setup.weather.ensure().seed);await page.reload();await page.waitForSelector('#attribute-effects');assert.equal(await page.evaluate(()=>SugarCube.setup.weather.ensure().seed),migratedSeed);
-    const descriptions=await page.evaluate(()=>[20,40,50,65,80,90,100].map(SugarCube.setup.attributeEffects.temperatureFeeling));assert.equal(new Set(descriptions).size,7);for(const text of descriptions)assert.doesNotMatch(text,/\d|°/);
+    const descriptions=await page.evaluate(()=>{const {setup,State}=SugarCube;const old=State.variables.character;State.variables.character={clothing:{}};const values=[20,79,100].map(setup.attributeEffects.temperatureFeeling);State.variables.character=old;return values;});assert.equal(new Set(descriptions).size,3);for(const text of descriptions)assert.doesNotMatch(text,/\d|°/);
     await page.keyboard.press('t');await page.getByRole('button',{name:'Pass Time',exact:true}).click();assert.equal(await page.locator('#attribute-effects').textContent(),await page.evaluate(()=>SugarCube.setup.attributeEffects.temperatureFeeling(SugarCube.setup.weather.temperature())));
+});
+
+
+test('clothing warmth weights coverage, keeps empty slots at zero and excludes bags and stored clothing',async()=>{
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube,character=State.variables.character,original=structuredClone(character.clothing);
+        const baseline=setup.warmth.clothingAverage();character.clothing.bottoms='none';const noPants=setup.warmth.clothingAverage();character.clothing.top='none';const shoesOnly=setup.warmth.clothingAverage();character.clothing.shoes='none';const bare=setup.warmth.clothingAverage();
+        character.clothing.storage='backpack';const backpack=setup.warmth.clothingAverage();character.clothing=original;
+        setup.inventory.ensure().containers['ground:apartments:30:33']=[{id:'stored-warm-clothes',type:'shirt',x:0,y:0}];const stored=setup.warmth.clothingAverage();
+        for(const slot of Object.keys(setup.warmth.weights)){const type=`test-insulation-${slot}`;setup.clothing.definitions[type]={name:'Insulated garment',warmth:10,pockets:[]};setup.clothing.choices[slot].push(type);character.clothing[slot]=type;}
+        const full=setup.warmth.clothingAverage(),hot=setup.warmth.calculate(character,100).category,cold=setup.warmth.calculate(character,30).category;
+        character.clothing.overtop='none';const withoutCoat=setup.warmth.clothingAverage();character.clothing=original;
+        return {baseline,noPants,shoesOnly,bare,backpack,stored,full,hot,cold,withoutCoat,weight:setup.warmth.totalWeight,weights:setup.warmth.weights};});
+    assert.equal(result.weight,23);assert.deepEqual(result.weights,{top:3,bottoms:3,overtop:3,undertop:2,underbottoms:2,feet:2,hands:2,shoes:2,hat:1,facewear:1,wrists:1,ankles:1});
+    assert.equal(result.baseline,33/23);assert.equal(result.noPants,18/23);assert.equal(result.shoesOnly,6/23);assert.equal(result.bare,0);assert.equal(result.backpack,0);assert.equal(result.stored,result.baseline);
+    assert.equal(result.full,10);assert.equal(result.hot,'Overheating');assert.equal(result.cold,'Comfortable');assert.equal(result.withoutCoat,200/23);
+});
+
+test('warmth requirement clamps its Fahrenheit range and feeling bands cover fractional differences symmetrically',async()=>{
+    const result=await page.evaluate(()=>{const {warmth}=SugarCube.setup;return {requirements:[-20,30,65,100,120].map(warmth.worldRequirement),bands:[-10,-4,-3.5,-3.49,-3,-2,-1.5,-1.49,-1,0,1,1.49,1.5,2,3,3.49,3.5,4,10].map(warmth.category)};});
+    assert.deepEqual(result.requirements,[10,10,5,0,0]);assert.deepEqual(result.bands,['Freezing','Freezing','Freezing','Cold','Cold','Cold','Cold','Comfortable','Comfortable','Comfortable','Comfortable','Comfortable','Warm','Warm','Warm','Warm','Overheating','Overheating','Overheating']);
+});
+
+test('removing and rewearing clothes immediately changes hidden warmth and feelings without time and survives reload',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const stamp=await page.evaluate(()=>{const {setup,State}=SugarCube;const seed=setup.weather.ensure().seed;const base=setup.gameClock.now();let found=null;
+        for(let i=0;i<365*24;i++){const time=base+i*3600,temp=setup.weather.temperature(time),clothed=setup.warmth.calculate(State.variables.character,temp),bare=setup.warmth.calculate({clothing:{}},temp);if(clothed.category!==bare.category){found=time;break;}}
+        if(found===null)throw new Error('No clothing-sensitive weather found');State.variables.world.elapsedSeconds+=found-base;setup.rest.commit();return {seed,time:setup.gameClock.now()};});
+    const before=await page.locator('#attribute-effects').textContent();await page.keyboard.press('i');
+    for(const name of ['Generic shirt','Generic pants','Generic shoes']){await page.getByRole('button',{name:`Equipped ${name}`,exact:true}).click();await page.getByRole('button',{name:'Drop on ground',exact:true}).click();}
+    const undressed=await page.locator('#attribute-effects').textContent();assert.notEqual(undressed,before);assert.doesNotMatch(undressed,/\d|°/);assert.equal(await page.evaluate(()=>SugarCube.setup.warmth.clothingAverage()),0);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),stamp.time);await page.keyboard.press('i');await page.reload();await page.waitForSelector('#attribute-effects');assert.equal(await page.locator('#attribute-effects').textContent(),undressed);
+    await page.keyboard.press('i');for(const name of ['Generic shirt','Generic pants','Generic shoes']){await page.getByRole('button',{name:new RegExp(`^${name},`)}).click();await page.getByRole('button',{name:`Wear ${name.toLowerCase()}`,exact:true}).click();}
+    assert.equal(await page.locator('#attribute-effects').textContent(),before);assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),stamp.time);assert.equal(await page.evaluate(()=>SugarCube.setup.weather.ensure().seed),stamp.seed);
 });
