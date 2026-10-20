@@ -58,7 +58,7 @@ setup.worldWindows = (() => {
     function open(name) {
         const sheets={Character:'CharacterSheet',Stats:'StatsSheet','Quests/Jobs':'QuestsJobsSheet'};
         if (!Object.hasOwn(sheets,name) || !document.querySelector(".world-sidebar")) return;
-        Dialog.setup(name, "character-window");
+        Dialog.setup(name, `character-window ${name==='Character'?'character-sheet-window':name==='Quests/Jobs'?'quests-jobs-window':'stats-window'}`);
         Dialog.wiki(Story.get(sheets[name]).processText());
         populate(Dialog.body(), State.variables.character);
         Dialog.open();
@@ -75,11 +75,16 @@ $(document).on('keydown.characterWindow', event => {
 
 $(document).on(':equipmentchange',()=>{if(document.querySelector('.world-sidebar')) setup.characterDisplay.mount(State.variables.character);});
 
-/* World shortcuts never replace a dialog or intercept typing/browser shortcuts. */
+/* Matching shortcuts toggle their screen; other dialogs and typing stay alone. */
 $(document).on('keydown.sidebarShortcuts',event=>{
     const key=event.key.toLowerCase();
-    if(!['i','c','j'].includes(key)||event.repeat||event.originalEvent?.repeat||event.ctrlKey||event.altKey||event.metaKey||Dialog.isOpen()||
+    if(!['i','c','j'].includes(key)||event.repeat||event.originalEvent?.repeat||event.ctrlKey||event.altKey||event.metaKey||
         event.target.closest('input,select,textarea,[contenteditable="true"]')||!document.querySelector('.world-sidebar'))return;
+    if(Dialog.isOpen()) {
+        const matching={i:'inventory-window',c:'character-sheet-window',j:'quests-jobs-window'};
+        if(Dialog.body().classList.contains(matching[key])){event.preventDefault();Dialog.close();}
+        return;
+    }
     event.preventDefault();
     if(key==='i')setup.inventoryUI.open();else setup.worldWindows.open(key==='j'?'Quests/Jobs':'Character');
 });

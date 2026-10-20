@@ -40,8 +40,9 @@ The old generic Combat skill has been removed; Athleticism retains its own XP.
 Start at Apartments locks creation. The sidebar shows the same full-body sprite.
 The sidebar lists Inventory **[i]**, Quests/Jobs **[j]**, Character **[c]**, then Stats.
 Press **I** for Inventory, **J** for Quests/Jobs or **C** for the read-only character sheet; shortcuts
-ignore typing, held-key repeats, browser modifiers and open dialogs, and pause
-held movement when opening a window. Quests/Jobs has empty quest and job sections.
+ignore typing, held-key repeats and browser modifiers, and pause
+held movement when opening a window. Press the matching key again to close its
+window; another screen’s key does not replace the open window. Quests/Jobs has empty quest and job sections.
 The character sheet begins with a compact identity/appearance grid, omits clothing
 and labels its trait section **Traits**. The sidebar map counts **discovered** areas.
 Character and Stats are read-only windows over the map; Inventory is also a
@@ -716,3 +717,33 @@ reload or disk save/load. Approach the unit door, open it, enter, and use E besi
 the bed to try Sit, Nap and Sleep. Check that other rooms remain hidden. Check
 Inventory and the separate pockets as before. Stop here for feedback before
 adding another feature.
+
+
+## Seasonal temperature and attribute sensations
+
+Temperature is the first environmental input for character attributes. **How you
+feel**, below Sounds, describes cold, comfort or heat; exact temperatures are not
+shown in the player interface. This initial step does not assign clothing warmth,
+body-heat accumulation, health damage or other attribute penalties.
+
+The prototype uses **Fahrenheit** and a temperate Northern Hemisphere climate:
+the seasonal morning baseline averages 25°F in mid-January and 75°F in mid-July.
+Each date's 7 AM baseline is randomly selected within a **25°F-wide seasonal
+window** (±12.5°F), constrained to at most **5°F above or below the previous day**.
+The yearly forecast also constrains December to meet the next January smoothly.
+Leap years have 366 daily values. Seasonal values and units can be tuned in
+`weather.js` without changing calendar or movement code.
+
+From 7 AM to 7 PM, temperature rises linearly by **10°F** above that morning's
+baseline. From 7 PM to the next 7 AM it falls linearly to the next day's morning
+baseline. Midnight is part of that continuous nighttime transition; it does not
+reset the temperature. Waiting, sleep, movement and calendar rollovers all use
+the same in-game clock. Opening dialogs and real-world waiting do not change it.
+
+A saved random seed fixes each playthrough's forecast; bounded runtime caches
+hold derived annual arrays without bloating saves or movement history. Older saves
+without a seed derive one from their existing character, so reloading before the
+next saved action does not reroll the forecast. Forecasts
+can be queried in any order without rerolling dates or breaking year boundaries.
+`attribute-effects.js` translates temperatures into player-facing sensations and
+updates on passage display and game-time changes. Raw values remain in simulation.

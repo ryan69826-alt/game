@@ -2630,3 +2630,49 @@ test('housing office clears the road and sidewalk and v5 saves follow its reloca
     assert.deepEqual(result.items,[{id:'office-kept',type:'cloth',x:0,y:0}]);assert.equal(result.old,undefined);assert.equal(result.gap,2);assert.equal(result.apartmentGap,2);
     assert.ok(result.curb.every(kind=>kind==='pavement'));assert.ok(result.street.every(kind=>kind==='road'));assert.equal(result.path,'path');assert.equal(result.door,'entrance');
 });
+
+
+test('i j and c toggle only their matching screens without advancing time or resuming held movement',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await page.clock.install();
+    for(const [key,name]of [['i','Inventory'],['j','Quests/Jobs'],['c','Character']]){
+        await page.keyboard.down('d');await page.keyboard.press(key);const dialog=page.getByRole('dialog',{name,exact:true});await dialog.waitFor({state:'visible'});
+        const paused=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
+        await page.keyboard.press(key==='c'?'j':'c');assert.ok(await dialog.isVisible());
+        await page.keyboard.press(key);await dialog.waitFor({state:'hidden'});await page.clock.runFor(600);await page.keyboard.up('d');
+        assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),paused);
+        await page.getByRole('navigation',{name:'Game pages'}).getByRole('button',{name,exact:true}).click();await page.keyboard.press(key);assert.equal(await page.getByRole('dialog').count(),0);
+    }
+    await page.keyboard.press('t');await page.keyboard.press('i');await page.keyboard.press('j');await page.keyboard.press('c');assert.ok(await page.getByRole('dialog',{name:'Actions',exact:true}).isVisible());
+});
+
+test('annual weather stays in seasonal 25-degree bands with five-degree daily limits across leap years and year boundaries',async()=>{
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;const failures=[];let comparisons=0;
+        for(const seed of [0,1,123456789,4294967295]){State.variables.weather={version:1,seed};
+            for(const year of [2026,2027,2028,2029]){const start=Date.UTC(year,0,1)/1000,values=setup.weather.yearForecast(year);let previous=setup.weather.yearForecast(year-1).at(-1);
+                for(let index=0;index<values.length;index++){const value=values[index],band=setup.weather.band(start+index*86400);if(!Number.isFinite(value)||value<band.min-1e-10||value>band.max+1e-10||Math.abs(value-previous)>5+1e-10)failures.push({year,index,value,previous,band});previous=value;comparisons++;}
+            }
+        }
+        State.variables.weather={version:1,seed:9876};const first=[...setup.weather.yearForecast(2026)];for(let y=2030;y<2040;y++)setup.weather.yearForecast(y);const again=setup.weather.yearForecast(2026);
+        return {failures,comparisons,leap:setup.weather.yearForecast(2028).length,normal:first.length,stable:first.every((value,index)=>value===again[index]),winter:setup.weather.band(Date.UTC(2026,0,15)/1000),summer:setup.weather.band(Date.UTC(2026,6,16)/1000),seed:State.variables.weather.seed};});
+    assert.deepEqual(result.failures,[]);assert.equal(result.comparisons,5844);assert.equal(result.leap,366);assert.equal(result.normal,365);assert.equal(result.stable,true);assert.equal(result.seed,9876);
+    assert.ok(Math.abs(result.winter.max-result.winter.min-25)<1e-10);assert.ok(result.summer.min>result.winter.max);
+});
+
+test('temperature reaches morning plus ten at 7 PM and interpolates continuously to the next 7 AM',async()=>{
+    const result=await page.evaluate(()=>{const weather=SugarCube.setup.weather;SugarCube.State.variables.weather={version:1,seed:12345};return [Date.UTC(2026,2,20),Date.UTC(2026,11,31),Date.UTC(2028,1,29)].map(ms=>{const day=ms/1000,base=weather.morning(day),next=weather.morning(day+86400);return {base,next,morning:weather.temperature(day+25200),afternoon:weather.temperature(day+46800),evening:weather.temperature(day+68400),midnight:weather.temperature(day+86400),nextMorning:weather.temperature(day+111600),beforeMidnight:weather.temperature(day+86400-1),beforeMorning:weather.temperature(day+111600-1),afterEvening:weather.temperature(day+68401)};});});
+    for(const day of result){assert.equal(day.morning,day.base);assert.equal(day.afternoon,day.base+5);assert.equal(day.evening,day.base+10);assert.equal(day.nextMorning,day.next);
+        assert.ok(Math.abs(day.midnight-(day.base+10+(day.next-day.base-10)*5/12))<1e-10);assert.ok(Math.abs(day.midnight-day.beforeMidnight)<.001);assert.ok(Math.abs(day.nextMorning-day.beforeMorning)<.001);assert.ok(day.afterEvening<day.evening);}
+});
+
+test('temperature sensations sit below Sounds, hide exact values, refresh with game time and persist through reloads',async()=>{
+    const seeded=await page.evaluate(()=>SugarCube.setup.weather.ensure().seed);await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const initial=await page.evaluate(()=>({seed:SugarCube.setup.weather.ensure().seed,temperature:SugarCube.setup.weather.temperature(),text:document.getElementById('attribute-effects').textContent}));assert.equal(initial.seed,seeded);
+    assert.ok(await page.locator('#attribute-effects').isVisible());assert.ok(await page.evaluate(()=>!!(document.querySelector('.room-sounds').compareDocumentPosition(document.querySelector('.attribute-feelings'))&Node.DOCUMENT_POSITION_FOLLOWING)));
+    assert.doesNotMatch(initial.text,/\d|°|fahrenheit|celsius/i);assert.match(initial.text,/You feel/);
+    await page.reload();await page.waitForSelector('#attribute-effects');assert.deepEqual(await page.evaluate(()=>({seed:SugarCube.setup.weather.ensure().seed,temperature:SugarCube.setup.weather.temperature(),text:document.getElementById('attribute-effects').textContent})),initial);
+    const moved=await page.evaluate(()=>{const before=SugarCube.setup.weather.temperature();SugarCube.setup.worldMovement.move(1,0);return {before,after:SugarCube.setup.weather.temperature(),text:document.getElementById('attribute-effects').textContent,expected:SugarCube.setup.attributeEffects.temperatureFeeling(SugarCube.setup.weather.temperature())};});assert.notEqual(moved.before,moved.after);assert.equal(moved.text,moved.expected);
+    await page.evaluate(()=>{delete SugarCube.State.variables.weather;SugarCube.Engine.play('Apartments');});await page.waitForSelector('#attribute-effects');
+    const migratedSeed=await page.evaluate(()=>SugarCube.setup.weather.ensure().seed);await page.reload();await page.waitForSelector('#attribute-effects');assert.equal(await page.evaluate(()=>SugarCube.setup.weather.ensure().seed),migratedSeed);
+    const descriptions=await page.evaluate(()=>[20,40,50,65,80,90,100].map(SugarCube.setup.attributeEffects.temperatureFeeling));assert.equal(new Set(descriptions).size,7);for(const text of descriptions)assert.doesNotMatch(text,/\d|°/);
+    await page.keyboard.press('t');await page.getByRole('button',{name:'Pass Time',exact:true}).click();assert.equal(await page.locator('#attribute-effects').textContent(),await page.evaluate(()=>SugarCube.setup.attributeEffects.temperatureFeeling(SugarCube.setup.weather.temperature())));
+});

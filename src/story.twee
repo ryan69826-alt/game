@@ -72,3 +72,6 @@ Neon Meridian
 <img class="character-source" id="long-hair-atlas" src="asset:characters/hair-layers.png" alt="">
 <img class="character-source" id="hair-atlas" src="asset:characters/hair-atlas.png" alt="">
 </div>
+
+:: StoryInit
+<<run setup.weather.ensure()>>

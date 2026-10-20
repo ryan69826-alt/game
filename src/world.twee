@@ -39,6 +39,7 @@
 :: Apartments [nobr world]
 <<set $worldStarted = true>>
 <<run setup.worldMovement.ensure()>>
+<<run setup.weather.ensure()>>
 <main class="world-content location-layout" aria-labelledby="location-title">
 <div class="location-story">
 
@@ -62,6 +63,7 @@
 <header class="world-heading"><p id="location-eyebrow" class="eyebrow">URBAN AREA · RESIDENTIAL</p><h1 id="location-title">Apartments</h1><p id="location-subtitle" class="world-subtitle">A small corner of the city.</p></header>
 <section class="location-description" aria-label="Location description"><p id="location-description"></p><p id="housing-summary" class="world-note"></p></section>
 <section class="room-sounds" aria-labelledby="sounds-title"><h2 id="sounds-title">Sounds</h2><p id="room-sounds"></p></section>
+<section class="attribute-feelings" aria-labelledby="feelings-title"><h2 id="feelings-title">How you feel</h2><p id="attribute-effects"></p></section>
 
 
 </div>
