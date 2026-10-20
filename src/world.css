@@ -164,8 +164,8 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 
 /* Inventory: carried storage / full-body portrait / equipment, in body order. */
 #ui-dialog:has(#ui-dialog-body.inventory-window){max-width:calc(100vw - 24px)}
-#ui-dialog-body.inventory-window{width:min(1180px,calc(100vw - 24px));max-height:calc(100dvh - 100px);padding:18px}
-.inventory-shell{display:grid;grid-template-columns:minmax(230px,.9fr) minmax(250px,1fr) minmax(290px,1fr);gap:20px;align-items:start}
+#ui-dialog-body.inventory-window{width:min(1320px,calc(100vw - 24px));max-height:calc(100dvh - 100px);padding:18px}
+.inventory-shell{display:grid;grid-template-columns:minmax(210px,1fr) minmax(240px,1.1fr) minmax(175px,.75fr) minmax(260px,1fr);gap:16px;align-items:start}
 .inventory-storage,.inventory-portrait,.inventory-shell>.equipment-panel{min-width:0}
 .inventory-layout{grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
 .inventory-portrait{position:sticky;top:0;margin:0;padding:12px 6px;border:1px solid var(--line);background:radial-gradient(ellipse at center,#2a403b,#142426 70%);text-align:center}
@@ -179,14 +179,17 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 .equipment-slot strong{font-size:.65rem;margin-bottom:3px}
 .equipment-slot>span{color:var(--muted);font-size:.6rem}
 .equipment-slot .inventory-item{min-height:25px;font-size:.63rem;padding:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.inventory-storage>.ground-drop{margin-top:0;font-size:.75rem}
+.inventory-portrait>.ground-drop{font-size:.75rem}
+.inventory-portrait .world-note{font-size:.65rem;line-height:1.5;margin:10px 0}
+.inventory-carried .pocket-group{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.inventory-carried>h2{font-size:.85rem;color:var(--accent);margin:0 0 8px}
 .augmentation-panel{margin-top:12px;padding-top:7px;border-top:1px solid var(--line)}
 .augmentation-slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
 .augmentation-slot{min-width:0;text-align:center;font-size:.55rem;color:var(--muted)}
 .augmentation-slot button{display:block;width:100%;height:42px;margin:0 0 4px;border:1px dashed #526b62;background:#122322;color:#8fa69e;font-size:.85rem;opacity:1;cursor:default}
 .augmentation-slot:first-child button{border-style:solid;color:#b9daca;background:#233b33}
-@media(max-width:900px){.inventory-shell{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.inventory-portrait{position:static;grid-column:2;grid-row:1}.inventory-storage{grid-column:1;grid-row:1}.inventory-shell>.equipment-panel{grid-column:1/-1}.inventory-character-canvas{max-height:440px}.equipment-slots{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:520px){#ui-dialog-body.inventory-window{padding:12px}.inventory-shell{display:flex;flex-direction:column;gap:14px}.inventory-portrait{order:0;width:100%;box-sizing:border-box}.inventory-storage{order:1;width:100%}.inventory-shell>.equipment-panel{order:2;width:100%;box-sizing:border-box}.inventory-character-canvas{height:360px;max-height:55dvh;width:100%}.equipment-slots{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1100px){.inventory-shell{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.inventory-portrait{position:static;grid-column:2;grid-row:1}.inventory-shell>.inventory-storage{grid-column:1;grid-row:1}.inventory-shell>.inventory-carried{grid-column:1;grid-row:2}.inventory-shell>.equipment-panel{grid-column:2;grid-row:2}.inventory-character-canvas{max-height:440px}.equipment-slots{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){#ui-dialog-body.inventory-window{padding:12px}.inventory-shell{display:flex;flex-direction:column;gap:14px}.inventory-portrait{order:0;width:100%;box-sizing:border-box}.inventory-storage{order:1;width:100%}.inventory-carried{order:2}.inventory-shell>.equipment-panel{order:3;width:100%;box-sizing:border-box}.inventory-character-canvas{height:360px;max-height:55dvh;width:100%}.equipment-slots{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .inventory-storage .inventory-column h2{margin:8px 0;font-size:.9rem}
 .inventory-storage .world-note{font-size:.7rem;line-height:1.5;margin:7px 0 10px}
 .inventory-storage .inventory-container{margin-bottom:12px}
@@ -199,3 +202,8 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 .inventory-item:has(.inventory-item-slot){display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
 .inventory-item-name{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .inventory-item-slot{display:block;max-width:100%;font-size:9px;line-height:1.15;letter-spacing:.02em;color:#e1e9e4;white-space:nowrap}
+
+.sidebar-nav a{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.sidebar-shortcut{margin-left:auto;color:var(--muted);font-size:.75em;white-space:nowrap}
+.inventory-character-canvas.drop-valid{outline:2px solid #9ae3bb;outline-offset:2px}
+.inventory-character-canvas.drop-invalid{outline:2px solid #df9989;outline-offset:2px}

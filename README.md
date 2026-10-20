@@ -38,6 +38,10 @@ live in `character-rules.js`; grouping does not change save keys, XP or progress
 The old generic Combat skill has been removed; Athleticism retains its own XP.
 
 Start at Apartments locks creation. The sidebar shows the same full-body sprite.
+The sidebar lists Inventory **[i]**, Quests/Jobs, Character **[c]**, then Stats.
+Press **I** for Inventory or **C** for the read-only character sheet; shortcuts
+ignore typing, held-key repeats, browser modifiers and open dialogs, and pause
+held movement when opening a window. Quests/Jobs has empty quest and job sections.
 Character and Stats are read-only windows over the map; Inventory is also a
 window. Escape, close button, or backdrop closes them. Character creation cannot
 be reopened after starting. Use a private browser window to review a fresh creator
@@ -343,8 +347,10 @@ elapsed game seconds persist through reloads, Continue, and disk saves.
 
 ## Removable clothing and ground items
 
-On desktop, Inventory has three columns: reachable storage on the left, a larger
-full-body character view in the center, and equipment on the right. The portrait
+On desktop, Inventory has four columns: nearby storage and ground items on the
+left, a larger full-body character view, carried pockets/bags, then equipment on
+the right. The Drop on ground button sits below the character (Drop to cabin
+floor while seated). The portrait
 updates after clothing changes and uses the same crisp artwork as the sidebar.
 Narrow screens stack the panels without horizontal scrolling.
 
@@ -367,7 +373,8 @@ storage and ground grids; the label also stays visible on its drag preview.
 Inventory shows draggable equipment slots. Drag a garment to reachable storage,
 another garment's bag, or **Drop on ground**; select then choose a block/drop
 button as a keyboard/touch alternative. Drag a stored garment onto an empty
-matching slot or select **Wear**. Remove the existing garment in that slot first.
+matching slot, drop it onto the center character to use its matching empty
+slot automatically, or select **Wear**. Remove the existing garment in that slot first.
 Removing/equipping items takes no game time and refreshes the sidebar sprite.
 
 Shirts and pants occupy 2×2 blocks folded, shoes 2×1, and backpacks 2×3. Each

@@ -25,10 +25,12 @@ setup.inventoryUI = (() => {
             const status = document.createElement('p');status.id = 'inventory-status';status.className = 'world-note';
             status.setAttribute('role', 'status');status.textContent = message;root.append(status);
             const shell=document.createElement('div');shell.className='inventory-shell';root.append(shell);
-            const storage=document.createElement('section');storage.className='inventory-storage';storage.setAttribute('aria-label','Inventory storage');
+            const storage=document.createElement('section');storage.className='inventory-storage';storage.setAttribute('aria-label','Nearby storage and ground');
             const portrait=document.createElement('figure');portrait.className='inventory-portrait';
             const portraitTitle=document.createElement('figcaption');portraitTitle.textContent='Your character';
-            const canvas=document.createElement('canvas');canvas.className='inventory-character-canvas';canvas.setAttribute('role','img');portrait.append(portraitTitle,canvas);
+            const canvas=document.createElement('canvas');canvas.className='inventory-character-canvas';canvas.dataset.characterEquip='true';canvas.setAttribute('role','img');
+            const equipHint=document.createElement('p');equipHint.className='world-note';equipHint.textContent='Drop clothing onto your character to wear it in an empty slot.';
+            portrait.append(portraitTitle,canvas,equipHint);
             shell.append(storage,portrait);
             const equipment=document.createElement('section');equipment.className='equipment-panel';
             const equipmentTitle=document.createElement('h2');equipmentTitle.textContent='Equipped clothing';equipment.append(equipmentTitle);
@@ -63,7 +65,7 @@ setup.inventoryUI = (() => {
             const drop=document.createElement('button');drop.type='button';drop.dataset.groundDrop='true';drop.className='ground-drop';
             drop.textContent=setup.vehicleCabin.current()?'Drop to cabin floor':'Drop on ground';
             drop.addEventListener('click',()=>{if(drag.ignoreClick()) return;if(!selected){message='Select or drag an item or equipped garment first.';render();return;}const result=setup.equipment.drop(selected.container,selected.id,externalId);message=result.message;if(result.ok)selected=null;render();});
-            storage.append(drop);shell.append(equipment);
+            portrait.append(drop);shell.append(equipment);
             const source=selected&&!selected.container.startsWith('equipped:')&&inventory.accessible(externalId)?.find(container=>container.id===selected.container);
             const garment=source&&inventory.placements(source).find(item=>item.id===selected.id&&setup.equipment.slotFor(item.type));
             if(garment) {
@@ -144,7 +146,7 @@ setup.inventoryUI = (() => {
                     drawContainer(container,column);
                 }
             }
-            const player = document.createElement('div');player.className = 'inventory-column';layout.append(player);
+            const player = document.createElement('section');player.className = 'inventory-column inventory-carried inventory-storage';player.setAttribute('aria-label','Player inventory');shell.insertBefore(player,equipment);
             const heading = document.createElement('h2');heading.textContent = 'Worn storage';player.append(heading);
             const equipped = document.createElement('p');equipped.className = 'world-note';
             equipped.textContent = 'Wearing: ' + setup.clothing.summary(State.variables.character);player.append(equipped);
@@ -161,7 +163,8 @@ setup.inventoryUI = (() => {
             }
             for(const container of worn.filter(container=>container.id==='worn:backpack')) drawContainer(container,player);
             const ground=setup.groundItems.current();
-            if(ground&&ground.id!==inventory.external(externalId)?.id&&inventory.placements(ground).length) drawContainer(ground,player);
+            if(ground&&ground.id!==inventory.external(externalId)?.id&&inventory.placements(ground).length) drawContainer(ground,layout);
+            if(!layout.childElementCount){const empty=document.createElement('p');empty.className='world-note';empty.textContent='No items on the ground here.';layout.append(empty);}
             refreshPortrait();
             if (!worn.length) {
                 const empty = document.createElement('p');empty.className = 'world-note';empty.textContent = 'No carrying space. You have no pockets or bags equipped.';player.append(empty);

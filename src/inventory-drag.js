@@ -14,6 +14,11 @@ setup.inventoryDrag = (() => {
         function destination(event) {
             const node=document.elementFromPoint(event.clientX,event.clientY);
             const item=active.from.startsWith('equipped:')?setup.equipment.preview(active.from.slice(9)):setup.inventory.placements({id:active.from}).find(item=>item.id===active.id);
+            const character=node?.closest('[data-character-equip]');
+            if(character&&root.contains(character)) {
+                const slot=item&&setup.equipment.slotFor(item.type);
+                return {grid:character,kind:'equip',valid:!!slot&&!active.from.startsWith('equipped:')&&State.variables.character.clothing[slot]==='none'};
+            }
             const equip=node?.closest('[data-equip-slot]');
             if(equip&&root.contains(equip)) return {grid:equip,kind:'equip',valid:!!item&&!active.from.startsWith('equipped:')&&setup.equipment.slotFor(item.type)===equip.dataset.equipSlot&&State.variables.character.clothing[equip.dataset.equipSlot]==='none'};
             const map=document.getElementById('local-map'),bounds=map?.getBoundingClientRect();

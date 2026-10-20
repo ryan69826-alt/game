@@ -4,6 +4,8 @@ $(document).on(':passagedisplay', () => {
     const character = State.variables.character;
     setup.characterDisplay.mount(character);
     for (const link of document.querySelectorAll('.sidebar-nav a')) {
+        const shortcut=link.querySelector('[data-shortcut]');
+        if(shortcut) link.setAttribute('aria-keyshortcuts',shortcut.dataset.shortcut);
         if (link.dataset.passage === State.passage) link.setAttribute('aria-current', 'page');
     }
 });
@@ -54,9 +56,10 @@ setup.worldWindows = (() => {
         }
     }
     function open(name) {
-        if (!["Character", "Stats"].includes(name) || !document.querySelector(".world-sidebar")) return;
+        const sheets={Character:'CharacterSheet',Stats:'StatsSheet','Quests/Jobs':'QuestsJobsSheet'};
+        if (!Object.hasOwn(sheets,name) || !document.querySelector(".world-sidebar")) return;
         Dialog.setup(name, "character-window");
-        Dialog.wiki(Story.get(`${name}Sheet`).processText());
+        Dialog.wiki(Story.get(sheets[name]).processText());
         populate(Dialog.body(), State.variables.character);
         Dialog.open();
     }
@@ -71,3 +74,12 @@ $(document).on('keydown.characterWindow', event => {
 });
 
 $(document).on(':equipmentchange',()=>{if(document.querySelector('.world-sidebar')) setup.characterDisplay.mount(State.variables.character);});
+
+/* World shortcuts never replace a dialog or intercept typing/browser shortcuts. */
+$(document).on('keydown.sidebarShortcuts',event=>{
+    const key=event.key.toLowerCase();
+    if(!['i','c'].includes(key)||event.repeat||event.originalEvent?.repeat||event.ctrlKey||event.altKey||event.metaKey||Dialog.isOpen()||
+        event.target.closest('input,select,textarea,[contenteditable="true"]')||!document.querySelector('.world-sidebar'))return;
+    event.preventDefault();
+    if(key==='i')setup.inventoryUI.open();else setup.worldWindows.open('Character');
+});

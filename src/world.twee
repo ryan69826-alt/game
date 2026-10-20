@@ -25,8 +25,9 @@
 <div><span>Fatigue</span><output id="player-fatigue"></output></div>
 </div>
 <nav class="sidebar-nav" aria-label="Game pages">
-<<link "Character">><<run setup.worldWindows.open("Character")>><</link>>
-<<link "Inventory">><<run setup.inventoryUI.open()>><</link>>
+<<link 'Inventory <span class="sidebar-shortcut" data-shortcut="i" aria-hidden="true">[i]</span>'>><<run setup.inventoryUI.open()>><</link>>
+<<link "Quests/Jobs">><<run setup.worldWindows.open("Quests/Jobs")>><</link>>
+<<link 'Character <span class="sidebar-shortcut" data-shortcut="c" aria-hidden="true">[c]</span>'>><<run setup.worldWindows.open("Character")>><</link>>
 <<link "Stats">><<run setup.worldWindows.open("Stats")>><</link>>
 </nav>
 <div class="sidebar-utilities">
@@ -87,6 +88,12 @@
 <section class="world-panel" aria-labelledby="vitals-title"><h2 id="vitals-title">Vitals & money</h2><dl id="player-stats" class="character-details"></dl></section>
 <section class="world-panel" aria-labelledby="skills-title"><h2 id="skills-title">Skills</h2><p class="world-note">Levels range from 0 (untrained) to 10. XP shown is progress toward the next level.</p><div id="world-skills" class="world-skills"></div></section>
 <p class="world-note">Additional character stats and trait effects have not been defined yet.</p>
+</div>
+
+:: QuestsJobsSheet [nobr]
+<div class="character-window-content">
+<section class="world-panel"><h2>Quests</h2><p class="world-note">No active quests.</p></section>
+<section class="world-panel"><h2>Jobs</h2><p class="world-note">No current jobs.</p></section>
 </div>
 
 :: Character [nobr]

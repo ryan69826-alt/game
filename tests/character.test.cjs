@@ -1136,7 +1136,7 @@ test('money and health are persistent sidebar stats, with safe transactions and 
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     assert.equal(await page.locator('#player-money').textContent(),'$99,999');assert.equal(await page.locator('#player-health').textContent(),'100 / 100');
     const nav=page.getByRole('navigation',{name:'Game pages'});assert.equal(await nav.getByRole('link',{name:'Apartments',exact:true}).count(),0);
-    assert.deepEqual(await nav.locator('a').allTextContents(),['Character','Inventory','Stats']);
+    assert.deepEqual(await nav.locator('a').allTextContents(),['Inventory [i]','Quests/Jobs','Character [c]','Stats']);
     const changes=await page.evaluate(()=>{
         const {setup,State}=SugarCube;
         const rejects=[setup.playerState.spend(-1),setup.playerState.spend(100000),setup.playerState.changeMoney(.5),setup.playerState.changeHealth(NaN)];
@@ -2540,12 +2540,12 @@ test('casino and hotel doors connect both alleys while casino grows and tattoo p
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),0);
 });
 
-test('inventory places storage left, a larger live character in the center and all body slots on the right',async()=>{
+test('inventory separates nearby items, live character, carried inventory and body slots',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await page.getByRole('button',{name:'Inventory',exact:true}).click();
     const dialog=page.getByRole('dialog',{name:'Inventory',exact:true});
     const labels=await dialog.locator('.equipment-slot>strong').allTextContents();assert.deepEqual(labels,['Hat','Face Wear','Over Top','Top','Under Top','Waist','Wrists','Hands','Bottom','Under Bottom','Ankles','Feet','Shoes','Back','Handheld']);
-    const layout=await page.evaluate(()=>{const b=selector=>document.querySelector(selector).getBoundingClientRect();return{left:b('.inventory-storage').x,center:b('.inventory-portrait').x,right:b('.equipment-panel').x,portrait:b('.inventory-character-canvas').width,sidebar:b('.sidebar-character #character-canvas').width};});
-    assert.ok(layout.left<layout.center&&layout.center<layout.right);assert.ok(layout.portrait>layout.sidebar);
+    const layout=await page.evaluate(()=>{const b=selector=>document.querySelector(selector).getBoundingClientRect();return{left:b('.inventory-storage').x,center:b('.inventory-portrait').x,carried:b('.inventory-carried').x,right:b('.equipment-panel').x,drop:b('.ground-drop').top,portraitBottom:b('.inventory-character-canvas').bottom,portrait:b('.inventory-character-canvas').width,sidebar:b('.sidebar-character #character-canvas').width};});
+    assert.ok(layout.left<layout.center&&layout.center<layout.carried&&layout.carried<layout.right);assert.ok(layout.drop>layout.portraitBottom);assert.ok(layout.portrait>layout.sidebar);
     const portrait=()=>dialog.locator('.inventory-character-canvas').evaluate(c=>c.toDataURL());assert.equal(await portrait(),await image());const before=await portrait();
     await dialog.getByRole('button',{name:'Equipped Generic shirt',exact:true}).click();await dialog.getByRole('button',{name:'Drop on ground',exact:true}).click();
     assert.notEqual(await portrait(),before);assert.equal(await portrait(),await image());assert.equal(await dialog.locator('[data-equip-slot="top"] .inventory-item').count(),0);assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.top),'none');
@@ -2571,4 +2571,45 @@ test('compact Apartments preserves old parked-car seating and ground items and s
         State.variables.world={version:4,mapId:'apartments',x:30,y:23,elapsedSeconds:321};const park=structuredClone(setup.worldMovement.ensure()),map=setup.worldMaps.apartments;
         return {world,unchanged,seated,items,park,ends:[3,9].every(x=>[70,71,72,73].every(y=>map.tileAt(x,y).kind==='ground')),distance:map.roads.horizontal.y-(map.buildings[2].y+map.buildings[2].height)};});
     assert.deepEqual(result.world,{version:5,mapId:'apartments',x:79,y:49,elapsedSeconds:321});assert.deepEqual(result.unchanged,result.world);assert.equal(result.seated,true);assert.deepEqual(result.items,[{id:'kept-at-car',type:'cloth',x:0,y:0}]);assert.deepEqual(result.park,{version:5,mapId:'apartments',x:30,y:33,elapsedSeconds:321});assert.equal(result.ends,true);assert.equal(result.distance,8);
+});
+
+
+test('sidebar shortcuts open inventory and character, preserve typing and pause movement; Quests/Jobs overlays the world',async()=>{
+    await page.keyboard.press('i');assert.equal(await page.getByRole('dialog').count(),0);
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const nav=page.getByRole('navigation',{name:'Game pages'});
+    assert.deepEqual(await nav.locator('a').allTextContents(),['Inventory [i]','Quests/Jobs','Character [c]','Stats']);
+    assert.equal(await nav.getByRole('button',{name:'Inventory',exact:true}).getAttribute('aria-keyshortcuts'),'i');
+    assert.equal(await nav.getByRole('button',{name:'Character',exact:true}).getAttribute('aria-keyshortcuts'),'c');
+    await page.clock.install();await page.keyboard.down('d');await page.keyboard.press('i');
+    const inventory=page.getByRole('dialog',{name:'Inventory',exact:true});await inventory.waitFor({state:'visible'});
+    const paused=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));await page.clock.runFor(800);
+    assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),paused);await page.keyboard.up('d');
+    await page.keyboard.press('c');assert.ok(await inventory.isVisible());await page.keyboard.press('Escape');await page.keyboard.press('C');
+    assert.ok(await page.getByRole('dialog',{name:'Character',exact:true}).isVisible());await page.keyboard.press('Escape');
+    await nav.getByRole('button',{name:'Quests/Jobs',exact:true}).click();const quests=page.getByRole('dialog',{name:'Quests/Jobs',exact:true});
+    assert.match(await quests.textContent(),/No active quests/);assert.match(await quests.textContent(),/No current jobs/);assert.ok(await page.locator('#local-map').isVisible());
+    await page.keyboard.press('Escape');
+    await page.evaluate(()=>{const input=document.createElement('input');input.id='shortcut-typing-check';document.querySelector('.world-content').append(input);input.focus();});
+    await page.keyboard.type('ic');assert.equal(await page.locator('#shortcut-typing-check').inputValue(),'ic');assert.equal(await page.getByRole('dialog').count(),0);
+    await page.evaluate(()=>{document.getElementById('shortcut-typing-check').remove();for(const options of [{key:'i',ctrlKey:true},{key:'c',altKey:true},{key:'i',metaKey:true},{key:'i',repeat:true}])document.body.dispatchEvent(new KeyboardEvent('keydown',{...options,bubbles:true}));});
+    assert.equal(await page.getByRole('dialog').count(),0);assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),paused);
+});
+
+test('dragging ground clothing onto the character equips an empty slot with its contents and rejects occupied slots and other items',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const groundId=await page.evaluate(()=>{const {setup}=SugarCube;setup.inventory.ensure().containers['worn:shirt']=[{id:'portrait-kept-key',type:'apartmentKey',x:0,y:0}];
+        setup.equipment.drop('equipped:top','equipped:top');const ground=setup.groundItems.current();setup.inventory.ensure().containers[ground.id].push({id:'spare-shirt',type:'shirt',x:3,y:0,pockets:{}},{id:'not-clothing',type:'water',x:6,y:0});return ground.id;});
+    await page.keyboard.press('i');const dialog=page.getByRole('dialog',{name:'Inventory',exact:true});await dialog.waitFor({state:'visible'});
+    async function drag(id,valid){const item=dialog.locator(`[data-storage-id="${groundId}"] [data-item="${id}"]`);await item.scrollIntoViewIfNeeded();const from=await item.boundingBox(),to=await dialog.locator('.inventory-character-canvas').boundingBox();
+        await page.mouse.move(from.x+8,from.y+8);await page.mouse.down();await page.mouse.move(to.x+to.width/2,to.y+to.height/2,{steps:10});
+        assert.equal(await page.locator('.inventory-drag-ghost').getAttribute('data-valid'),String(valid));await page.mouse.up();}
+    const shirtId=await page.evaluate(id=>SugarCube.setup.inventory.placements({id})[0].id,groundId);await drag(shirtId,true);
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.top),'shirt');
+    assert.equal(await page.evaluate(()=>SugarCube.setup.inventory.placements({id:'worn:shirt'})[0].id),'portrait-kept-key');
+    assert.equal(await dialog.locator(`[data-storage-id="${groundId}"] [data-item="${shirtId}"]`).count(),0);
+    const before=await page.evaluate(()=>JSON.stringify({clothing:SugarCube.State.variables.character.clothing,inventory:SugarCube.State.variables.inventory}));
+    await drag('spare-shirt',false);assert.match(await dialog.locator('#inventory-status').textContent(),/empty matching clothing slot/);
+    await drag('not-clothing',false);assert.equal(await page.evaluate(()=>JSON.stringify({clothing:SugarCube.State.variables.character.clothing,inventory:SugarCube.State.variables.inventory})),before);
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),0);
 });
