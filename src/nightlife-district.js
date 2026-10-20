@@ -20,10 +20,17 @@ setup.nightlifeDistrict=()=>{
     const backAlley={x:6,y:6,width:84,height:4};
     const outdoorDoors=venues.map(venue=>({id:`${venue.id}:entrance`,kind:'door',name:`${venue.name} entrance`,...venue.door,
         lockId:`${venue.id}:front`,lockLevel:1,destination:{mapId:venue.id,...venue.spawn},description:`The ${venue.name.toLowerCase()} entrance faces ${venue.facing==='south'?'the street':'the alley'}.`}));
+    const nightclubAlleys=[
+        {id:'e1-nightclub:west',name:'Nightclub west alley entrance',door:{x:34,y:37},approach:{x:33,y:37},spawn:{x:2,y:7},exit:{x:0,y:7}},
+        {id:'e1-nightclub:east',name:'Nightclub east alley entrance',door:{x:61,y:37},approach:{x:62,y:37},spawn:{x:15,y:7},exit:{x:17,y:7}}
+    ];
+    for(const entrance of nightclubAlleys)outdoorDoors.push({id:entrance.id,kind:'door',name:entrance.name,...entrance.door,lockId:entrance.id,lockLevel:1,
+        destination:{mapId:'e1-nightclub',...entrance.spawn},description:'An alley entrance leads into the nightclub.'});
     function tileAt(x,y) {
         const tile=(kind,label,walkable=true)=>({kind,label,walkable});
         if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=width||y>=height)return tile('boundary','Edge of the area',false);
-        for(const venue of venues){if(x===venue.door.x&&y===venue.door.y)return tile('entrance',`${venue.name} entrance`);if(inside(x,y,venue))return tile('building',venue.name,false);}
+        const entrance=outdoorDoors.find(door=>door.x===x&&door.y===y);if(entrance)return tile('entrance',entrance.name);
+        for(const venue of venues)if(inside(x,y,venue))return tile('building',venue.name,false);
         if(y===5&&x>=5&&x<=90||(x===5||x===90)&&y>=6&&y<=41)return tile('fence','Service boundary fence',false);
         if(y>=44&&y<=48)return tile('road','Nightlife district road');
         if(inside(x,y,backAlley))return tile('alley','Back alley');
@@ -51,8 +58,8 @@ setup.nightlifeDistrict=()=>{
         }
     }
     function stairs(id,name,x,y,destination,label) {
-        return {id,kind:'stairs',name,x,y,width:2,height:2,description:'A stairway connects the small club and the underground club.',
-            actions:[{id:'travel',label,result:()=>setup.worldTravel.enter({destination})}]};
+        const portal={id,kind:'stairs',name,x,y,width:2,height:2,destination,description:'A stairway connects the small club and the underground club.'};
+        portal.actions=[{id:'travel',label,result:()=>setup.worldTravel.enter({destination:portal.destination})}];return portal;
     }
     function interior(id,name,style,spawn,portals) {
         const furniture=furnishings(style),stairways=portals.filter(object=>object.kind==='stairs');
@@ -78,6 +85,7 @@ setup.nightlifeDistrict=()=>{
         const exit={id:`${venue.id}:exit`,kind:'door',name:'Exit to Nightlife',...venue.exit,exit:true,lockId:`${venue.id}:front`,lockLevel:1,
             destination:{mapId:'e1',...venue.approach},description:'The entrance leads back to the nightlife district.'};
         const portals=[exit];
+        if(venue.style==='nightclub')for(const entrance of nightclubAlleys)portals.push({id:`${entrance.id}:exit`,kind:'door',name:`Exit to ${entrance.id.endsWith('west')?'west':'east'} alley`,...entrance.exit,exit:true,lockId:entrance.id,lockLevel:1,destination:{mapId:'e1',...entrance.approach},description:'An alley doorway leads outside.'});
         if(venue.style==='small-club')portals.push(stairs('e1-stairs-down','Stairs to underground club',13,10,{mapId:'e1-underground-club',x:3,y:4},'Go downstairs'));
         interior(venue.id,venue.name,venue.style,venue.spawn,portals);
     }

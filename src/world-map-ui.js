@@ -7,14 +7,14 @@
         if (!local) return;
         const overview = document.getElementById('world-map');
         const map = setup.worldMaps[setup.worldMovement.ensure().mapId];
-        if(map.interior) {local.width=map.width*16;local.height=map.height*16;}
+        if(map.interior){local.width=Math.min(26,map.width)*16;local.height=Math.min(40,map.height)*16;}
         local.style.setProperty('--map-aspect',local.width/local.height);
         document.getElementById('location-title').textContent=map.name;
         document.getElementById('location-subtitle').textContent=map.subtitle;
         document.getElementById('location-description').textContent=map.description;
         document.getElementById('location-eyebrow').textContent=map.eyebrow||(map.interior?'RESIDENTIAL · SINGLE FLOOR':'URBAN AREA · RESIDENTIAL');
         document.getElementById('local-map-title').textContent=`${map.name.toUpperCase()} · ${map.width} × ${map.height}`;
-        document.getElementById('map-camera-note').textContent=map.interior?'Single floor':'Scrolls as you move';
+        document.getElementById('map-camera-note').textContent=map.interior?'Interior · Scrolls as needed':'Scrolls as you move';
         if(map.interior||map.legend) {
             const legend=document.getElementById('local-map-legend');legend.replaceChildren();
             for(const [name,color] of (map.legend||[['Door','#dfb777'],['Furniture','#907451'],...(map.id==='housing-office'?[['NPC','#9cd7ea']]:[])])) {
@@ -204,7 +204,6 @@
             step(x - world.x, y - world.y);
         });
         function resizeLocal() {
-            if(map.interior) return;
             const viewport=local.parentElement.getBoundingClientRect();
             if(!viewport.width||!viewport.height) return;
             const next=Math.max(10,Math.min(map.height,Math.floor(viewport.height*columns/viewport.width)));

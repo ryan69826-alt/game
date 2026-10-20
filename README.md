@@ -300,7 +300,7 @@ placements persist through movement, reload, menu/Continue and disk saves.
 
 ## World and movement
 
-Apartments is a 50×50 grid: four buildings face a park, a parking lot has edge and
+Apartments is a 70×74 grid: four buildings face a park, a parking lot has edge and
 median bays, and two five-square-wide roads meet at the south edge. Cars occupy
 2×2 squares. A continuous sidewalk surrounds the park and connects each entrance.
 Doors are walkable thresholds; buildings, cars, trees, and medians block movement.
@@ -353,10 +353,32 @@ The existing inventory/drag modules handle packing, pointer cancellation and
 reachable storage consistently. Drops outside storage/drop zones are cancelled;
 dragging onto the visible local map drops at the player's feet.
 
+## Building proportions and developer tools
+
+Every accessible building uses an interior grid 1.5 times its exterior width
+and height, rounded up. `interior-sizing.js` expands floor space and wall layout
+while keeping furniture, people and door thresholds at their normal tile sizes.
+Large interiors scroll around the player. The nightclub is 42×15 inside its
+28×10 footprint; each 12×12 house is 18×18 inside. Apartment exteriors have grown
+to preserve their six-unit layouts: 17×20 or 20×17 outside, 26×30 or 30×26 inside.
+The courtyard, office and parking connections accommodate these larger buildings.
+
+World save version 3 migrates previous player positions, seated positions and
+ground containers to the changed layouts once. Object IDs, locks, keys, leases,
+item contents, money and elapsed time remain attached to their existing records.
+New building definitions should supply an exterior footprint and register before
+`setup.interiorSizing.apply()` in `world-map-data.js`.
+
+Press **P** while playing to open Developer tools over the world. **Max out all
+stats** sets all 18 skills to level 10, restores health, clears tiredness/fatigue
+and endurance usage, and gives at least $999,999,999. Endurance capacity becomes
+300 through its existing skill rule. Creator XP allocations remain intact;
+these changes persist in saves and cost no game time. Escape closes the window.
+
 ## Low Density Housing (A1)
 
 Walk west beyond B1 to enter A1 and east to return. The 100×90 local map shares
-road rows 44–48 with B1/C1. Five modest houses stand north of the road and four
+road rows 44–48 with B1 (aligned with C1 rows 64–68). Five modest houses stand north of the road and four
 south, with entrances facing the street. The road retains five driving squares
 and adds two-square curb parking strips on each side, plus sidewalks. Its western
 end is a turning cul-de-sac with a surrounding sidewalk, rather than a road off
@@ -365,8 +387,8 @@ Car identities and contents survive relocation of the former westernmost bay. Lo
 and east/west-facing cars represent parallel parking; existing vehicle locks,
 side/rear interactions, separate inventories and cabin behavior still apply.
 
-All nine houses have enterable 13×12 floor plans, modestly larger than the
-9×8 apartment studios: a bedroom, side room, combined living/dining room and
+All nine 12×12 houses have enterable 18×18 floor plans, larger than the
+apartment studios: a bedroom, side room, combined living/dining room and
 bathroom. North-facing houses rotate the complete plan and bed artwork by 180°.
 Bedroom, side-room and bathroom doors hide their room until the player enters or
 stands beside its open door. Room descriptions, sounds, sleeping and dropped-item
@@ -384,8 +406,8 @@ ownership are not implemented. Existing apartment listings are unchanged.
 Walking west beyond any open tile on the Apartments west edge enters B1;
 walking east beyond B1 returns. Crossing counts as one ordinary walking/sprint
 step (5/2 game seconds), including endurance and billing, with no interaction
-menu. This connection preserves the exact north–south coordinate across both edges;
-B1 is 70×90, extending south of the road while Apartments remains 50×50.
+menu. The connection uses a 20-row offset: C1 rows 64–68 align with B1 rows
+44–48. B1 is 70×90, extending south of the road; Apartments is 70×74.
 The warehouses and mechanic stand south of the road. B1 rows beyond the
 Apartments boundary have no eastward exit; they cannot warp back into C1.
 Other map connections may use explicit coordinate offsets or proportional alignment.
@@ -452,6 +474,9 @@ west, hotel/casino/nightclub in the middle, and small club/tattoo parlor to the
 east. Colored sign borders and entrance strips identify each venue. Street
 sidewalks continue across the district boundary; other region exits stay closed
 until neighboring areas are built.
+
+The nightclub has its street entrance plus a door on each alley. Each pairs with
+an interior exit and shares its own lock/open state with that exit.
 
 All seven venues have explorable, simply furnished interiors. The front doors
 start unlocked, use the existing Open/Close and Enter/Exit interactions, and
@@ -558,7 +583,7 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
 Old character saves migrate to Medium with shirt/pants/shoes and no backpack;
 other valid selections, traits and XP remain. Removed height/composition fields
 are discarded. Invalid traits are filtered; imported XP is rounded down and capped
-to 250 in skill order. `$world` stores only map ID, position and elapsed seconds (v2). `$openedObjects`
+to 250 in skill order. `$world` stores only map ID, position and elapsed seconds (v3). `$openedObjects`
 stores open/closed flags; `$doorLocks` stores shared lock states, `$endurance`
 stores breath/counters, `$vehicleSeat` stores the seated car and exit anchor,
 `$vehicleContents` stores cabin cash, and `$skillXp` stores earned XP independently of character creation.
