@@ -639,7 +639,7 @@ test('interaction reach uses door squares and full car footprints, excluding dia
             doorAdjacent:has('apartment-door-1',32,24),doorOn:has('apartment-door-1',32,23),doorDiagonal:has('apartment-door-1',33,24),
             carLeft:has('parked-car-1',76,48),carRight:has('parked-car-1',79,49),carBelow:has('parked-car-1',78,50),carDiagonal:has('parked-car-1',79,50)};
     });
-    assert.deepEqual(reach,{count:13,unique:13,doorAdjacent:true,doorOn:true,doorDiagonal:false,carLeft:true,carRight:true,carBelow:true,carDiagonal:false});
+    assert.deepEqual(reach,{count:17,unique:17,doorAdjacent:true,doorOn:true,doorDiagonal:false,carLeft:true,carRight:true,carBelow:true,carDiagonal:false});
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     assert.ok(await page.getByRole('button',{name:'Interact [E]',exact:true}).isDisabled());
     await page.keyboard.press('e');assert.equal(await page.getByRole('dialog').count(),0);
