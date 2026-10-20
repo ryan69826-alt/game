@@ -2659,7 +2659,7 @@ test('annual weather stays in seasonal 25-degree bands with five-degree daily li
         State.variables.weather={version:1,seed:9876};const first=[...setup.weather.yearForecast(2026)];for(let y=2030;y<2040;y++)setup.weather.yearForecast(y);const again=setup.weather.yearForecast(2026);
         return {failures,comparisons,leap:setup.weather.yearForecast(2028).length,normal:first.length,stable:first.every((value,index)=>value===again[index]),winter:setup.weather.band(Date.UTC(2026,0,15)/1000),summer:setup.weather.band(Date.UTC(2026,6,16)/1000),seed:State.variables.weather.seed};});
     assert.deepEqual(result.failures,[]);assert.equal(result.comparisons,5844);assert.equal(result.leap,366);assert.equal(result.normal,365);assert.equal(result.stable,true);assert.equal(result.seed,9876);
-    assert.ok(Math.abs(result.winter.max-result.winter.min-25)<1e-10);assert.ok(result.summer.min>result.winter.max);
+    assert.deepEqual(result.winter,{min:22.5,max:47.5});assert.ok(Math.abs(result.winter.max-result.winter.min-25)<1e-10);assert.ok(result.summer.min>result.winter.max);
 });
 
 test('temperature reaches morning plus ten at 7 PM and interpolates continuously to the next 7 AM',async()=>{

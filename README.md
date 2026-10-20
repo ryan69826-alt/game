@@ -729,7 +729,9 @@ described below. Body-heat accumulation, health damage and other attribute
 penalties are not part of this step.
 
 The prototype uses **Fahrenheit** and a temperate Northern Hemisphere climate:
-the seasonal morning baseline averages 25°F in mid-January and 75°F in mid-July.
+the seasonal morning baseline averages 35°F in mid-January and 85°F in mid-July.
+This curve is 10°F warmer throughout the year than the original climate; existing
+playthroughs retain their weather seed and receive the same 10°F shift.
 Each date's 7 AM baseline is randomly selected within a **25°F-wide seasonal
 window** (±12.5°F), constrained to at most **5°F above or below the previous day**.
 The yearly forecast also constrains December to meet the next January smoothly.

@@ -16,7 +16,7 @@ setup.weather=(()=>{
     const midnight=(year,month=0,day=1)=>Date.UTC(year,month,day)/1000;
     function band(stamp) {
         const year=new Date(stamp*1000).getUTCFullYear(),length=(midnight(year+1)-midnight(year))/daySeconds;
-        const center=50-25*Math.cos(2*Math.PI*(stamp-midnight(year,0,15))/daySeconds/length);
+        const center=60-25*Math.cos(2*Math.PI*(stamp-midnight(year,0,15))/daySeconds/length);
         return {min:center-12.5,max:center+12.5};
     }
     function random(seed,year,index) {
