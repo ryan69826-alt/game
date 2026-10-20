@@ -11,8 +11,10 @@ setup.transitDistrict=()=>{
             spawn:anchor?{x:8,y:5}:{x:5,y:7},exit:anchor?{x:10,y:5}:{x:5,y:9}};
     });
     const parking={x:17,y:33,width:56,height:10};
-    const driveway={x:43,y:33,width:5,height:11};
+    const driveway={x:43,y:43,width:5,height:1};
+    const stationParking=[{x:17,y:51,width:20,height:8},{x:53,y:51,width:20,height:8}];
     const parkingBays=[33,41].flatMap(y=>Array.from({length:14},(_,i)=>({x:17+i*4,y,width:2,height:2,facing:y===33?'north':'south'}))).filter(bay=>bay.x+bay.width<=41||bay.x>=50);
+    const stationBays=stationParking.flatMap(lot=>[lot.y,lot.y+6].flatMap(y=>[0,4,8,12,16].map(dx=>({x:lot.x+dx,y,width:2,height:2,facing:y===lot.y?'north':'south'}))).filter(bay=>bay.y!==lot.y||bay.x+bay.width<=lot.x+8||bay.x>=lot.x+13));
     // Keep the existing eight car IDs and their saved inventories after resizing.
     const cars=parkingBays.filter((bay,i)=>i%3===0).map((bay,i)=>({...bay,color:['#7f939a','#9d8a78','#70867a'][i%3]}));
     const train={id:'d1-train',kind:'train',stationId:'d1',name:'Station train',x:32,y:70,width:26,height:4,
@@ -33,6 +35,9 @@ setup.transitDistrict=()=>{
         if(inside(x,y,platform))return tile('platform','Station platform');
         if(inside(x,y,driveway))return tile('road','Shopping center driveway');
         if(y>=44&&y<=48)return tile('road','Transit district road');
+        if(y===50&&(x>=25&&x<=29||x>=61&&x<=65))return tile('road','Transit parking entrance');
+        if(stationParking.some(lot=>inside(x,y,lot)))return tile('parking','Transit station parking');
+        if(y===59||y===60&&x>=16&&x<=74)return tile('pavement','Station parking walkway');
         if(y===43||y===49)return tile('pavement','Roadside sidewalk');
         if(y>=31&&y<=32&&x>=15&&x<=74)return tile('path','Shopping center walkway');
         if((x>=15&&x<=16||x>=73&&x<=74)&&y>=33&&y<=42)return tile('pavement','Shopping center sidewalk');
@@ -40,10 +45,10 @@ setup.transitDistrict=()=>{
         if(inside(x,y,parking))return tile('parking','Shopping center parking lot');
         return tile('ground','Transit district grounds');
     }
-    setup.worldMaps.d1={id:'d1',worldArea:'d1',name:'Transit & Shops',width,height,spawn:{x:0,y:46},shops,buildings:shops,parking,parkingBays,cars,interactables,furniture:benches,rail,platform,train,tunnels:[{x:3,y:68,width:9,height:9},{x:78,y:68,width:9,height:9}],trees:[],driveway,
+    setup.worldMaps.d1={id:'d1',worldArea:'d1',name:'Transit & Shops',width,height,spawn:{x:0,y:46},shops,buildings:shops,parking,stationParking,parkingBays:[...parkingBays,...stationBays],cars,interactables,furniture:benches,rail,platform,train,tunnels:[{x:3,y:68,width:9,height:9},{x:78,y:68,width:9,height:9}],trees:[],driveway,
         station:{id:'d1',arrival:{x:45,y:69}},roads:{horizontal:{y:44,height:5},vertical:{x:43,width:5}},exits:{west:{mapId:'apartments',offset:0}},
         eyebrow:'TRANSIT · LOCAL SHOPS',subtitle:'A roadside station and neighborhood shopping center.',
-        description:'Five shops and their parking lot sit north of the road: a discount store, food stall, laundry, barbershop and electronic repair store. South of the road, a platform serves a waiting train. Tracks disappear underground toward B6, H4 and F3. The road leads west to Apartments.',
+        description:'Five shops and their parking lot sit north of the road: a discount store, food stall, laundry, barbershop and electronic repair store. South of the road, two small parking lots flank the approach to a waiting train and its platform. Tracks disappear underground toward B6, H4 and F3. The road leads west to Apartments.',
         labels:[{x:45,y:63,text:'TRANSIT PLATFORM'},{x:29,y:38,text:'PARKING'},{x:61,y:38,text:'PARKING'},{x:7,y:67,text:'TUNNEL'},{x:82,y:67,text:'TUNNEL'}],
         ambientSounds:[{bounds:{x:16,y:60,width:58,height:16},text:'The waiting train’s ventilation gives off a low electrical hum.'}],
         legend:[['Platform','#a4a18b'],['Track','#29353d'],['Train','#779aa3'],['Parking','#47525a']],tileAt};

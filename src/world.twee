@@ -10,7 +10,7 @@
 <div class="map-heading"><span>WORLD MAP</span><span id="world-map-count"></span></div>
 <div class="map-viewport"><canvas id="world-map" width="300" height="300" role="img" aria-label="World map showing the current area"></canvas></div>
 <<button "Expand world map">><<run setup.worldAtlas.open()>><</button>>
-<figcaption><span class="location-dot" aria-hidden="true"></span> Apartments <span>Current area</span></figcaption>
+<figcaption><span class="location-dot" aria-hidden="true"></span><span id="world-map-location"></span></figcaption>
 </figure>
 <div class="sidebar-character"><<include "CharacterArtwork">></div>
 <p id="preview-status" class="preview-status" role="status" aria-live="polite"></p>

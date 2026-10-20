@@ -1,11 +1,11 @@
 /* Position and elapsed game seconds are serialized. Only successful steps cost time. */
 setup.worldMovement = (() => {
     function ensure() {
-        const value = setup.interiorSizing.migrate(State.variables.world);
+        const value = setup.layoutMigration.migrate(State.variables.world);
         const map = Object.values(setup.worldMaps).find(map => map.id === value?.mapId) || setup.worldMaps.apartments;
         const valid = value && map.tileAt(value.x, value.y).walkable;
         State.variables.world = {
-            version: 3, mapId: map.id,
+            version: 4, mapId: map.id,
             x: valid ? value.x : map.spawn.x, y: valid ? value.y : map.spawn.y,
             elapsedSeconds: setup.gameClock.elapsed(value)
         };

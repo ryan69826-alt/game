@@ -3,7 +3,7 @@ setup.housing = (() => {
     const rentPrice=600;
     const weekSeconds=7*24*60*60;
     const units=()=>Object.values(setup.worldMaps).flatMap(map=>map.units||[]);
-    const listedIds=['1-2','1-5','2-3','3-1','3-4','4-6'];
+    const listedIds=['1-2','1-3','2-3','3-1','3-4','4-4'];
     const listings=()=>units().filter(unit=>listedIds.includes(unit.id));
     const trayId='housing:key-tray';
     const keyId=id=>`apartment-key:${id}`;
@@ -25,7 +25,7 @@ setup.housing = (() => {
         }
         return State.variables.housing;
     }
-    const canEnter=id=>setup.inventory.worn().some(container=>setup.inventory.placements(container).some(item=>item.type==='apartmentKey'&&item.id===keyId(id)));
+    const canEnter=id=>setup.inventory.worn().some(container=>setup.inventory.placements(container).some(item=>item.type==='apartmentKey'&&setup.layoutMigration.unitId(item.id.replace(/^apartment-key:/,''))===id));
     function counter() {
         if(State.variables.world?.mapId!=='housing-office'||!setup.interactions.nearby().some(target=>target.object.role==='housing')) return null;
         ensure();return {id:trayId,name:'Receptionist key tray',columns:1,rows:1};

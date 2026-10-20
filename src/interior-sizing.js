@@ -1,5 +1,5 @@
 /* A common 1.5× footprint standard. Expand floor space, not furniture sprites.
-   Doors keep one-cell thresholds and all persistent object/room IDs stay stable. */
+   Doors keep one-cell thresholds. Save compatibility lives in layout-migration.js. */
 setup.interiorSizing=(()=>{
     const inside=(p,r)=>p.x>=r.x&&p.y>=r.y&&p.x<r.x+r.width&&p.y<r.y+r.height;
     function axis(length,target,protectedCells) {
@@ -50,6 +50,7 @@ setup.interiorSizing=(()=>{
                 if(sources[door.destination.mapId]?.interior)footprints[door.destination.mapId]=building;
             }
         }
+        for(const map of Object.values(sources))if(map.interior&&map.exteriorFootprint)footprints[map.id]=map.exteriorFootprint;
         // The basement belongs to the small club's building footprint.
         footprints['e1-underground-club']=footprints['e1-small-club'];
         for(const [id,exterior] of Object.entries(footprints)) {
@@ -76,45 +77,5 @@ setup.interiorSizing=(()=>{
         maps.apartments.exits={west:{mapId:'b1',offset:-20},east:{mapId:'d1',offset:-20}};
         maps.b1.exits.east={mapId:'apartments',offset:20};maps.d1.exits.west={mapId:'apartments',offset:20};
     }
-    function nearest(map,p,available=()=>true) {
-        const start={x:Math.max(0,Math.min(map.width-1,p.x)),y:Math.max(0,Math.min(map.height-1,p.y))},queue=[start],seen=new Set();
-        for(let i=0;i<queue.length;i++) {
-            const point=queue[i],key=`${point.x},${point.y}`;if(seen.has(key))continue;seen.add(key);
-            if(map.tileAt(point.x,point.y).walkable&&available(point))return point;
-            for(const[dx,dy]of[[0,1],[1,0],[0,-1],[-1,0]]){const x=point.x+dx,y=point.y+dy;if(x>=0&&y>=0&&x<map.width&&y<map.height)queue.push({x,y});}
-        }
-        return map.spawn;
-    }
-    function legacyPoint(mapId,p) {
-        const map=setup.worldMaps[mapId];if(!map)return p;
-        if(map.layout)return nearest(map,map.layout.point(p));
-        if(mapId!=='apartments')return p;
-        if(p.x<=24&&p.y>=27)return nearest(map,{x:p.x,y:p.y+20});
-        if(p.y>=43)return nearest(map,{x:p.x,y:p.y+20});
-        const old=[{x:30,y:15},{x:37,y:23},{x:30,y:31},{x:23,y:23},{x:42,y:32}];
-        const next=[...map.buildings,map.housingOffice];
-        const i=old.findIndex(door=>Math.abs(door.x-p.x)+Math.abs(door.y-p.y)<=2);
-        return nearest(map,i>=0?{x:next[i].door.x+p.x-old[i].x,y:next[i].door.y+p.y-old[i].y}:{x:p.x,y:p.y});
-    }
-    function migrate(value) {
-        if(!value||value.version===3)return value;
-        const converted={...value,...legacyPoint(value.mapId||'apartments',value),version:3};
-        const seat=State.variables.vehicleSeat;if(seat)Object.assign(seat,legacyPoint(seat.mapId,seat));
-        if(State.variables.worldLayoutVersion!==2) {
-            const containers=State.variables.inventory?.containers;
-            if(containers) {
-                const migrated={...containers};for(const id of Object.keys(containers))if(id.startsWith('ground:'))delete migrated[id];
-                for(const [id,items] of Object.entries(containers)) {
-                    const match=/^ground:([^:]+):(\d+):(\d+)$/.exec(id);if(!match)continue;
-                    const map=setup.worldMaps[match[1]];if(!map){migrated[id]=items;continue;}
-                    const p=nearest(map,legacyPoint(map.id,{x:+match[2],y:+match[3]}),p=>!migrated[`ground:${map.id}:${p.x}:${p.y}`]);
-                    migrated[`ground:${map.id}:${p.x}:${p.y}`]=items;
-                }
-                State.variables.inventory.containers=migrated;
-            }
-            State.variables.worldLayoutVersion=2;
-        }
-        return converted;
-    }
-    return {apply,resize,legacyPoint,migrate};
+    return {apply,resize};
 })();

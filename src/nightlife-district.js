@@ -1,48 +1,50 @@
 /* E1 is a compact venue block. Services and staffed activity come later. */
 setup.nightlifeDistrict=()=>{
     const inside=(x,y,r)=>x>=r.x&&x<r.x+r.width&&y>=r.y&&y<r.y+r.height;
-    const width=100,height=54;
+    const width=100,height=70;
     const venues=[
         {id:'e1-bar',name:'Bar',label:'BAR',x:6,y:10,width:24,height:16,facing:'east',door:{x:29,y:18},accent:'#dcad78',style:'bar'},
         {id:'e1-clothing',name:'Clothing store',label:'CLOTHING',x:6,y:26,width:24,height:16,facing:'east',door:{x:29,y:34},accent:'#d69ec1',style:'clothing'},
-        {id:'e1-hotel',name:'Hotel',label:'HOTEL',x:34,y:10,width:28,height:12,facing:'east',door:{x:61,y:16},accent:'#d5c48b',style:'hotel'},
-        {id:'e1-casino',name:'Casino',label:'CASINO',x:34,y:22,width:28,height:10,facing:'west',door:{x:34,y:27},accent:'#b8bb85',style:'casino'},
-        {id:'e1-nightclub',name:'Nightclub',label:'NIGHTCLUB',x:34,y:32,width:28,height:10,facing:'south',door:{x:48,y:41},accent:'#aa9ddd',style:'nightclub'},
+        {id:'e1-hotel',name:'Hotel',label:'HOTEL',x:34,y:6,width:28,height:12,facing:'east',door:{x:61,y:12},accent:'#d5c48b',style:'hotel'},
+        {id:'e1-casino',name:'Casino',label:'CASINO',x:34,y:18,width:28,height:26,facing:'west',door:{x:34,y:31},accent:'#b8bb85',style:'casino'},
+        {id:'e1-nightclub',name:'Nightclub',label:'NIGHTCLUB',x:34,y:44,width:28,height:14,facing:'south',door:{x:48,y:57},accent:'#aa9ddd',style:'nightclub'},
         {id:'e1-small-club',name:'Small club',label:'SMALL CLUB',x:66,y:10,width:24,height:16,facing:'west',door:{x:66,y:18},accent:'#d294b2',style:'small-club'},
-        {id:'e1-tattoo',name:'Tattoo parlor',label:'TATTOO',x:66,y:26,width:24,height:16,facing:'west',door:{x:66,y:34},accent:'#86bac5',style:'tattoo'}
+        {id:'e1-tattoo',name:'Tattoo parlor',label:'TATTOO',x:66,y:26,width:12,height:10,facing:'west',door:{x:66,y:31},accent:'#86bac5',style:'tattoo'}
     ].map(venue=>{
         const dx=venue.facing==='east'?1:venue.facing==='west'?-1:0,dy=venue.facing==='south'?1:0;
         return {...venue,approach:{x:venue.door.x+dx,y:venue.door.y+dy},
             spawn:venue.facing==='east'?{x:15,y:7}:venue.facing==='west'?{x:2,y:7}:{x:9,y:11},
             exit:venue.facing==='east'?{x:17,y:7}:venue.facing==='west'?{x:0,y:7}:{x:9,y:13}};
     });
-    const alleys=[{x:30,y:10,width:4,height:34},{x:62,y:10,width:4,height:34}];
-    const backAlley={x:6,y:6,width:84,height:4};
+    const alleys=[{x:30,y:6,width:4,height:54},{x:62,y:6,width:4,height:54}];
+    const backAlley={x:6,y:2,width:84,height:4};
     const outdoorDoors=venues.map(venue=>({id:`${venue.id}:entrance`,kind:'door',name:`${venue.name} entrance`,...venue.door,
         lockId:`${venue.id}:front`,lockLevel:1,destination:{mapId:venue.id,...venue.spawn},description:`The ${venue.name.toLowerCase()} entrance faces ${venue.facing==='south'?'the street':'the alley'}.`}));
-    const nightclubAlleys=[
-        {id:'e1-nightclub:west',name:'Nightclub west alley entrance',door:{x:34,y:37},approach:{x:33,y:37},spawn:{x:2,y:7},exit:{x:0,y:7}},
-        {id:'e1-nightclub:east',name:'Nightclub east alley entrance',door:{x:61,y:37},approach:{x:62,y:37},spawn:{x:15,y:7},exit:{x:17,y:7}}
+    const extraEntrances=[
+        {id:'e1-nightclub:west',name:'Nightclub west alley entrance',mapId:'e1-nightclub',door:{x:34,y:51},approach:{x:33,y:51},spawn:{x:2,y:7},exit:{x:0,y:7}},
+        {id:'e1-nightclub:east',name:'Nightclub east alley entrance',mapId:'e1-nightclub',door:{x:61,y:51},approach:{x:62,y:51},spawn:{x:15,y:7},exit:{x:17,y:7}},
+        {id:'e1-casino:east',mapId:'e1-casino',name:'Casino east alley entrance',door:{x:61,y:31},approach:{x:62,y:31},spawn:{x:15,y:7},exit:{x:17,y:7}},
+        {id:'e1-hotel:west',mapId:'e1-hotel',name:'Hotel west alley entrance',door:{x:34,y:12},approach:{x:33,y:12},spawn:{x:2,y:7},exit:{x:0,y:7}}
     ];
-    for(const entrance of nightclubAlleys)outdoorDoors.push({id:entrance.id,kind:'door',name:entrance.name,...entrance.door,lockId:entrance.id,lockLevel:1,
-        destination:{mapId:'e1-nightclub',...entrance.spawn},description:'An alley entrance leads into the nightclub.'});
+    for(const entrance of extraEntrances)outdoorDoors.push({id:entrance.id,kind:'door',name:entrance.name,...entrance.door,lockId:entrance.id,lockLevel:1,
+        destination:{mapId:entrance.mapId,...entrance.spawn},description:'An alley entrance connects this building to the access lane.'});
     function tileAt(x,y) {
         const tile=(kind,label,walkable=true)=>({kind,label,walkable});
         if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=width||y>=height)return tile('boundary','Edge of the area',false);
         const entrance=outdoorDoors.find(door=>door.x===x&&door.y===y);if(entrance)return tile('entrance',entrance.name);
         for(const venue of venues)if(inside(x,y,venue))return tile('building',venue.name,false);
-        if(y===5&&x>=5&&x<=90||(x===5||x===90)&&y>=6&&y<=41)return tile('fence','Service boundary fence',false);
-        if(y>=44&&y<=48)return tile('road','Nightlife district road');
+        if(y===1&&x>=5&&x<=90||(x===5||x===90)&&y>=2&&y<=57)return tile('fence','Service boundary fence',false);
+        if(y>=60&&y<=64)return tile('road','Nightlife district road');
         if(inside(x,y,backAlley))return tile('alley','Back alley');
         if(alleys.some(alley=>inside(x,y,alley)))return tile('alley','Nightlife alley');
-        if(y>=42&&y<=43||y>=49&&y<=50)return tile('pavement','Street sidewalk');
+        if(y>=58&&y<=59||y>=65&&y<=66)return tile('pavement','Street sidewalk');
         return tile('pavement','Nightlife district pavement');
     }
-    setup.worldMaps.e1={id:'e1',worldArea:'e1',name:'Nightlife',width,height,spawn:{x:0,y:46},venues,buildings:venues,alleys,backAlley,
-        interactables:outdoorDoors,trees:[],cars:[],parkingBays:[],roads:{horizontal:{y:44,height:5},vertical:{x:-10,width:0}},
-        exits:{west:{mapId:'d1',offset:0}},eyebrow:'NIGHTLIFE · ALLEYS & VENUES',subtitle:'Neon signs above a compact block of connected venues.',
-        description:'Two alleys run north from the road between connected buildings. A back alley joins their northern ends. Signs mark a bar, nightclub, casino, clothing store, hotel, tattoo parlor and small club. Stairs inside the small club descend to an underground club. The road leads west to Transit & Shops.',
-        labels:[{x:48,y:8,text:'BACK ALLEY'}],ambientSounds:[{bounds:backAlley,text:'Air moves through the narrow service passage behind the buildings.'},...alleys.map(bounds=>({bounds,text:'A faint electrical hum comes from the signs above the alley.'}))],
+    setup.worldMaps.e1={id:'e1',worldArea:'e1',name:'Nightlife',width,height,spawn:{x:0,y:62},venues,buildings:venues,alleys,backAlley,
+        interactables:outdoorDoors,trees:[],cars:[],parkingBays:[],roads:{horizontal:{y:60,height:5},vertical:{x:-10,width:0}},
+        exits:{west:{mapId:'d1',offset:-16}},eyebrow:'NIGHTLIFE · ALLEYS & VENUES',subtitle:'Neon signs above a compact block of connected venues.',
+        description:'Two alleys run north from the road between connected buildings. A back alley joins their northern ends. Signs mark a bar, nightclub, casino, clothing store, hotel, tattoo parlor and small club. Stairs inside the small club descend to an underground club. The road leads west to Transit & Shops and east to Executive Offices.',
+        labels:[{x:48,y:4,text:'BACK ALLEY'}],ambientSounds:[{bounds:backAlley,text:'Air moves through the narrow service passage behind the buildings.'},...alleys.map(bounds=>({bounds,text:'A faint electrical hum comes from the signs above the alley.'}))],
         legend:[['Entrance','#dfb777'],['Alley','#354046'],['Sidewalk','#66736c']],tileAt};
 
     function furnishings(style) {
@@ -85,11 +87,11 @@ setup.nightlifeDistrict=()=>{
         const exit={id:`${venue.id}:exit`,kind:'door',name:'Exit to Nightlife',...venue.exit,exit:true,lockId:`${venue.id}:front`,lockLevel:1,
             destination:{mapId:'e1',...venue.approach},description:'The entrance leads back to the nightlife district.'};
         const portals=[exit];
-        if(venue.style==='nightclub')for(const entrance of nightclubAlleys)portals.push({id:`${entrance.id}:exit`,kind:'door',name:`Exit to ${entrance.id.endsWith('west')?'west':'east'} alley`,...entrance.exit,exit:true,lockId:entrance.id,lockLevel:1,destination:{mapId:'e1',...entrance.approach},description:'An alley doorway leads outside.'});
+        for(const entrance of extraEntrances.filter(entrance=>entrance.mapId===venue.id))portals.push({id:`${entrance.id}:exit`,kind:'door',name:`Exit to ${entrance.id.endsWith('west')?'west':'east'} alley`,...entrance.exit,exit:true,lockId:entrance.id,lockLevel:1,destination:{mapId:'e1',...entrance.approach},description:'An alley doorway leads outside.'});
         if(venue.style==='small-club')portals.push(stairs('e1-stairs-down','Stairs to underground club',13,10,{mapId:'e1-underground-club',x:3,y:4},'Go downstairs'));
         interior(venue.id,venue.name,venue.style,venue.spawn,portals);
     }
     interior('e1-underground-club','Underground club','underground',{x:3,y:4},[
         stairs('e1-stairs-up','Stairs to small club',2,2,{mapId:'e1-small-club',x:13,y:9},'Go upstairs')]);
-    setup.worldMaps.d1.exits.east={mapId:'e1',offset:0};
+    setup.worldMaps.d1.exits.east={mapId:'e1',offset:16};
 };

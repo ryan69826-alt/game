@@ -17,7 +17,10 @@ setup.developerTools=(()=>{
         const action=document.createElement('button');action.type='button';action.textContent='Max out all stats';
         const result=document.createElement('p');result.setAttribute('role','status');
         action.addEventListener('click',()=>{if(maxStats())result.textContent='All skills are level 10. Health is restored, fatigue and tiredness are cleared, endurance is recovered, and you have at least $999,999,999.';});
-        root.append(help,action,result);Dialog.open();
+        const clearance=document.createElement('button');clearance.type='button';
+        const label=()=>{clearance.textContent=setup.corporateAccess.authorized()?'Revoke corporate parking clearance':'Grant corporate parking clearance';};label();
+        clearance.addEventListener('click',()=>{const granted=setup.corporateAccess.toggleClearance();label();result.textContent=granted?'Your ID implant now has Executive Parking clearance.':'Executive Parking clearance removed from your ID implant.';});
+        root.append(help,action,clearance,result);Dialog.open();
     }
     return {open,maxStats};
 })();

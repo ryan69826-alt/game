@@ -45,26 +45,30 @@ without changing an existing playthrough; disk export preserves saves across ori
 
 ## Apartments, housing, money and health
 
-The four buildings each contain one floor with six furnished studio apartments.
+The four buildings each contain one floor with four furnished studio apartments in one row.
 Each floor plan (including furniture and unit doors) rotates to match the outdoor
 building's entrance toward the park. Open an entrance with E, then choose Enter;
-inside, Open and Exit returns through the corresponding outdoor door. The lower
+inside, Open and Exit returns through the corresponding outdoor door. The
 world map sits above the sidebar character and is an area atlas: Apartments is one icon, selected while outdoors or
-inside any building in that area. New areas can be added in `world-atlas.js`;
-the atlas never renders local tiles, cars, or camera bounds. The right-side local
+inside any building in that area. District names live in `district-data.js`;
+the atlas never renders local tiles, cars, or camera bounds. The sidebar shows
+a close view centered on the current district, with separated nodes and lines
+only to registered, playable exits. Known areas without a direct route appear
+muted. A2 is not accessible from A1; B2 is not accessible from B1. Discovery
+and the full map overlay retain all previously found districts. The right-side local
 map uses the freed height and adjusts its outdoor camera rows to fit the panel.
 
-Unit numbers start at the nearest room on the left when entering, then the
-opposite room, continuing 1–6 down the hall. Rotating the building preserves
-that entry-relative order. Stable save IDs stay attached to physical rooms, so
-leases, keys, beds, and saved room activity keep their existing associations.
-Rental labels, map numbers, room descriptions and key tooltips use the displayed numbers.
+Unit numbers run 1–4 from the entry end of one shared corridor. The complete
+plan rotates with the building. Each studio has its own bed, kitchenette,
+dining table and enclosed bathroom. Two-tile sidewalks and open gaps connect
+all four buildings around the park.
 
 The north-facing Housing Office stands immediately right of Apartment 3, linked
-by sidewalk. Its receptionist is behind a blocking desk; approach the service
+by sidewalk. The office is 8×8 outside and 12×12 inside, with a rental desk
+and a separately enclosed storeroom. Its receptionist is behind a blocking desk; approach the service
 positions on the front side and press E. The first screen has Talk and Attack.
-Talk → Rent apartment lists six physical units: Apartment 1 units 1 and 6,
-Apartment 2 unit 3, Apartment 3 units 4 and 5, and Apartment 4 unit 2. Attack is an explicit
+Talk → Rent apartment lists six physical units: Apartment 1 units 2 and 3,
+Apartment 2 unit 3, Apartment 3 units 1 and 4, and Apartment 4 unit 4. Attack is an explicit
 placeholder and makes no attack until combat rules are developed.
 
 The player starts with **$99,999** and **100 / 100 health**. Both appear above
@@ -208,9 +212,11 @@ pointer buttons and map clicks. Sprint steps repeat every 100 ms instead of
 200 ms, cost 2 game seconds instead of 5, and increase endurance used by 1.
 Blocked steps cost no time, endurance, or XP. At the limit the player walks
 instead and cannot use endurance again until usage falls strictly below 80% of
-maximum (19 or less at the base 25). This recovery state survives saves/reloads;
+maximum (below 20 at the base 25). This recovery state survives saves/reloads;
 holding Sprint resumes running once the threshold is crossed.
-Endurance use recovers by 1 per five non-sprinting game seconds, including
+Endurance use recovers by **5% of maximum capacity per five non-sprinting game
+seconds**: 1.25 at the base 25, or 15 at the level-10 maximum of 300. Fractional
+usage is preserved, and recovery is capped at zero. This includes
 walking, waiting, sleep and unconsciousness. Partial recovery seconds survive
 saves. Starting a sprint resets the partial recovery interval.
 
@@ -300,7 +306,7 @@ placements persist through movement, reload, menu/Continue and disk saves.
 
 ## World and movement
 
-Apartments is a 70×74 grid: four buildings face a park, a parking lot has edge and
+Apartments is a 90×74 grid: four buildings face a park, a parking lot has edge and
 median bays, and two five-square-wide roads meet at the south edge. Cars occupy
 2×2 squares. A continuous sidewalk surrounds the park and connects each entrance.
 Doors are walkable thresholds; buildings, cars, trees, and medians block movement.
@@ -358,14 +364,19 @@ dragging onto the visible local map drops at the player's feet.
 Every accessible building uses an interior grid 1.5 times its exterior width
 and height, rounded up. `interior-sizing.js` expands floor space and wall layout
 while keeping furniture, people and door thresholds at their normal tile sizes.
-Large interiors scroll around the player. The nightclub is 42×15 inside its
-28×10 footprint; each 12×12 house is 18×18 inside. Apartment exteriors have grown
-to preserve their six-unit layouts: 17×20 or 20×17 outside, 26×30 or 30×26 inside.
-The courtyard, office and parking connections accommodate these larger buildings.
+Large interiors scroll around the player. The nightclub is 42×21 inside its
+28×14 footprint; each 12×12 house is 18×18 inside. Apartment buildings are
+32×10 or 10×32 outside and 48×15 or 15×48 inside. Each contains four studios
+in one row. The district widens to 90 tiles, restoring both sides of the
+five-tile intersection at the southwest corner (vertical road x=4–8).
 
-World save version 3 migrates previous player positions, seated positions and
-ground containers to the changed layouts once. Object IDs, locks, keys, leases,
-item contents, money and elapsed time remain attached to their existing records.
+World save version 4 migrates previous player positions, seated positions and
+ground containers once through frozen v3 geometry in `layout-history.js`.
+`layout-migration.js` maps retired unit IDs 5 and 6 to 3 and 4 in the same
+building; old physical keys retain their identities and work for the replacement
+unit. Leases retain due dates and arrears. Ground piles that converge on one
+location receive separate nearby tiles, preserving their contents. Money and
+elapsed time remain unchanged.
 New building definitions should supply an exterior footprint and register before
 `setup.interiorSizing.apply()` in `world-map-data.js`.
 
@@ -373,7 +384,9 @@ Press **P** while playing to open Developer tools over the world. **Max out all
 stats** sets all 18 skills to level 10, restores health, clears tiredness/fatigue
 and endurance usage, and gives at least $999,999,999. Endurance capacity becomes
 300 through its existing skill rule. Creator XP allocations remain intact;
-these changes persist in saves and cost no game time. Escape closes the window.
+these changes persist in saves and cost no game time. The separate **Grant /
+Revoke corporate parking clearance** button changes authorization on the ID
+implant for testing F1. Maxing stats does not grant access. Escape closes the window.
 
 ## Low Density Housing (A1)
 
@@ -407,7 +420,7 @@ Walking west beyond any open tile on the Apartments west edge enters B1;
 walking east beyond B1 returns. Crossing counts as one ordinary walking/sprint
 step (5/2 game seconds), including endurance and billing, with no interaction
 menu. The connection uses a 20-row offset: C1 rows 64–68 align with B1 rows
-44–48. B1 is 70×90, extending south of the road; Apartments is 70×74.
+44–48. B1 is 70×90, extending south of the road; Apartments is 90×74.
 The warehouses and mechanic stand south of the road. B1 rows beyond the
 Apartments boundary have no eastward exit; they cannot warp back into C1.
 Other map connections may use explicit coordinate offsets or proportional alignment.
@@ -445,7 +458,8 @@ Region-edge connections live in each map's `exits` metadata and are resolved by 
 Walk east off Apartments to enter D1; walking west returns along the aligned road.
 Continuing east off D1 enters E1 Nightlife.
 A shopping center and compact parking lot sit immediately north of the roadside
-sidewalk, with no grass gap. A short central driveway connects the lot to the road. Two-tile sidewalks flank the lot and run along the connected shop frontage.
+sidewalk, with no grass gap. A central driveway extends just one row (y=43) from the road to the lot;
+no road cuts through the lot to its northern edge. Two-tile sidewalks flank the lot and run along the connected shop frontage.
 The discount store anchors the west side, with its door facing east into the lot;
 the other four shops form an adjoining row along the north side.
 The shops are a discount store, food stall, laundry, barbershop and electronic
@@ -453,7 +467,8 @@ repair store. Four shops have
 explorable interiors; the food stall is an outdoor counter. Shop services remain
 placeholders for later development.
 
-South of the road, a pedestrian approach leads to a train platform. Approach the
+South of the road, two small 20×8 parking lots flank the pedestrian approach
+to the train platform. Each has edge bays, an open aisle and a road entrance. Approach the
 stationary train and use E → Board train to see destinations. B6, H4 and F3 are
 listed as unavailable future stops; no remote platforms are playable yet. The
 tracks lead into tunnel mouths at both ends. Train travel has no schedule, fare
@@ -466,17 +481,20 @@ is limited to the platform area, with no unmodeled crowds or traffic.
 
 ## Nightlife (E1)
 
-Walk east off D1 Transit & Shops to enter E1; walking west returns. The 100×54
-local grid preserves the main road at rows 44–48. Two four-tile alleys run north
+Walk east off D1 Transit & Shops to enter E1; walking west returns. The 100×70
+local grid has its main road at rows 60–64; an explicit 16-row offset aligns
+it with D1 rows 44–48. Two four-tile alleys run north
 from the street, and a four-tile back alley connects their northern ends. Three
 strips of attached buildings enclose the alleys: bar and clothing store to the
 west, hotel/casino/nightclub in the middle, and small club/tattoo parlor to the
 east. Colored sign borders and entrance strips identify each venue. Street
-sidewalks continue across the district boundary; other region exits stay closed
-until neighboring areas are built.
+sidewalks continue across district boundaries. The east edge reaches F1 Executive Offices.
 
-The nightclub has its street entrance plus a door on each alley. Each pairs with
-an interior exit and shares its own lock/open state with that exit.
+The nightclub has its street entrance plus a door on each alley. The hotel and
+casino also have entrances on both alleys, with open asphalt approaches. Each
+pairs with an interior exit and shares its own lock/open state with that exit.
+The casino is 28×26 outside (2.6 times its former area), with a 42×39 interior.
+The tattoo parlor is reduced to 12×10 outside and 18×15 inside.
 
 All seven venues have explorable, simply furnished interiors. The front doors
 start unlocked, use the existing Open/Close and Enter/Exit interactions, and
@@ -497,7 +515,34 @@ there are no invented crowds, music, footsteps or traffic.
 `nightlife-district.js` registers the outdoor block, venue interiors and both
 stairway directions. All belong to `worldArea: 'e1'`, so entering buildings does
 not reveal unrelated districts. Entering E1 reveals its adjacent E2 and F1
-markers, without making those unbuilt districts playable.
+markers. F1 is playable; E2 remains unavailable.
+
+## Executive Offices (F1)
+
+Walk east off E1 to enter the 120×100 corporate campus; the boulevard remains
+at rows 60–64. Pale stone promenades, clipped trees and glass-fronted towers
+separate this area visually from Nightlife. Meridian and Apex Towers each have
+12 floors; Crown Tower has 16. Their lobbies, Skyline Restaurant, Corporate
+Clinic and Security Office can be entered through E → Open → Enter.
+
+Every tower floor is a real, saved map with an elevator. Approach it and use E
+to choose any floor; the lobby permits return outdoors. Upper levels contain
+leadership offices, boardrooms and executive suites with placeholder furniture.
+Floor changes cost no time. Jobs, staff, dining and medical services come later.
+All floors share their tower's exterior footprint and the 1.5× sizing rule.
+
+The parking lot south of the boulevard has a continuous fence and a five-tile
+barrier. E → **Scan ID implant** denies entry without Executive Parking
+clearance. It cannot be lockpicked. Use the P developer menu to grant/revoke
+clearance for review; an accepted scan opens the barrier, and E → Close gate
+closes it again once the player is clear. Clearance, gate state and floor
+position persist through saves/reloads. Parked vehicles retain the usual
+independent door/trunk locks and inventories. There is no default corporate
+clearance, and maximum skills do not bypass the scanner.
+
+`executive-district.js` defines the campus and floors; `executive-access.js`
+owns the small, serialized ID-clearance record. This is the initial access hook
+for later implant issuance and corporate progression.
 
 ## District plan and discovery
 
@@ -583,7 +628,7 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
 Old character saves migrate to Medium with shirt/pants/shoes and no backpack;
 other valid selections, traits and XP remain. Removed height/composition fields
 are discarded. Invalid traits are filtered; imported XP is rounded down and capped
-to 250 in skill order. `$world` stores only map ID, position and elapsed seconds (v3). `$openedObjects`
+to 250 in skill order. `$world` stores only map ID, position and elapsed seconds (v4). `$openedObjects`
 stores open/closed flags; `$doorLocks` stores shared lock states, `$endurance`
 stores breath/counters, `$vehicleSeat` stores the seated car and exit anchor,
 `$vehicleContents` stores cabin cash, and `$skillXp` stores earned XP independently of character creation.
@@ -608,7 +653,7 @@ SugarCube browser runtime. Coverage includes two fixed body models,
 proportional heads and visible faces, independent clothing layers, old-save normalization,
 all visual choices, long-hair face/curtain regressions, creator migration,
 traits/XP, responsive layouts, read-only sheets, map geometry/collision,
-movement/held-direction pacing, interaction reach/actions, nose-in parking/headlight orientation, directional car access, oriented six-unit interiors and portal returns,
+movement/held-direction pacing, interaction reach/actions, nose-in parking/headlight orientation, directional car access, oriented four-unit interiors and portal returns,
 rental transactions/access/desk reach, weekly due-time and arrears handling, seasonal
 weekdays, calendar rollover and time-free interactions, persistent money/health, garment-only layer bounds,
 block packing/failed transfers, separate single-block pockets, dropdown categories,
