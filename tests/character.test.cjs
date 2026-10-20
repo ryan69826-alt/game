@@ -2343,3 +2343,62 @@ test('D1 compact parking has a clear road driveway and continuous outer sidewalk
     assert.equal(result.againstRoad,true);assert.ok(result.size<80*14*.6);assert.ok(result.driveway.every(kind=>kind==='road'));assert.equal(result.aisles,true);assert.equal(result.paths,true);
     assert.deepEqual(result.cars,Array.from({length:8},(_,i)=>`d1-car-${i+1}`));
 });
+
+test('E1 extends the D1 road with two reachable north alleys, connected venue strips and a back alley',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('d1',89,46);
+    await page.getByRole('button',{name:'Move east',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="e1"]');
+    assert.deepEqual(await page.evaluate(()=>({map:SugarCube.State.variables.world.mapId,x:SugarCube.State.variables.world.x,y:SugarCube.State.variables.world.y,time:SugarCube.State.variables.world.elapsedSeconds})),{map:'e1',x:0,y:46,time:5});
+    const geometry=await page.evaluate(()=>{const {setup}=SugarCube,map=setup.worldMaps.e1,queue=[map.spawn],seen=new Set();
+        for(let i=0;i<queue.length;i++){const p=queue[i],key=`${p.x},${p.y}`;if(seen.has(key)||!map.tileAt(p.x,p.y).walkable)continue;seen.add(key);for(const [dx,dy]of[[0,1],[1,0],[0,-1],[-1,0]])queue.push({x:p.x+dx,y:p.y+dy});}
+        return {names:map.venues.map(v=>v.name).sort(),reachable:map.venues.every(v=>seen.has(`${v.approach.x},${v.approach.y}`)),
+            alley:map.alleys.length===2&&map.alleys.every(a=>Array.from({length:a.height},(_,i)=>map.tileAt(a.x,a.y+i)).every(t=>t.walkable&&t.kind==='alley')&&seen.has(`${a.x},${a.y}`)),
+            back:map.tileAt(48,7).label==='Back alley'&&seen.has('48,7'),attached:map.venues.every(v=>map.venues.some(other=>other!==v&&v.x===other.x&&(v.y+v.height===other.y||other.y+other.height===v.y))),
+            road:[44,45,46,47,48].every(y=>map.tileAt(0,y).kind==='road'&&setup.worldMaps.d1.tileAt(89,y).kind==='road'),
+            futureBlocked:setup.worldTravel.edge({mapId:'e1',x:99,y:46},1,0)===null,
+            known:setup.worldAtlas.visible().map(location=>location.coordinate)};});
+    assert.deepEqual(geometry.names,['Bar','Casino','Clothing store','Hotel','Nightclub','Small club','Tattoo parlor']);
+    for(const key of ['reachable','alley','back','attached','road','futureBlocked'])assert.equal(geometry[key],true,key);
+    assert.ok(geometry.known.includes('F1'));assert.ok(geometry.known.includes('E2'));assert.ok(!geometry.known.includes('F2'));
+    await page.getByRole('button',{name:'Move west',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="d1"]');
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),89);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),10);
+});
+
+test('all seven E1 venues enter and exit from their facing doors without time costs or invented services',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const venues=await page.evaluate(()=>SugarCube.setup.worldMaps.e1.venues);
+    for(const venue of venues) {
+        await placeInWorld('e1',venue.approach.x,venue.approach.y);await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
+        await dialog.getByRole('button',{name:'Open',exact:true}).click();await dialog.getByRole('button',{name:'Enter',exact:true}).click();await page.waitForSelector(`#local-map[data-map-id="${venue.id}"]`);
+        assert.equal(await page.locator('#world-map').getAttribute('data-location-id'),'e1');
+        assert.deepEqual(await page.evaluate(()=>({x:SugarCube.State.variables.world.x,y:SugarCube.State.variables.world.y})),venue.spawn);
+        const valid=await page.evaluate(id=>{const map=SugarCube.setup.worldMaps[id],queue=[map.spawn],seen=new Set();for(let i=0;i<queue.length;i++){const p=queue[i],key=`${p.x},${p.y}`;if(seen.has(key)||!map.tileAt(p.x,p.y).walkable)continue;seen.add(key);for(const[dx,dy]of[[0,1],[1,0],[0,-1],[-1,0]])queue.push({x:p.x+dx,y:p.y+dy});}
+            return map.interactables.every(o=>[[0,1],[1,0],[0,-1],[-1,0]].some(([dx,dy])=>seen.has(`${o.x+dx},${o.y+dy}`)));},venue.id);
+        assert.equal(valid,true,venue.name+' fixtures and portals are reachable');
+        const dx=venue.facing==='east'?-1:venue.facing==='west'?1:0,dy=venue.facing==='south'?-1:0;
+        await placeInWorld(venue.id,venue.exit.x+dx,venue.exit.y+dy);await page.keyboard.press('e');await dialog.locator('.interaction-actions').getByRole('button',{name:'Close',exact:true}).click();
+        await dialog.getByRole('button',{name:'Open',exact:true}).click();await dialog.getByRole('button',{name:'Exit',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="e1"]');
+        assert.deepEqual(await page.evaluate(()=>({x:SugarCube.State.variables.world.x,y:SugarCube.State.variables.world.y})),venue.approach);
+    }
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),0);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.playerState.ensure().money),99999);
+});
+
+test('small club stairs lead to a persistent underground E1 interior and return without charging time',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('e1-small-club',13,9);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.interactions.run('e1-stairs-down','travel').travelled),true);
+    await page.waitForSelector('#local-map[data-map-id="e1-underground-club"]');assert.equal(await page.locator('#world-map').getAttribute('data-location-id'),'e1');
+    assert.match(await page.locator('#location-description').textContent(),/Stairs lead back up/);
+    await page.reload();await page.waitForSelector('#local-map[data-map-id="e1-underground-club"]');
+    await page.keyboard.press('e');await page.getByRole('button',{name:'Go upstairs',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="e1-small-club"]');
+    assert.deepEqual(await page.evaluate(()=>({x:SugarCube.State.variables.world.x,y:SugarCube.State.variables.world.y,time:SugarCube.State.variables.world.elapsedSeconds})),{x:13,y:9,time:0});
+    await page.keyboard.press('e');await page.getByRole('button',{name:'Go downstairs',exact:true}).click();await page.waitForSelector('#local-map[data-map-id="e1-underground-club"]');
+    await placeInWorld('e1',48,42);assert.equal(await page.evaluate(()=>SugarCube.setup.interactions.run('e1-stairs-down','travel').ok),false);
+});
+
+test('E1 map art and sounds match quiet venue geometry without suggesting nonexistent crowds',async()=>{
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;return [setup.worldMaps.e1,...Object.values(setup.worldMaps).filter(map=>map.worldArea==='e1'&&map.interior)].map(map=>{
+        State.variables.world={...State.variables.world,mapId:map.id,...map.spawn};const image=setup.worldMapArt.paint(map);
+        return {name:map.name,sound:setup.rooms.sounds(),width:image.width,height:image.height,expectedWidth:map.width*16,expectedHeight:map.height*16};});});
+    assert.equal(result.length,9);
+    for(const map of result){assert.equal(map.width,map.expectedWidth);assert.equal(map.height,map.expectedHeight);assert.doesNotMatch(map.sound,/traffic|footstep|voice|crowd|laughter|music/i);}
+});

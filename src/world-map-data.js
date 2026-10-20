@@ -70,3 +70,5 @@ setup.storageDistrict();
 setup.neighborhoodDistrict();
 
 setup.transitDistrict();
+
+setup.nightlifeDistrict();

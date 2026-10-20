@@ -2,7 +2,7 @@
 
 A modular browser RPG prototype built with Twine 2, SugarCube 2.37.3 and Tweego
 2.1.1. For the click-to-play site, see [GitHub Pages deployment](DEPLOYMENT.md).
-The protagonist is an adult woman (age 26). Apartments, B1 Warehouse / Storage, A1 Low Density Housing, and D1 Transit & Shops are available;
+The protagonist is an adult woman (age 26). Apartments, B1 Warehouse / Storage, A1 Low Density Housing, D1 Transit & Shops, and E1 Nightlife are available;
 no story, NPC schedules, or trait modifiers have been added. The game clock advances with movement only.
 
 ## Current character and equipment
@@ -421,6 +421,7 @@ Region-edge connections live in each map's `exits` metadata and are resolved by 
 ## Transit & Shops (D1)
 
 Walk east off Apartments to enter D1; walking west returns along the aligned road.
+Continuing east off D1 enters E1 Nightlife.
 A shopping center and compact parking lot sit immediately north of the roadside
 sidewalk, with no grass gap. A short central driveway connects the lot to the road. Two-tile sidewalks flank the lot and run along the connected shop frontage.
 The discount store anchors the west side, with its door facing east into the lot;
@@ -440,6 +441,38 @@ must have a registered, walkable arrival point, and boarding rechecks proximity.
 `transit-district.js` owns D1 geometry and shop interiors; `transit.js` owns the
 station registry, destination availability and boarding window. The train sound
 is limited to the platform area, with no unmodeled crowds or traffic.
+
+## Nightlife (E1)
+
+Walk east off D1 Transit & Shops to enter E1; walking west returns. The 100×54
+local grid preserves the main road at rows 44–48. Two four-tile alleys run north
+from the street, and a four-tile back alley connects their northern ends. Three
+strips of attached buildings enclose the alleys: bar and clothing store to the
+west, hotel/casino/nightclub in the middle, and small club/tattoo parlor to the
+east. Colored sign borders and entrance strips identify each venue. Street
+sidewalks continue across the district boundary; other region exits stay closed
+until neighboring areas are built.
+
+All seven venues have explorable, simply furnished interiors. The front doors
+start unlocked, use the existing Open/Close and Enter/Exit interactions, and
+share their state with the corresponding interior door. Entrances and interior
+exits face the same direction. Bars, counters, racks, tables, seating and a tattoo
+chair block walking; the open floors and all entrances remain connected.
+The hotel currently contains its reception lobby, with guest rooms and booking
+left for later. Venue purchases, gambling, tattoos, staff and events are not
+implemented in this layout pass.
+
+Inside the small club, approach the stairs and use E → Go downstairs to enter
+the underground club. Its stairs offer Go upstairs and return to the small club.
+These transitions use no time or money, and underground saves retain the correct
+map and E1 atlas location. Stage and lounge furniture provide the initial basement
+layout. Sounds describe ventilation, sign electronics and air in the back alley;
+there are no invented crowds, music, footsteps or traffic.
+
+`nightlife-district.js` registers the outdoor block, venue interiors and both
+stairway directions. All belong to `worldArea: 'e1'`, so entering buildings does
+not reveal unrelated districts. Entering E1 reveals its adjacent E2 and F1
+markers, without making those unbuilt districts playable.
 
 ## District plan and discovery
 
