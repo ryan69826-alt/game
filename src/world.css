@@ -168,7 +168,7 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 .inventory-shell{display:grid;grid-template-columns:minmax(210px,1fr) minmax(240px,1.1fr) minmax(175px,.75fr) minmax(260px,1fr);gap:16px;align-items:start}
 .inventory-storage,.inventory-portrait,.inventory-shell>.equipment-panel{min-width:0}
 .inventory-layout{grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
-.inventory-portrait{position:sticky;top:0;margin:0;padding:12px 6px;border:1px solid var(--line);background:radial-gradient(ellipse at center,#2a403b,#142426 70%);text-align:center}
+.inventory-portrait{display:flex;flex-direction:column;align-self:stretch;position:sticky;top:0;margin:0;padding:12px 6px;border:1px solid var(--line);background:radial-gradient(ellipse at center,#2a403b,#142426 70%);text-align:center}
 .inventory-portrait figcaption{font-size:.7rem;color:var(--muted);margin-bottom:12px;letter-spacing:.08em}
 .inventory-character-canvas{display:block;width:100%;height:auto;max-height:calc(100dvh - 210px);object-fit:contain;image-rendering:pixelated}
 .inventory-shell>.equipment-panel{margin:0;padding:10px}
@@ -179,7 +179,7 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 .equipment-slot strong{font-size:.65rem;margin-bottom:3px}
 .equipment-slot>span{color:var(--muted);font-size:.6rem}
 .equipment-slot .inventory-item{min-height:25px;font-size:.63rem;padding:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.inventory-portrait>.ground-drop{font-size:.75rem}
+.inventory-portrait>.ground-drop{flex:1;min-height:120px;font-size:.85rem;margin-bottom:0}
 .inventory-portrait .world-note{font-size:.65rem;line-height:1.5;margin:10px 0}
 .inventory-carried .pocket-group{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .inventory-carried>h2{font-size:.85rem;color:var(--accent);margin:0 0 8px}
@@ -207,3 +207,12 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 .sidebar-shortcut{margin-left:auto;color:var(--muted);font-size:.75em;white-space:nowrap}
 .inventory-character-canvas.drop-valid{outline:2px solid #9ae3bb;outline-offset:2px}
 .inventory-character-canvas.drop-invalid{outline:2px solid #df9989;outline-offset:2px}
+
+/* Compact character identity stays at the top without changing the Stats sheet. */
+.character-sheet .world-panel{padding:12px;margin-bottom:12px}
+.character-sheet .world-panel h2{font-size:.8rem;margin-bottom:10px}
+#character-details{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 14px}
+#character-details .character-field{min-width:0}
+#character-details dt{font-size:.6rem;line-height:1.3;margin:0 0 2px}
+#character-details dd{font-size:.75rem;line-height:1.3;margin:0}
+@media(max-width:520px){#character-details{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}}

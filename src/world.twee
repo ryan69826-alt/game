@@ -26,7 +26,7 @@
 </div>
 <nav class="sidebar-nav" aria-label="Game pages">
 <<link 'Inventory <span class="sidebar-shortcut" data-shortcut="i" aria-hidden="true">[i]</span>'>><<run setup.inventoryUI.open()>><</link>>
-<<link "Quests/Jobs">><<run setup.worldWindows.open("Quests/Jobs")>><</link>>
+<<link 'Quests/Jobs <span class="sidebar-shortcut" data-shortcut="j" aria-hidden="true">[j]</span>'>><<run setup.worldWindows.open("Quests/Jobs")>><</link>>
 <<link 'Character <span class="sidebar-shortcut" data-shortcut="c" aria-hidden="true">[c]</span>'>><<run setup.worldWindows.open("Character")>><</link>>
 <<link "Stats">><<run setup.worldWindows.open("Stats")>><</link>>
 </nav>
@@ -77,10 +77,9 @@
 </main>
 
 :: CharacterSheet [nobr]
-<div class="character-window-content">
-<p class="world-note">Identity, appearance, and starting traits.</p>
+<div class="character-window-content character-sheet">
 <section class="world-panel" aria-labelledby="identity-title"><h2 id="identity-title">Identity & appearance</h2><dl id="character-details" class="character-details"></dl></section>
-<section class="world-panel" aria-labelledby="traits-title"><h2 id="traits-title">Starting traits</h2><ul id="character-traits" class="trait-tags"></ul></section>
+<section class="world-panel" aria-labelledby="traits-title"><h2 id="traits-title">Traits</h2><ul id="character-traits" class="trait-tags"></ul></section>
 </div>
 
 :: StatsSheet [nobr]

@@ -38,10 +38,12 @@ live in `character-rules.js`; grouping does not change save keys, XP or progress
 The old generic Combat skill has been removed; Athleticism retains its own XP.
 
 Start at Apartments locks creation. The sidebar shows the same full-body sprite.
-The sidebar lists Inventory **[i]**, Quests/Jobs, Character **[c]**, then Stats.
-Press **I** for Inventory or **C** for the read-only character sheet; shortcuts
+The sidebar lists Inventory **[i]**, Quests/Jobs **[j]**, Character **[c]**, then Stats.
+Press **I** for Inventory, **J** for Quests/Jobs or **C** for the read-only character sheet; shortcuts
 ignore typing, held-key repeats, browser modifiers and open dialogs, and pause
 held movement when opening a window. Quests/Jobs has empty quest and job sections.
+The character sheet begins with a compact identity/appearance grid, omits clothing
+and labels its trait section **Traits**. The sidebar map counts **discovered** areas.
 Character and Stats are read-only windows over the map; Inventory is also a
 window. Escape, close button, or backdrop closes them. Character creation cannot
 be reopened after starting. Use a private browser window to review a fresh creator
@@ -350,7 +352,8 @@ elapsed game seconds persist through reloads, Continue, and disk saves.
 On desktop, Inventory has four columns: nearby storage and ground items on the
 left, a larger full-body character view, carried pockets/bags, then equipment on
 the right. The Drop on ground button sits below the character (Drop to cabin
-floor while seated). The portrait
+floor while seated) and fills the remaining portrait-panel space as a large
+drop target. The portrait
 updates after clothing changes and uses the same crisp artwork as the sidebar.
 Narrow screens stack the panels without horizontal scrolling.
 

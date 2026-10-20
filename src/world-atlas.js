@@ -41,7 +41,7 @@ setup.worldAtlas = (() => {
         canvas.dataset.locationId=current();canvas.dataset.iconCount=shown.length;canvas.dataset.visibleIds=shown.map(l=>l.id).join(',');canvas.dataset.connectionIds=routes.join(',');canvas.dataset.zoom='neighborhood';
         canvas.setAttribute('aria-label',`World map. Current area: ${here.name} (${here.coordinate}). Direct routes: ${routes.map(id=>find(id)?.coordinate||id).join(', ')||'none'}. Discovered districts: ${known.map(location=>`${location.coordinate} ${location.name}`).join('; ')}.`);
         const caption=document.getElementById('world-map-location');if(caption)caption.textContent=`${here.coordinate} · ${here.name}`;
-        const count=document.getElementById('world-map-count');if(count)count.textContent=`${known.length} KNOWN`;
+        const count=document.getElementById('world-map-count');if(count)count.textContent=`${known.length} DISCOVERED`;
     }
     function open() {
         const shown=visible(),known=new Set(shown.map(location=>location.id));

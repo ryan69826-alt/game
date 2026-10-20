@@ -308,6 +308,7 @@ test('character and stats are read-only dialogs over the unchanged Apartments sc
     await dialog.waitFor({state:'visible'});
     assert.match(await dialog.locator('#character-details').textContent(),/Base modelBodysuit base/);
     assert.equal(await dialog.locator('#character-traits').textContent(),'Nerd');
+    assert.equal(await dialog.locator('#traits-title').textContent(),'Traits');assert.equal(await dialog.locator('#character-details dt').filter({hasText:/^Clothing$/}).count(),0);
     assert.equal(await dialog.locator('input,select,textarea,[contenteditable="true"],a').count(),0,'no editing controls or links');
     assert.equal(await page.getByRole('link',{name:'Edit character',exact:true}).count(),0);
     assert.ok(await location.evaluate(node=>node===document.querySelector('.world-content')),'same location DOM remains behind the window');
@@ -1136,7 +1137,7 @@ test('money and health are persistent sidebar stats, with safe transactions and 
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     assert.equal(await page.locator('#player-money').textContent(),'$99,999');assert.equal(await page.locator('#player-health').textContent(),'100 / 100');
     const nav=page.getByRole('navigation',{name:'Game pages'});assert.equal(await nav.getByRole('link',{name:'Apartments',exact:true}).count(),0);
-    assert.deepEqual(await nav.locator('a').allTextContents(),['Inventory [i]','Quests/Jobs','Character [c]','Stats']);
+    assert.deepEqual(await nav.locator('a').allTextContents(),['Inventory [i]','Quests/Jobs [j]','Character [c]','Stats']);
     const changes=await page.evaluate(()=>{
         const {setup,State}=SugarCube;
         const rejects=[setup.playerState.spend(-1),setup.playerState.spend(100000),setup.playerState.changeMoney(.5),setup.playerState.changeHealth(NaN)];
@@ -1897,7 +1898,7 @@ test('default ambience follows nearby environment and contains no phantom traffi
 
 test('district atlas reveals only Apartments and cardinal neighbors, with readable names in an overlay',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await stableAtlas();
-    assert.equal(await page.locator('#world-map-count').textContent(),'4 KNOWN');
+    assert.equal(await page.locator('#world-map-count').textContent(),'4 DISCOVERED');
     assert.deepEqual(await page.evaluate(()=>SugarCube.setup.worldAtlas.visible().map(area=>area.coordinate).sort()),['B1','C1','C2','D1']);
     const before=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
     await page.getByRole('button',{name:'Expand world map',exact:true}).click();
@@ -2578,7 +2579,7 @@ test('sidebar shortcuts open inventory and character, preserve typing and pause 
     await page.keyboard.press('i');assert.equal(await page.getByRole('dialog').count(),0);
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     const nav=page.getByRole('navigation',{name:'Game pages'});
-    assert.deepEqual(await nav.locator('a').allTextContents(),['Inventory [i]','Quests/Jobs','Character [c]','Stats']);
+    assert.deepEqual(await nav.locator('a').allTextContents(),['Inventory [i]','Quests/Jobs [j]','Character [c]','Stats']);
     assert.equal(await nav.getByRole('button',{name:'Inventory',exact:true}).getAttribute('aria-keyshortcuts'),'i');
     assert.equal(await nav.getByRole('button',{name:'Character',exact:true}).getAttribute('aria-keyshortcuts'),'c');
     await page.clock.install();await page.keyboard.down('d');await page.keyboard.press('i');
@@ -2587,11 +2588,12 @@ test('sidebar shortcuts open inventory and character, preserve typing and pause 
     assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),paused);await page.keyboard.up('d');
     await page.keyboard.press('c');assert.ok(await inventory.isVisible());await page.keyboard.press('Escape');await page.keyboard.press('C');
     assert.ok(await page.getByRole('dialog',{name:'Character',exact:true}).isVisible());await page.keyboard.press('Escape');
-    await nav.getByRole('button',{name:'Quests/Jobs',exact:true}).click();const quests=page.getByRole('dialog',{name:'Quests/Jobs',exact:true});
+    assert.equal(await nav.getByRole('button',{name:'Quests/Jobs',exact:true}).getAttribute('aria-keyshortcuts'),'j');
+    await page.keyboard.press('j');const quests=page.getByRole('dialog',{name:'Quests/Jobs',exact:true});
     assert.match(await quests.textContent(),/No active quests/);assert.match(await quests.textContent(),/No current jobs/);assert.ok(await page.locator('#local-map').isVisible());
     await page.keyboard.press('Escape');
     await page.evaluate(()=>{const input=document.createElement('input');input.id='shortcut-typing-check';document.querySelector('.world-content').append(input);input.focus();});
-    await page.keyboard.type('ic');assert.equal(await page.locator('#shortcut-typing-check').inputValue(),'ic');assert.equal(await page.getByRole('dialog').count(),0);
+    await page.keyboard.type('icj');assert.equal(await page.locator('#shortcut-typing-check').inputValue(),'icj');assert.equal(await page.getByRole('dialog').count(),0);
     await page.evaluate(()=>{document.getElementById('shortcut-typing-check').remove();for(const options of [{key:'i',ctrlKey:true},{key:'c',altKey:true},{key:'i',metaKey:true},{key:'i',repeat:true}])document.body.dispatchEvent(new KeyboardEvent('keydown',{...options,bubbles:true}));});
     assert.equal(await page.getByRole('dialog').count(),0);assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),paused);
 });

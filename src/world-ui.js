@@ -25,15 +25,15 @@ setup.worldWindows = (() => {
         const details = root.querySelector('#character-details');
         if (details) {
             const fields = {Age: character.age, Gender: character.gender, Genitals: character.genitals,
-                'Base model': character.gender === 'Female' ? 'Bodysuit base' : 'Original male', Clothing: setup.clothing.summary(character),
+                'Base model': character.gender === 'Female' ? 'Bodysuit base' : 'Original male',
                 'Eye color': character.eyeColor, 'Hair color': character.hairColor, 'Hair length': character.hairLength, 'Skin tone': character.skinTone};
             for (const [name, value] of Object.entries(fields)) {
                 const term = document.createElement('dt');term.textContent = name;
                 const description = document.createElement('dd');description.textContent = value;
-                details.append(term, description);
+                const field=document.createElement('div');field.className='character-field';field.append(term,description);details.append(field);
             }
             const list = root.querySelector('#character-traits');
-            for (const name of character.traits.length ? character.traits : ['No starting traits selected']) {
+            for (const name of character.traits.length ? character.traits : ['No traits selected']) {
                 const item = document.createElement('li');item.textContent = name;list.append(item);
             }
         }
@@ -78,8 +78,8 @@ $(document).on(':equipmentchange',()=>{if(document.querySelector('.world-sidebar
 /* World shortcuts never replace a dialog or intercept typing/browser shortcuts. */
 $(document).on('keydown.sidebarShortcuts',event=>{
     const key=event.key.toLowerCase();
-    if(!['i','c'].includes(key)||event.repeat||event.originalEvent?.repeat||event.ctrlKey||event.altKey||event.metaKey||Dialog.isOpen()||
+    if(!['i','c','j'].includes(key)||event.repeat||event.originalEvent?.repeat||event.ctrlKey||event.altKey||event.metaKey||Dialog.isOpen()||
         event.target.closest('input,select,textarea,[contenteditable="true"]')||!document.querySelector('.world-sidebar'))return;
     event.preventDefault();
-    if(key==='i')setup.inventoryUI.open();else setup.worldWindows.open('Character');
+    if(key==='i')setup.inventoryUI.open();else setup.worldWindows.open(key==='j'?'Quests/Jobs':'Character');
 });
