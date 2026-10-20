@@ -32,7 +32,7 @@ $(document).on(':passagedisplay', () => {
     const clothing = document.createElement('fieldset');clothing.className = 'customization-group';
     const legend = document.createElement('legend');legend.textContent = 'Clothing';clothing.append(legend);
     const grid = document.createElement('div');grid.className = 'control-grid';
-    for (const slot of setup.clothing.slots) {
+    for (const slot of setup.clothing.creatorSlots) {
         const row = document.createElement('div');row.className = 'character-field';
         const label = document.createElement('label'), input = document.createElement('select');
         input.id = `clothing-${slot}`;input.name = slot;label.htmlFor = input.id;label.textContent = setup.clothing.labels[slot];

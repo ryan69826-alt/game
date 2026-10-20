@@ -202,7 +202,7 @@ test('old saves without character data open safely; malformed fields normalize',
     await page.waitForSelector('#character-gender');assert.equal((await value()).bodySize,'Medium');
     await page.evaluate(()=>{SugarCube.State.variables.character={gender:'Unknown',genitals:'Both',heightInches:900,bodyFat:'Fat'};SugarCube.Engine.play('CharacterCreation');});
     await page.waitForSelector('#character-gender');const character=await value();
-    assert.equal(character.gender,'Female');assert.equal(character.genitals,'Both');assert.equal(character.bodySize,'Medium');assert.equal(character.heightInches,undefined);assert.equal(character.bodyFat,undefined);assert.deepEqual(character.clothing,{top:'shirt',bottoms:'pants',shoes:'shoes',storage:'none',handheld:'none'});
+    assert.equal(character.gender,'Female');assert.equal(character.genitals,'Both');assert.equal(character.bodySize,'Medium');assert.equal(character.heightInches,undefined);assert.equal(character.bodyFat,undefined);assert.deepEqual(Object.fromEntries(['top','bottoms','shoes','storage','handheld'].map(slot=>[slot,character.clothing[slot]])),{top:'shirt',bottoms:'pants',shoes:'shoes',storage:'none',handheld:'none'});assert.ok(Object.entries(character.clothing).filter(([slot])=>!['top','bottoms','shoes','storage','handheld'].includes(slot)).every(([,value])=>value==='none'));
     assert.equal(character.breastSize,'Medium');assert.equal(character.version,8);
     assert.deepEqual(character.traits,[]);assert.ok(Object.values(character.skills).every(xp=>xp===0));
 });
@@ -406,7 +406,7 @@ test('Apartments has a connected 90 by 74 grid with two roads, parking, park, an
             seen.add(key);for(const [dx,dy] of [[0,1],[1,0],[0,-1],[-1,0]]) queue.push({x:x+dx,y:y+dy});
         }
         const towardPark={north:[0,-1],south:[0,1],east:[1,0],west:[-1,0]};
-        const sidewalks=new Set(),pathQueue=[{x:25,y:15}];
+        const sidewalks=new Set(),pathQueue=[{x:25,y:25}];
         for(let i=0;i<pathQueue.length;i++) {
             const {x,y}=pathQueue[i],key=`${x},${y}`;
             if(sidewalks.has(key) || !['path','entrance'].includes(map.tileAt(x,y).kind)) continue;
@@ -415,14 +415,14 @@ test('Apartments has a connected 90 by 74 grid with two roads, parking, park, an
         return {width:map.width,height:map.height,
             horizontal:Array.from({length:90},(_,x)=>map.tileAt(x,66).kind),
             vertical:Array.from({length:65},(_,y)=>map.tileAt(6,y).kind),
-            parking:map.tileAt(13,55).kind,park:map.tileAt(30,23).kind,
+            parking:map.tileAt(79,55).kind,park:map.tileAt(30,33).kind,
             horizontalWidth:[63,64,65,66,67,68,69].map(y=>map.tileAt(30,y).kind==='road'),
             verticalWidth:[3,4,5,6,7,8,9].map(x=>map.tileAt(x,5).kind==='road'),
-            parkIsUncut:Array.from({length:544},(_,i)=>map.tileAt(27+i%34,17+Math.floor(i/34)).kind).every(kind=>kind==='park'||kind==='tree'),
-            ring:Array.from({length:38},(_,i)=>[[25+i,15],[25+i,34],...(i<20?[[25,15+i],[62,15+i]]:[])]).flat().every(([x,y])=>map.tileAt(x,y).kind==='path'),
+            parkIsUncut:Array.from({length:544},(_,i)=>map.tileAt(27+i%34,27+Math.floor(i/34)).kind).every(kind=>kind==='park'||kind==='tree'),
+            ring:Array.from({length:38},(_,i)=>[[25+i,25],[25+i,44],...(i<20?[[25,25+i],[62,25+i]]:[])]).flat().every(([x,y])=>map.tileAt(x,y).kind==='path'),
             cars:map.cars.map(car=>({area:car.width*car.height,cells:Array.from({length:car.width*car.height},(_,i)=>map.tileAt(car.x+i%car.width,car.y+Math.floor(i/car.width))).every(tile=>tile.kind==='car'&&!tile.walkable)})),
-            median:map.tileAt(16,55),
-            aisles:[[12,51],[21,51],[12,56],[21,56],[12,60],[21,60]].every(([x,y])=>map.tileAt(x,y).kind==='parking'&&seen.has(`${x},${y}`)),
+            median:map.tileAt(82,55),
+            aisles:[[78,51],[87,51],[78,56],[87,56],[78,60],[87,60]].every(([x,y])=>map.tileAt(x,y).kind==='parking'&&seen.has(`${x},${y}`)),
             entrances:map.buildings.map(building=>{
                 const {x,y}=building.door,[dx,dy]=towardPark[building.facing];
                 return {reached:seen.has(`${x},${y}`),sidewalkConnected:sidewalks.has(`${x},${y}`),door:map.tileAt(x,y).kind,
@@ -482,9 +482,9 @@ test('movement buttons, keyboard, and adjacent map clicks advance five seconds, 
 
 test('walls, parked cars, trees, map bounds, and distant clicks do not advance time',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    for(const [x,y,dx,dy] of [[32,13,0,-1],[14,52,0,1],[13,55,1,0],[29,26,0,-1],[4,0,0,-1],[89,73,0,1]]) {
+    for(const [x,y,dx,dy] of [[32,23,0,-1],[80,52,0,1],[79,55,1,0],[29,36,0,-1],[4,0,0,-1],[89,73,0,1]]) {
         const result=await page.evaluate(({x,y,dx,dy})=>{
-            SugarCube.State.variables.world={version:4,mapId:'apartments',x,y,elapsedSeconds:35};
+            SugarCube.State.variables.world={version:5,mapId:'apartments',x,y,elapsedSeconds:35};
             const result=SugarCube.setup.worldMovement.move(dx,dy);
             return {result,world:structuredClone(SugarCube.State.variables.world)};
         },{x,y,dx,dy});
@@ -496,10 +496,10 @@ test('walls, parked cars, trees, map bounds, and distant clicks do not advance t
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),0);
     assert.match(await page.locator('#movement-status').textContent(),/adjacent square/);
     const results=await page.evaluate(()=>{
-        const cases=[undefined,{mapId:'constructor',x:NaN,y:50,elapsedSeconds:-1},{version:4,mapId:'apartments',x:33,y:10,elapsedSeconds:20}];
+        const cases=[undefined,{mapId:'constructor',x:NaN,y:50,elapsedSeconds:-1},{version:5,mapId:'apartments',x:33,y:20,elapsedSeconds:20}];
         return cases.map(value=>{SugarCube.State.variables.world=value;return structuredClone(SugarCube.setup.worldMovement.ensure());});
     });
-    for(const result of results) {assert.equal(result.x,30);assert.equal(result.y,23);assert.equal(result.mapId,'apartments');}
+    for(const result of results) {assert.equal(result.x,30);assert.equal(result.y,33);assert.equal(result.mapId,'apartments');}
     assert.equal(results[2].elapsedSeconds,20);
 });
 
@@ -545,12 +545,12 @@ test('held keys move at a controlled pace, stop on release/blur/dialogs, and res
     const paused=await world();await page.clock.runFor(600);assert.deepEqual(await world(),paused);
     await page.keyboard.up('s');await page.keyboard.press('Escape');
     await page.evaluate(()=>{
-        SugarCube.State.variables.world={version:4,mapId:'apartments',x:32,y:14,elapsedSeconds:0};
+        SugarCube.State.variables.world={version:5,mapId:'apartments',x:32,y:24,elapsedSeconds:0};
         SugarCube.Engine.play('Apartments');
     });
-    await page.waitForSelector('#local-map[data-player-y="14"]');
+    await page.waitForSelector('#local-map[data-player-y="24"]');
     await page.keyboard.down('w');await page.clock.runFor(1000);await page.keyboard.up('w');
-    assert.equal((await world()).elapsedSeconds,5);assert.equal((await world()).y,13);
+    assert.equal((await world()).elapsedSeconds,5);assert.equal((await world()).y,23);
     assert.match(await page.locator('#movement-status').textContent(),/blocks the way/);
 });
 
@@ -613,7 +613,7 @@ test('a blocked held direction remains active and can resume after another direc
     await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await page.evaluate(()=>{
-        SugarCube.State.variables.world={version:4,mapId:'apartments',x:28,y:25,elapsedSeconds:0};
+        SugarCube.State.variables.world={version:5,mapId:'apartments',x:28,y:35,elapsedSeconds:0};
         SugarCube.Engine.play('Apartments');
     });
     await page.waitForSelector('#local-map[data-player-x="28"]');
@@ -621,7 +621,7 @@ test('a blocked held direction remains active and can resume after another direc
     await page.keyboard.down('d');await page.clock.runFor(400);
     assert.equal((await world()).elapsedSeconds,0,'the tree blocks east without advancing time');
     await page.keyboard.down('s');await page.clock.runFor(200);
-    assert.equal((await world()).y,26);assert.equal((await world()).elapsedSeconds,5);
+    assert.equal((await world()).y,36);assert.equal((await world()).elapsedSeconds,5);
     await page.clock.runFor(200);assert.equal((await world()).x,29);assert.equal((await world()).elapsedSeconds,10,'east is still held and now unblocked');
     await page.keyboard.up('s');await page.clock.runFor(200);
     assert.equal((await world()).x,30);assert.equal((await world()).elapsedSeconds,15);
@@ -634,8 +634,8 @@ test('interaction reach uses door squares and full car footprints, excluding dia
         const api=SugarCube.setup.interactions,map=SugarCube.setup.worldMaps.apartments;
         const has=(id,x,y)=>api.nearby({mapId:'apartments',x,y}).some(target=>target.object.id===id);
         return {count:map.interactables.length,unique:new Set(map.interactables.map(object=>object.id)).size,
-            doorAdjacent:has('apartment-door-1',32,14),doorOn:has('apartment-door-1',32,13),doorDiagonal:has('apartment-door-1',33,14),
-            carLeft:has('parked-car-1',10,48),carRight:has('parked-car-1',13,49),carBelow:has('parked-car-1',12,50),carDiagonal:has('parked-car-1',13,50)};
+            doorAdjacent:has('apartment-door-1',32,24),doorOn:has('apartment-door-1',32,23),doorDiagonal:has('apartment-door-1',33,24),
+            carLeft:has('parked-car-1',76,48),carRight:has('parked-car-1',79,49),carBelow:has('parked-car-1',78,50),carDiagonal:has('parked-car-1',79,50)};
     });
     assert.deepEqual(reach,{count:13,unique:13,doorAdjacent:true,doorOn:true,doorDiagonal:false,carLeft:true,carRight:true,carBelow:true,carDiagonal:false});
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
@@ -649,7 +649,7 @@ test('E opens a door action window over the location and pauses held movement wi
     await page.clock.install({time:new Date('2026-01-01T00:00:00Z')});
     await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await placeInWorld('apartments',32,14);
+    await placeInWorld('apartments',32,24);
     assert.equal(await page.locator('#interaction-hint').textContent(),'Apartment 1 door');
     assert.ok(await page.getByRole('button',{name:'Interact [E]',exact:true}).isEnabled());
     await page.keyboard.down('w');
@@ -671,8 +671,8 @@ test('E opens a door action window over the location and pauses held movement wi
 
 test('car actions, nearby object selection, ground objects, and NPC definitions share one interaction system',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await page.evaluate(()=>{SugarCube.State.variables.world.x=13;SugarCube.State.variables.world.y=49;SugarCube.Engine.play('Apartments');});
-    await page.waitForSelector('#local-map[data-player-x="13"]');
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=79;SugarCube.State.variables.world.y=49;SugarCube.Engine.play('Apartments');});
+    await page.waitForSelector('#local-map[data-player-x="79"]');
     await page.keyboard.press('e');
     const dialog=page.getByRole('dialog',{name:'Interact',exact:true});await dialog.waitFor({state:'visible'});
     await dialog.getByRole('button',{name:'Look through window',exact:true}).click();
@@ -680,10 +680,10 @@ test('car actions, nearby object selection, ground objects, and NPC definitions 
     await page.keyboard.press('Escape');
     await page.evaluate(()=>{
         const map=SugarCube.setup.worldMaps.apartments;
-        map.interactables.push({id:'test-note',name:'Folded note',kind:'ground',x:30,y:23,
+        map.interactables.push({id:'test-note',name:'Folded note',kind:'ground',x:30,y:33,
             actions:[{id:'read',label:'Read',result:'A short handwritten message.'}]},
-            {id:'test-resident',name:'Test resident',kind:'npc',x:31,y:23,description:'A resident standing nearby.'});
-        SugarCube.State.variables.world.x=30;SugarCube.State.variables.world.y=23;SugarCube.Engine.play('Apartments');
+            {id:'test-resident',name:'Test resident',kind:'npc',x:31,y:33,description:'A resident standing nearby.'});
+        SugarCube.State.variables.world.x=30;SugarCube.State.variables.world.y=33;SugarCube.Engine.play('Apartments');
     });
     await page.waitForSelector('#local-map[data-player-x="30"]');
     assert.equal(await page.locator('#interaction-hint').textContent(),'2 objects nearby');
@@ -703,8 +703,8 @@ test('car actions, nearby object selection, ground objects, and NPC definitions 
 
 test('opening apartment and car doors updates both maps and persists across movement, reload, and disk saves',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await page.evaluate(()=>{SugarCube.State.variables.world.x=32;SugarCube.State.variables.world.y=14;SugarCube.Engine.play('Apartments');});
-    await page.waitForSelector('#local-map[data-player-y="14"]');
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=32;SugarCube.State.variables.world.y=24;SugarCube.Engine.play('Apartments');});
+    await page.waitForSelector('#local-map[data-player-y="24"]');
     await stableAtlas();
     const pixels=()=>page.locator('#local-map').evaluate(canvas=>canvas.toDataURL());
     const closed=await pixels();
@@ -717,12 +717,12 @@ test('opening apartment and car doors updates both maps and persists across move
     assert.notEqual(await pixels(),closed,'open door is drawn on the map');
     assert.equal(await page.locator('#world-map').evaluate(canvas=>canvas.toDataURL()),overviewClosed,'world atlas stays independent of local doors');
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),elapsedSeconds);
-    await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map[data-player-y="14"]');
+    await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map[data-player-y="24"]');
     assert.notEqual(await pixels(),closed,'open appearance survives reload');
     await page.keyboard.press('e');await dialog.locator('.interaction-actions').getByRole('button',{name:'Close',exact:true}).waitFor({state:'visible'});assert.equal(await dialog.getByRole('button',{name:'Open',exact:true}).count(),0);
     await page.keyboard.press('Escape');
-    await page.evaluate(()=>{SugarCube.State.variables.world.x=13;SugarCube.State.variables.world.y=49;SugarCube.Engine.play('Apartments');});
-    await page.waitForSelector('#local-map[data-player-x="13"]');
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=79;SugarCube.State.variables.world.y=49;SugarCube.Engine.play('Apartments');});
+    await page.waitForSelector('#local-map[data-player-x="79"]');
     const carClosed=await pixels();
     await page.keyboard.press('e');await dialog.getByRole('button',{name:'Open door',exact:true}).click();
     assert.equal(await dialog.getByRole('button',{name:'Open door',exact:true}).count(),0);assert.ok(await dialog.getByRole('button',{name:'Close door',exact:true}).isVisible());
@@ -743,7 +743,7 @@ test('opening apartment and car doors updates both maps and persists across move
 test('car edges restrict side actions, rear trunk access, front access, and diagonals',async()=>{
     const edges=await page.evaluate(()=>{
         const setup=SugarCube.setup, map=setup.worldMaps.apartments, car=map.interactables.find(object=>object.kind==='car');
-        const cases=[[10,48],[10,49],[13,48],[13,49],[11,50],[12,50],[11,47],[12,47],[10,50],[13,50],[10,47],[13,47]];
+        const cases=[[76,48],[76,49],[79,48],[79,49],[77,50],[78,50],[77,47],[78,47],[76,50],[79,50],[76,47],[79,47]];
         return cases.map(([x,y])=>{
             const world={mapId:'apartments',x,y};
             return {x,y,actions:setup.interactions.actionsFor(car,world).map(action=>action.id),near:setup.interactions.nearby(world).some(target=>target.object.id===car.id)};
@@ -754,7 +754,7 @@ test('car edges restrict side actions, rear trunk access, front access, and diag
     edges.slice(6).forEach(edge=>{assert.deepEqual(edge.actions,[]);assert.equal(edge.near,false);});
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     const rejected=await page.evaluate(()=>{
-        SugarCube.State.variables.world.x=12;SugarCube.State.variables.world.y=50;
+        SugarCube.State.variables.world.x=78;SugarCube.State.variables.world.y=50;
         return SugarCube.setup.interactions.run('parked-car-1','open');
     });assert.equal(rejected.ok,false);
 });
@@ -785,7 +785,7 @@ test('no equipment means no invisible storage; shoes add none and a backpack add
 test('trunk blocks support UI transfers, reject insufficient space, and persist without restocking',async()=>{
     await page.locator('#clothing-storage').selectOption('backpack');
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await page.evaluate(()=>{SugarCube.State.variables.world.x=12;SugarCube.State.variables.world.y=50;SugarCube.Engine.play('Apartments');});
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=78;SugarCube.State.variables.world.y=50;SugarCube.Engine.play('Apartments');});
     await page.waitForSelector('#local-map[data-player-y="50"]');
     const elapsedSeconds=await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds);
     await page.keyboard.press('e');
@@ -840,7 +840,7 @@ test('trunk blocks support UI transfers, reject insufficient space, and persist 
 test('packing rejects overlap, overflow, fractional positions, remote trunks and unworn storage without losing items',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     const results=await page.evaluate(()=>{
-        const {State,setup}=SugarCube;State.variables.world.x=12;State.variables.world.y=50;
+        const {State,setup}=SugarCube;State.variables.world.x=78;State.variables.world.y=50;
         const inv=setup.inventory, container=inv.openTrunk('parked-car-1');
         const item=inv.placements(container)[0];const before=JSON.stringify(State.variables.inventory);
         const attempts=[
@@ -850,7 +850,7 @@ test('packing rejects overlap, overflow, fractional positions, remote trunks and
             inv.transfer(container.id,'worn:backpack',item.id,0,0,'parked-car-1')
         ];
         const unchanged=before===JSON.stringify(State.variables.inventory);
-        State.variables.world.x=13;State.variables.world.y=49;
+        State.variables.world.x=79;State.variables.world.y=49;
         const remote=inv.transfer(container.id,'worn:pants:1',item.id,0,0,'parked-car-1');
         return {attempts,unchanged,remote,finalUnchanged:before===JSON.stringify(State.variables.inventory)};
     });
@@ -860,7 +860,7 @@ test('packing rejects overlap, overflow, fractional positions, remote trunks and
 test('inventory fits narrow screens and large text and blocks movement while open',async()=>{
     await page.locator('#clothing-storage').selectOption('backpack');
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await page.evaluate(()=>{SugarCube.State.variables.world.x=12;SugarCube.State.variables.world.y=50;SugarCube.Engine.play('Apartments');});
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=78;SugarCube.State.variables.world.y=50;SugarCube.Engine.play('Apartments');});
     await page.waitForSelector('#local-map[data-player-y="50"]');
     await page.keyboard.press('e');await page.getByRole('button',{name:'Open trunk',exact:true}).click();
     const dialog=page.getByRole('dialog',{name:'Trunk & inventory',exact:true});await dialog.waitFor({state:'visible'});
@@ -901,7 +901,7 @@ test('five clothing dropdown categories grant one shirt pocket and four independ
 test('pointer drag follows the mouse, drops into storage, and preserves items on invalid/outside drops',async()=>{
     await page.locator('#clothing-storage').selectOption('backpack');
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await page.evaluate(()=>{SugarCube.State.variables.world.x=12;SugarCube.State.variables.world.y=50;SugarCube.Engine.play('Apartments');});
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=78;SugarCube.State.variables.world.y=50;SugarCube.Engine.play('Apartments');});
     await page.waitForSelector('#local-map[data-player-y="50"]');await page.keyboard.press('e');await page.getByRole('button',{name:'Open trunk',exact:true}).click();
     const dialog=page.getByRole('dialog',{name:'Trunk & inventory',exact:true});await dialog.waitFor({state:'visible'});
     const trunk=dialog.locator('[data-container="trunk:apartments:parked-car-1"]'),bag=dialog.locator('[data-container="worn:backpack"]');
@@ -1005,8 +1005,8 @@ test('cars park nose-in toward bay ends and expose trunks to the driving aisles'
 
 test('parked car headlights and taillights render in the same direction used by interactions',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await page.evaluate(()=>{SugarCube.State.variables.world.x=16;SugarCube.State.variables.world.y=54;SugarCube.Engine.play('Apartments');});
-    await page.waitForSelector('#local-map[data-player-x="16"]');
+    await page.evaluate(()=>{SugarCube.State.variables.world.x=82;SugarCube.State.variables.world.y=54;SugarCube.Engine.play('Apartments');});
+    await page.waitForSelector('#local-map[data-player-x="82"]');
     const lamps=await page.evaluate(()=>{
         const canvas=document.getElementById('local-map'),ctx=canvas.getContext('2d');
         const ox=Number(canvas.dataset.cameraX)*16,oy=Number(canvas.dataset.cameraY)*16;
@@ -1174,7 +1174,7 @@ test('housing receptionist reach crosses the desk only at its service positions;
 
 test('renting through Talk provides a key to explicitly unlock the selected apartment and survives reloads and disk saves inside it',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await walkTo(69,47);await openPortal('Enter','housing-office');
+    await walkTo(69,55);await openPortal('Enter','housing-office');
     await walkTo(8,7);await page.keyboard.press('e');
     const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
     assert.deepEqual(await dialog.locator('.interaction-actions button').allTextContents(),['Talk','Attack']);
@@ -1189,7 +1189,7 @@ test('renting through Talk provides a key to explicitly unlock the selected apar
     await page.getByRole('button',{name:'Apartment key, 1 by 1 blocks, Receptionist key tray',exact:true}).click();
     await page.getByRole('button',{name:'Empty block 1, 1 in Shirt pocket',exact:true}).click();
     await page.keyboard.press('Escape');await walkTo(8,1);await openPortal('Exit','apartments');
-    await walkTo(55,35);await openPortal('Enter','apartment-3');
+    await walkTo(55,45);await openPortal('Enter','apartment-3');
     // Unit 4 is west of this hallway after rotating the north-facing building.
     await walkTo(6,4);await page.keyboard.press('e');await dialog.getByRole('button',{name:'Open',exact:true}).click();
     assert.match(await dialog.locator('#interaction-result').textContent(),/locked/);
@@ -1255,7 +1255,7 @@ test('game time crosses midnight and year boundaries independently of the browse
 
 test('opening doors, changing maps, talking, renting, and real-time waiting never advance game time',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await walkTo(69,47);const elapsed=await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds);
+    await walkTo(69,55);const elapsed=await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds);
     await openPortal('Enter','housing-office');assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),elapsed);
     await walkTo(8,7);const atDesk=await page.evaluate(()=>SugarCube.setup.gameClock.now());
     await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
@@ -1273,7 +1273,7 @@ test('weekly rent charges once at the exact due time, catches up, and retains un
         const {setup,State}=SugarCube,week=setup.housing.weekSeconds;
         State.variables.world={...State.variables.world,mapId:'housing-office',x:8,y:7};
         const rented=setup.housing.rent('1-2');const first={...State.variables.housing};
-        State.variables.world={...State.variables.world,mapId:'apartments',x:30,y:23,elapsedSeconds:week-10};
+        State.variables.world={...State.variables.world,mapId:'apartments',x:30,y:33,elapsedSeconds:week-10};
         setup.worldMovement.move(1,0);const before=State.variables.player.money;
         setup.worldMovement.move(-1,0);const due={money:State.variables.player.money,...State.variables.housing};
         setup.housing.collectDue();setup.housing.collectDue();const repeat=State.variables.player.money;
@@ -1307,7 +1307,7 @@ test('legacy turns and monthly leases migrate once without resetting time or cha
         return {world,again,first,lease,now:setup.gameClock.now(),money:State.variables.player.money,
             invalid:setup.character.normalize({startDate:'2026-02-30'}).startDate};
     });
-    assert.equal(result.world.version,4);assert.equal(result.world.turn,undefined);assert.equal(result.world.elapsedSeconds,85);assert.deepEqual(result.again,result.world);
+    assert.equal(result.world.version,5);assert.equal(result.world.turn,undefined);assert.equal(result.world.elapsedSeconds,85);assert.deepEqual(result.again,result.world);
     assert.equal(result.first.version,3);assert.equal(result.first.rentedUnit,'2-3');assert.equal(result.first.weeklyRent,600);
     assert.equal(result.first.monthlyRent,undefined);assert.equal(result.first.nextRentAt,result.now+604800);assert.deepEqual(result.lease,result.first);
     assert.equal(result.money,99999);assert.equal(result.invalid,'2026-03-20');
@@ -1461,7 +1461,7 @@ test('maximum tiredness or fatigue causes collapse, wakes at the recovery target
 
 test('carried coffee is consumed once, lowers tiredness, and leaves the awake schedule and clock unchanged',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await placeInWorld('apartments',15,50);
+    await placeInWorld('apartments',81,50);
     const coffee=await page.evaluate(()=>{
         const {setup,State}=SugarCube;const trunk=setup.inventory.openTrunk('parked-car-2');const item=setup.inventory.placements(trunk).find(item=>item.type==='coffee');
         const denied=setup.inventory.consume(trunk.id,item.id);setup.inventory.transfer(trunk.id,'worn:shirt',item.id,0,0,'parked-car-2');
@@ -1644,7 +1644,7 @@ test('all doors offer lock actions, lockpicking changes access without opening, 
         const all=Object.values(setup.worldMaps).flatMap(map=>map.interactables.filter(object=>object.kind==='door').map(object=>setup.interactions.actionsFor(object).map(action=>action.id)));
         State.variables.world={...State.variables.world,mapId:'apartment-1',x:5,y:13};
         const lock=setup.interactions.run('exit-apartment-1','lock');
-        State.variables.world={...State.variables.world,mapId:'apartments',x:32,y:14};
+        State.variables.world={...State.variables.world,mapId:'apartments',x:32,y:24};
         const blocked=setup.interactions.run('apartment-door-1','open');
         const pickedEntrance=setup.interactions.run('apartment-door-1','lockpick');
         const entranceOpen=setup.interactions.run('apartment-door-1','open');
@@ -1672,7 +1672,7 @@ test('door controls replace open/close and lock/unlock and every apartment lock 
 });
 
 test('unowned vehicle doors and trunks start independently locked and reject inventory access until unlocked',async()=>{
-    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',13,49);
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',79,49);
     await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true}),actions=dialog.locator('.interaction-actions');
     assert.match(await actions.textContent(),/Lockpick · Level 3 · 0% chance/);
     await actions.getByRole('button',{name:'Open door',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/locked/);
@@ -1681,7 +1681,7 @@ test('unowned vehicle doors and trunks start independently locked and reject inv
     await actions.getByRole('button',{name:'Unlock',exact:true}).click();await actions.getByRole('button',{name:'Open door',exact:true}).click();
     assert.equal(await actions.getByRole('button',{name:'Open door',exact:true}).count(),0);
     await actions.getByRole('button',{name:'Close door',exact:true}).click();await actions.getByRole('button',{name:'Lock',exact:true}).click();
-    await page.keyboard.press('Escape');await placeInWorld('apartments',12,50);await page.keyboard.press('e');
+    await page.keyboard.press('Escape');await placeInWorld('apartments',78,50);await page.keyboard.press('e');
     assert.match(await actions.textContent(),/Lockpick · Level 2 · 0% chance/);
     await actions.getByRole('button',{name:'Open trunk',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/locked/);
     assert.equal(await page.evaluate(()=>SugarCube.setup.inventory.openTrunk('parked-car-1')),null);
@@ -1733,9 +1733,9 @@ test('Shift sprinting halves input delay, spends two seconds per step and uses e
     await page.clock.runFor(1);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),32);
     await page.clock.runFor(100);assert.equal(await page.locator('#player-time').textContent(),'08:00:06');assert.equal(await page.locator('#player-endurance').textContent(),'3 / 25');
     await page.keyboard.up('Shift');await page.clock.runFor(199);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),33);
-    await page.clock.runFor(1);await page.keyboard.up('d');assert.equal(await page.locator('#player-time').textContent(),'08:00:11');assert.equal(await page.locator('#player-endurance').textContent(),'1.75 / 25');
+    await page.clock.runFor(1);await page.keyboard.up('d');assert.equal(await page.locator('#player-time').textContent(),'08:00:11');assert.equal(await page.locator('#player-endurance').textContent(),'2.5 / 25');
     await page.getByRole('button',{name:'Sprint [Shift]',exact:true}).click();await page.keyboard.press('a');
-    assert.equal(await page.locator('#player-time').textContent(),'08:00:13');assert.equal(await page.locator('#player-endurance').textContent(),'2.75 / 25');
+    assert.equal(await page.locator('#player-time').textContent(),'08:00:13');assert.equal(await page.locator('#player-endurance').textContent(),'3.5 / 25');
     await page.keyboard.press('t');await page.getByRole('button',{name:'Pass Time',exact:true}).click();assert.equal(await page.locator('#player-endurance').textContent(),'0 / 25');
 });
 
@@ -1755,11 +1755,11 @@ test('endurance limits sprinting, awards one earned XP per 25 steps, and adds cu
         setup.rest.commit();return {caps,exhausted,recovery,levelup,partial};
     });
     assert.deepEqual(result.caps,[25,30,40,55,75,100,130,165,205,250,300]);
-    assert.deepEqual(result.exhausted,{used:25,xp:1,steps:0});assert.deepEqual(result.recovery,{used:23.75,seconds:5,sprinted:false});
+    assert.deepEqual(result.exhausted,{used:25,xp:1,steps:0});assert.deepEqual(result.recovery,{used:24.5,seconds:5,sprinted:false});
     assert.deepEqual(result.levelup,{used:25,max:30,xp:50,base:49,earned:1});assert.equal(result.partial,10);
     await page.reload();await page.waitForSelector('#player-endurance');
     const after=await page.evaluate(()=>{SugarCube.setup.rest.advanceAwake(1);return {used:SugarCube.setup.endurance.ensure().used,max:SugarCube.setup.endurance.capacity(),earned:SugarCube.setup.skills.earned('Endurance')};});
-    assert.deepEqual(after,{used:8.5,max:30,earned:1});
+    assert.deepEqual(after,{used:9.4,max:30,earned:1});
     await page.getByRole('button',{name:'Stats',exact:true}).click();const endurance=page.locator('.world-skill[data-skill="Endurance"]');assert.match(await endurance.textContent(),/Level 1 \/ 10/);
 });
 
@@ -1771,7 +1771,7 @@ test('Rest in the T menu waits one awake minute and recovers endurance and fatig
     await dialog.getByRole('button',{name:'Rest',exact:true}).click();assert.match(await dialog.locator('#action-result').textContent(),/rest for 1 minute/);
     const after=await page.evaluate(()=>({world:structuredClone(SugarCube.State.variables.world),tiredness:SugarCube.State.variables.rest.tiredness,awake:SugarCube.State.variables.rest.awakeSeconds}));
     assert.deepEqual(after.world,{...before,elapsedSeconds:before.elapsedSeconds+60});assert.equal(after.tiredness,51);assert.equal(after.awake,959);
-    assert.equal(await page.locator('#player-endurance').textContent(),'5 / 25');assert.equal(await page.locator('#player-fatigue').textContent(),'49 / 100');
+    assert.equal(await page.locator('#player-endurance').textContent(),'14 / 25');assert.equal(await page.locator('#player-fatigue').textContent(),'49 / 100');
 });
 
 test('world atlas sits above the sidebar character and the local map uses the freed vertical space',async()=>{
@@ -1800,11 +1800,11 @@ test('repeated Shift events do not stall held sprinting; breath passes five and 
     assert.equal(await page.locator('#player-endurance').textContent(),'25 / 25');
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),35);assert.equal(await page.locator('#player-time').textContent(),'08:00:50');
     await page.clock.runFor(200);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),36);
-    assert.equal(await page.locator('#player-time').textContent(),'08:00:55');assert.equal(await page.locator('#player-endurance').textContent(),'23.75 / 25');
+    assert.equal(await page.locator('#player-time').textContent(),'08:00:55');assert.equal(await page.locator('#player-endurance').textContent(),'24.5 / 25');
     assert.match(await page.locator('#movement-status').textContent(),/Out of breath/);
     await page.clock.runFor(100);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),36);
-    await page.clock.runFor(900);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),42);assert.equal(await page.locator('#player-endurance').textContent(),'20.75 / 25');
-    await page.clock.runFor(100);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),43);assert.equal(await page.locator('#player-time').textContent(),'08:01:21');
+    await page.clock.runFor(900);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),41);assert.equal(await page.locator('#player-endurance').textContent(),'22 / 25');
+    await page.clock.runFor(100);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),41);assert.equal(await page.locator('#player-time').textContent(),'08:01:20');
     await page.keyboard.up('d');await page.keyboard.up('Shift');assert.equal(await page.evaluate(()=>SugarCube.setup.skills.earned('Endurance')),1);
 });
 
@@ -1819,7 +1819,7 @@ test('car window money rolls have exact 15-percent boundaries and one-to-120 dol
 });
 
 test('looking through car windows reports stable visible money without changing cash or time, including after reload',async()=>{
-    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',13,49);
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',79,49);
     await page.evaluate(()=>{SugarCube.State.variables.vehicleContents={'apartments:parked-car-1':{money:120},'apartments:parked-car-2':{money:0}};});
     const before=await page.evaluate(()=>({cash:SugarCube.State.variables.player.money,time:SugarCube.setup.gameClock.now()}));
     await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
@@ -1828,9 +1828,9 @@ test('looking through car windows reports stable visible money without changing 
     await page.evaluate(()=>SugarCube.State.create(SugarCube.State.passage));await page.reload();await page.waitForSelector('#local-map');
     await page.keyboard.press('e');await dialog.getByRole('button',{name:'Look through window',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/\$120/);
     assert.deepEqual(await page.evaluate(()=>({cash:SugarCube.State.variables.player.money,time:SugarCube.setup.gameClock.now()})),before);
-    await page.keyboard.press('Escape');await placeInWorld('apartments',17,49);await page.keyboard.press('e');
+    await page.keyboard.press('Escape');await placeInWorld('apartments',83,49);await page.keyboard.press('e');
     await dialog.getByRole('button',{name:'Look through window',exact:true}).click();assert.match(await dialog.locator('#interaction-result').textContent(),/no money is visible/);
-    await page.keyboard.press('Escape');await placeInWorld('apartments',23,49);
+    await page.keyboard.press('Escape');await placeInWorld('apartments',89,49);
     const generated=await page.evaluate(()=>{const {setup,State}=SugarCube;const first=setup.interactions.run('parked-car-3','look-inside'),moment=State.length;
         const second=setup.interactions.run('parked-car-3','look-inside');return {first,second,moment,after:State.length,stored:State.variables.vehicleContents['apartments:parked-car-3']};});
     assert.ok(generated.first.ok);assert.ok(generated.first.visibleMoney>=0&&generated.first.visibleMoney<=120);
@@ -1838,7 +1838,7 @@ test('looking through car windows reports stable visible money without changing 
 });
 
 test('open car doors offer entry; seated actions include disabled Hotwire and exit, and walking cannot move the car',async()=>{
-    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',13,49);
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',79,49);
     await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true}),actions=dialog.locator('.interaction-actions');
     assert.equal(await actions.getByRole('button',{name:'Get in car',exact:true}).count(),0);
     await page.evaluate(()=>{SugarCube.setup.inventory.ensure().containers['worn:shirt']=[{id:'vehicle-key:apartments:parked-car-1',type:'vehicleKey',x:0,y:0}];});
@@ -1854,7 +1854,7 @@ test('open car doors offer entry; seated actions include disabled Hotwire and ex
 });
 
 test('seated Inventory shows separate empty cabin storage, supports item transfers, and retains seating and items on reload',async()=>{
-    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',13,49);
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',79,49);
     await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.ownedVehicles=['apartments:parked-car-1'];setup.inventory.ensure().containers['worn:shirt']=[{id:'test-cloth',type:'cloth',x:0,y:0}];setup.interactions.run('parked-car-1','unlock');setup.interactions.run('parked-car-1','open');setup.interactions.run('parked-car-1','get-in');});
     await page.getByRole('button',{name:'Inventory',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Cabin & inventory',exact:true});await dialog.waitFor({state:'visible'});
     const cabin=dialog.locator('[data-container="cabin:apartments:parked-car-1"]');assert.equal(await cabin.locator('.inventory-item').count(),0);assert.equal(await dialog.locator('[data-container^="trunk:"]').count(),0);assert.equal(await cabin.locator('.inventory-cell').count(),12);
@@ -1863,12 +1863,12 @@ test('seated Inventory shows separate empty cabin storage, supports item transfe
     await page.getByRole('button',{name:'Inventory',exact:true}).click();await dialog.waitFor({state:'visible'});assert.equal(await cabin.locator('.inventory-item').count(),1);
     await page.keyboard.press('Escape');await page.keyboard.press('e');await page.getByRole('button',{name:'Get out of car',exact:true}).click();await page.keyboard.press('Escape');
     const inaccessible=await page.evaluate(()=>SugarCube.setup.inventory.external('cabin:parked-car-1'));assert.equal(inaccessible,null);
-    await placeInWorld('apartments',12,50);await page.keyboard.press('e');const interact=page.getByRole('dialog',{name:'Interact',exact:true});await interact.getByRole('button',{name:'Open trunk',exact:true}).click();
+    await placeInWorld('apartments',78,50);await page.keyboard.press('e');const interact=page.getByRole('dialog',{name:'Interact',exact:true});await interact.getByRole('button',{name:'Open trunk',exact:true}).click();
     const trunk=page.getByRole('dialog',{name:'Trunk & inventory',exact:true});await trunk.waitFor({state:'visible'});assert.equal(await trunk.locator('[data-container^="cabin:"]').count(),0);assert.equal(await trunk.locator('[data-container^="trunk:"] .inventory-item').count(),3);
 });
 
 test('exact spotted cabin money can be taken once through seated inventory and never respawns',async()=>{
-    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',13,49);
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',79,49);
     const before=await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.ownedVehicles=['apartments:parked-car-1'];State.variables.vehicleContents={'apartments:parked-car-1':{money:73}};const denied=setup.vehicleContents.take('parked-car-1');setup.interactions.run('parked-car-1','look-inside');setup.interactions.run('parked-car-1','unlock');setup.interactions.run('parked-car-1','open');setup.interactions.run('parked-car-1','get-in');return {cash:State.variables.player.money,time:setup.gameClock.now(),denied};});
     assert.equal(before.denied.ok,false);await page.getByRole('button',{name:'Inventory',exact:true}).click();const inventory=page.getByRole('dialog',{name:'Cabin & inventory',exact:true});
     await inventory.getByRole('button',{name:'Take $73',exact:true}).click();assert.equal(await page.locator('#player-money').textContent(),'$100,072');assert.equal(await inventory.getByRole('button',{name:'Take $73',exact:true}).count(),0);
@@ -1880,14 +1880,14 @@ test('exact spotted cabin money can be taken once through seated inventory and n
 });
 
 test('cabin storage cannot reach another car or a trunk and cash actions reject stale targets',async()=>{
-    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',13,49);
-    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.ownedVehicles=['apartments:parked-car-1','apartments:parked-car-2'];State.variables.vehicleContents={'apartments:parked-car-1':{money:120},'apartments:parked-car-2':{money:45}};setup.interactions.run('parked-car-1','unlock');setup.interactions.run('parked-car-1','open');setup.interactions.run('parked-car-1','get-in');const other=setup.inventory.openExternal('cabin:parked-car-2'),trunk=setup.inventory.openTrunk('parked-car-1'),otherCash=setup.vehicleContents.take('parked-car-2');State.variables.world.x=17;const stale=setup.vehicleContents.take('parked-car-1');return {other,trunk,otherCash,stale,seat:setup.vehicleCabin.current(),cash:State.variables.player.money};});
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await placeInWorld('apartments',79,49);
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.ownedVehicles=['apartments:parked-car-1','apartments:parked-car-2'];State.variables.vehicleContents={'apartments:parked-car-1':{money:120},'apartments:parked-car-2':{money:45}};setup.interactions.run('parked-car-1','unlock');setup.interactions.run('parked-car-1','open');setup.interactions.run('parked-car-1','get-in');const other=setup.inventory.openExternal('cabin:parked-car-2'),trunk=setup.inventory.openTrunk('parked-car-1'),otherCash=setup.vehicleContents.take('parked-car-2');State.variables.world.x=83;const stale=setup.vehicleContents.take('parked-car-1');return {other,trunk,otherCash,stale,seat:setup.vehicleCabin.current(),cash:State.variables.player.money};});
     assert.equal(result.other,null);assert.equal(result.trunk,null);assert.equal(result.otherCash.ok,false);assert.equal(result.stale.ok,false);assert.equal(result.seat,null);assert.equal(result.cash,99999);
 });
 
 test('default ambience follows nearby environment and contains no phantom traffic, footsteps or human activity',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    const results=await page.evaluate(()=>{const {setup,State}=SugarCube;const points=[['apartments',30,23],['apartments',0,46],['apartment-1',11,10],['apartment-1',20,3],['apartment-1',14,3],['housing-office',8,7]];return points.map(([mapId,x,y])=>{State.variables.world={...State.variables.world,mapId,x,y};State.variables.roomActivities={[`${mapId}:hall`]:'conversation'};return {mapId,x,y,sound:setup.rooms.sounds()};});});
+    const results=await page.evaluate(()=>{const {setup,State}=SugarCube;const points=[['apartments',30,33],['apartments',0,46],['apartment-1',11,10],['apartment-1',20,3],['apartment-1',14,3],['housing-office',8,7]];return points.map(([mapId,x,y])=>{State.variables.world={...State.variables.world,mapId,x,y};State.variables.roomActivities={[`${mapId}:hall`]:'conversation'};return {mapId,x,y,sound:setup.rooms.sounds()};});});
     for(const result of results) assert.doesNotMatch(result.sound,/traffic|footstep|voice|laughter|paper|keys tap|music|tools tap/i);
     assert.match(results[0].sound,/leaves/);assert.doesNotMatch(results[1].sound,/leaves/);assert.match(results[2].sound,/quiet hallway/);assert.match(results[4].sound,/extractor fan/);
 });
@@ -2010,7 +2010,7 @@ test('rented storage uses block transfers, remains separate per unit, persists a
     await page.keyboard.press('Escape');await placeInWorld('b1',11,34);
     assert.equal(await page.evaluate(()=>SugarCube.setup.inventory.external('storage:2')),null);
     await page.keyboard.press('e');await page.getByRole('button',{name:'Open storage',exact:true}).click();assert.equal(await page.locator('[data-storage-id="storage:b1:6"] [data-item]').count(),0);
-    await page.keyboard.press('Escape');await placeInWorld('apartments',30,23);
+    await page.keyboard.press('Escape');await placeInWorld('apartments',30,33);
     assert.equal(await page.evaluate(()=>SugarCube.setup.inventory.transfer('worn:shirt','storage:b1:2','storage-test-cloth',0,0,'storage:2').ok),false);
 });
 
@@ -2063,7 +2063,7 @@ test('dropped clothing has a visible ground marker, an E interaction, durable co
     await placeInWorld('apartments',44,60);
     assert.equal(await page.evaluate(id=>SugarCube.setup.inventory.external(id),result.id),null);
     const remote=await page.evaluate(id=>{const {setup}=SugarCube;return setup.equipment.equip(id,setup.inventory.placements({id})[0].id,id).ok;},result.id);assert.equal(remote,false);
-    await placeInWorld('apartments',30,23);await page.keyboard.press('e');await page.getByRole('button',{name:'View items',exact:true}).click();
+    await placeInWorld('apartments',30,33);await page.keyboard.press('e');await page.getByRole('button',{name:'View items',exact:true}).click();
     await page.getByRole('button',{name:'Generic shoes, 2 by 1 blocks, Items on the ground',exact:true}).click();await page.getByRole('button',{name:'Wear generic shoes',exact:true}).click();
     assert.equal(await page.locator('#local-map').getAttribute('data-ground-count'),'0');
 });
@@ -2137,7 +2137,7 @@ test('existing storage leases get one kiosk key without resetting balances, date
         const before=setup.playerState.ensure().money;const lease=structuredClone(setup.selfStorage.ensure().leases['2']);setup.selfStorage.ensure();
         const tray=setup.inventory.placements({id:'storage:key-tray'}),count=tray.length;
         const key=tray[0];State.variables.inventory.containers['storage:key-tray']=[];
-        State.variables.inventory.containers['ground:apartments:30:23']=[{id:'legacy-shirt',type:'shirt',x:0,y:0,pockets:{'worn:shirt':[key]}}];
+        State.variables.inventory.containers['ground:apartments:30:33']=[{id:'legacy-shirt',type:'shirt',x:0,y:0,pockets:{'worn:shirt':[key]}}];
         State.variables.selfStorage.leases['2'].keyIssued=false;setup.selfStorage.ensure();
         return {due,before,after:State.variables.player.money,lease,count,respawn:setup.inventory.placements({id:'storage:key-tray'}).length};});
     assert.equal(result.lease.nextRentAt,result.due);assert.equal(result.lease.arrears,400);assert.equal(result.lease.keyIssued,true);assert.equal(result.before,result.after);assert.equal(result.count,1);assert.equal(result.respawn,0);
@@ -2293,20 +2293,20 @@ test('exhaustion persists across reload and forces walking until endurance is st
     const first=await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.endurance={used:24,sprintSteps:0,recoverySeconds:0};
         const sprint=setup.worldMovement.move(1,0,true),walk=setup.worldMovement.move(-1,0,true);
         return {sprint:sprint.sprinted,walk:walk.sprinted,state:structuredClone(setup.endurance.ensure()),can:setup.endurance.canSprint()};});
-    assert.equal(first.sprint,true);assert.equal(first.walk,false);assert.equal(first.state.used,23.75);assert.equal(first.state.exhausted,true);assert.equal(first.can,false);
+    assert.equal(first.sprint,true);assert.equal(first.walk,false);assert.equal(first.state.used,24.5);assert.equal(first.state.exhausted,true);assert.equal(first.can,false);
     await page.reload();await page.waitForSelector('#local-map');
     assert.equal(await page.evaluate(()=>SugarCube.setup.endurance.canSprint()),false);
     const steps=await page.evaluate(()=>{const {setup,State}=SugarCube;return Array.from({length:6},(_,i)=>{const before=State.variables.world.elapsedSeconds,result=setup.worldMovement.move(i%2?-1:1,0,true);return {sprinted:result.sprinted,used:setup.endurance.ensure().used,seconds:State.variables.world.elapsedSeconds-before,can:setup.endurance.canSprint()};});});
-    assert.deepEqual(steps.map(step=>step.used),[22.5,21.25,20,18.75,19.75,20.75]);
-    assert.deepEqual(steps.map(step=>step.sprinted),[false,false,false,false,true,true]);
-    assert.deepEqual(steps.map(step=>step.seconds),[5,5,5,5,2,2]);
-    assert.equal(steps[2].can,false);assert.equal(steps[3].can,true);
+    assert.deepEqual(steps.map(step=>step.used),[24,23.5,23,22.5,22,21.5]);
+    assert.deepEqual(steps.map(step=>step.sprinted),[false,false,false,false,false,false]);
+    assert.deepEqual(steps.map(step=>step.seconds),[5,5,5,5,5,5]);
+    assert.equal(steps[2].can,false);assert.equal(steps[3].can,false);
 });
 
 test('exhaustion threshold scales with skill capacity and legacy maximum saves enter recovery',async()=>{
     const checks=await page.evaluate(()=>{const {setup,State}=SugarCube;return [0,50,350].map(xp=>{
         State.variables.character.skills.Endurance=xp;const max=setup.endurance.capacity();State.variables.endurance={version:1,used:max,sprintSteps:0,recoverySeconds:0};
-        const initial=setup.endurance.canSprint();setup.endurance.recover(20);const boundary={used:setup.endurance.ensure().used,can:setup.endurance.canSprint()};
+        const initial=setup.endurance.canSprint();setup.endurance.recover(50);const boundary={used:setup.endurance.ensure().used,can:setup.endurance.canSprint()};
         setup.endurance.recover(4);const partial=setup.endurance.canSprint();setup.endurance.recover(1);return {max,initial,boundary,partial,ready:setup.endurance.canSprint()};});});
     assert.deepEqual(checks.map(check=>check.max),[25,30,55]);
     for(const check of checks){assert.equal(check.initial,false);assert.equal(check.boundary.used,check.max*.8);assert.equal(check.boundary.can,false);assert.equal(check.partial,false);assert.equal(check.ready,true);}
@@ -2437,8 +2437,8 @@ test('both nightclub alley doors enter a 42 by 21 interior and exit into their m
 test('old layout saves migrate player and ground containers once without losing persistent property',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     const result=await page.evaluate(()=>{const {State,setup}=SugarCube;const inventory=setup.inventory.ensure();inventory.containers['ground:apartments:12:30']=[{id:'migration-item',type:'cloth',x:0,y:0}];State.variables.world={version:2,mapId:'apartments',x:13,y:29,elapsedSeconds:12345};delete State.variables.worldLayoutVersion;State.variables.openedObjects={'lock:building-1':true};
-        const first=structuredClone(setup.worldMovement.ensure()),second=structuredClone(setup.worldMovement.ensure());return {first,second,items:setup.inventory.ensure().containers['ground:apartments:12:50'],locks:State.variables.openedObjects,money:setup.playerState.ensure().money};});
-    assert.deepEqual(result.first,{version:4,mapId:'apartments',x:13,y:49,elapsedSeconds:12345});assert.deepEqual(result.second,result.first);assert.deepEqual(result.items,[{id:'migration-item',type:'cloth',x:0,y:0}]);assert.deepEqual(result.locks,{'lock:building-1':true});assert.equal(result.money,99999);
+        const first=structuredClone(setup.worldMovement.ensure()),second=structuredClone(setup.worldMovement.ensure());return {first,second,items:setup.inventory.ensure().containers['ground:apartments:78:50'],locks:State.variables.openedObjects,money:setup.playerState.ensure().money};});
+    assert.deepEqual(result.first,{version:5,mapId:'apartments',x:79,y:49,elapsedSeconds:12345});assert.deepEqual(result.second,result.first);assert.deepEqual(result.items,[{id:'migration-item',type:'cloth',x:0,y:0}]);assert.deepEqual(result.locks,{'lock:building-1':true});assert.equal(result.money,99999);
 });
 
 test('the close sidebar atlas draws only real exits and discovery never opens A2 or B2',async()=>{
@@ -2507,15 +2507,15 @@ test('four-unit save migration preserves retired leases, physical keys and colli
         inventory.containers[`ground:apartment-1:${room.anchor.x}:${room.anchor.y}`]=[{id:'pile-a',type:'cloth',x:0,y:0}];inventory.containers[`ground:apartment-1:${other.anchor.x}:${other.anchor.y}`]=[{id:'pile-b',type:'cloth',x:0,y:0}];
         const migrated=structuredClone(setup.worldMovement.ensure()),again=structuredClone(setup.worldMovement.ensure()),housing=setup.housing.ensure();
         const piles=Object.entries(setup.inventory.ensure().containers).filter(([id])=>id.startsWith('ground:')).map(([id,items])=>({id,items}));return {migrated,again,unit:setup.rooms.current().unit?.id,housing,piles,hasKey:setup.housing.canEnter('1-3'),unlocked:State.variables.doorLocks['unit-1-3'],money:setup.playerState.ensure().money,key:setup.inventory.ensure().containers['worn:shirt'][0].id};});
-    assert.equal(result.migrated.version,4);assert.equal(result.migrated.elapsedSeconds,98765);assert.deepEqual(result.again,result.migrated);assert.equal(result.unit,'1-3');assert.equal(result.housing.rentedUnit,'1-3');assert.equal(result.housing.nextRentAt,9999999999);assert.equal(result.housing.arrears,1200);assert.equal(result.money,99999);assert.equal(result.key,'apartment-key:1-5');assert.equal(result.hasKey,true);assert.equal(result.unlocked,false);
+    assert.equal(result.migrated.version,5);assert.equal(result.migrated.elapsedSeconds,98765);assert.deepEqual(result.again,result.migrated);assert.equal(result.unit,'1-3');assert.equal(result.housing.rentedUnit,'1-3');assert.equal(result.housing.nextRentAt,9999999999);assert.equal(result.housing.arrears,1200);assert.equal(result.money,99999);assert.equal(result.key,'apartment-key:1-5');assert.equal(result.hasKey,true);assert.equal(result.unlocked,false);
     assert.equal(result.piles.length,2);assert.equal(new Set(result.piles.map(p=>p.id)).size,2);assert.deepEqual(result.piles.flatMap(p=>p.items.map(i=>i.id)).sort(),['pile-a','pile-b']);
     await page.evaluate(()=>SugarCube.Engine.play('Apartments'));await page.waitForSelector('#local-map[data-map-id="apartment-1"]');await page.getByRole('button',{name:'Inventory',exact:true}).click();assert.equal(await page.locator('button[title="Key for Apartment 1 · Unit 3"]').count(),1);
 });
 
-test('endurance recovers five percent of capacity each five seconds without losing fractional recovery',async()=>{
+test('endurance recovers two percent of capacity each five seconds without losing fractional recovery',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.endurance={used:25,exhausted:true};setup.endurance.recover(4);const partial=setup.endurance.ensure().used;setup.endurance.recover(1);const tick=setup.endurance.ensure().used;setup.endurance.recover(15);const boundary={used:setup.endurance.ensure().used,can:setup.endurance.canSprint()};setup.endurance.recover(5);const ready=setup.endurance.canSprint();setup.skills.award('Endurance',setup.characterRules.maxXp);State.variables.endurance={used:250};setup.endurance.recover(5);return {partial,tick,boundary,ready,max:setup.endurance.capacity(),large:setup.endurance.ensure().used};});
-    assert.equal(result.partial,25);assert.equal(result.tick,23.75);assert.deepEqual(result.boundary,{used:20,can:false});assert.equal(result.ready,true);assert.equal(result.max,300);assert.equal(result.large,235);
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.endurance={used:25,exhausted:true};setup.endurance.recover(4);const partial=setup.endurance.ensure().used;setup.endurance.recover(1);const tick=setup.endurance.ensure().used;setup.endurance.recover(45);const boundary={used:setup.endurance.ensure().used,can:setup.endurance.canSprint()};setup.endurance.recover(5);const ready=setup.endurance.canSprint();setup.skills.award('Endurance',setup.characterRules.maxXp);State.variables.endurance={used:250};setup.endurance.recover(5);return {partial,tick,boundary,ready,max:setup.endurance.capacity(),large:setup.endurance.ensure().used};});
+    assert.equal(result.partial,25);assert.equal(result.tick,24.5);assert.deepEqual(result.boundary,{used:20,can:false});assert.equal(result.ready,true);assert.equal(result.max,300);assert.equal(result.large,244);
 });
 
 test('Transit has a one-row shopping driveway and two station lots with open entrance aisles',async()=>{
@@ -2533,4 +2533,37 @@ test('casino and hotel doors connect both alleys while casino grows and tattoo p
         await placeInWorld(id,exit.x+(side==='east'?-1:1),exit.y);await openPortal('Exit','e1');assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),outside.x+(side==='east'?1:-1));
     }
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),0);
+});
+
+test('inventory places storage left, a larger live character in the center and all body slots on the right',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await page.getByRole('button',{name:'Inventory',exact:true}).click();
+    const dialog=page.getByRole('dialog',{name:'Inventory',exact:true});
+    const labels=await dialog.locator('.equipment-slot>strong').allTextContents();assert.deepEqual(labels,['Hat','Face Wear','Over Top','Top','Under Top','Waist','Wrists','Hands','Bottom','Under Bottom','Ankles','Feet','Shoes','Back','Handheld']);
+    const layout=await page.evaluate(()=>{const b=selector=>document.querySelector(selector).getBoundingClientRect();return{left:b('.inventory-storage').x,center:b('.inventory-portrait').x,right:b('.equipment-panel').x,portrait:b('.inventory-character-canvas').width,sidebar:b('.sidebar-character #character-canvas').width};});
+    assert.ok(layout.left<layout.center&&layout.center<layout.right);assert.ok(layout.portrait>layout.sidebar);
+    const portrait=()=>dialog.locator('.inventory-character-canvas').evaluate(c=>c.toDataURL());assert.equal(await portrait(),await image());const before=await portrait();
+    await dialog.getByRole('button',{name:'Equipped Generic shirt',exact:true}).click();await dialog.getByRole('button',{name:'Drop on ground',exact:true}).click();
+    assert.notEqual(await portrait(),before);assert.equal(await portrait(),await image());assert.equal(await dialog.locator('[data-equip-slot="top"] .inventory-item').count(),0);assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.top),'none');
+    const noSpace=await page.evaluate(()=>SugarCube.setup.inventory.worn().map(c=>c.id));assert.deepEqual(noSpace,['worn:pants:1','worn:pants:2','worn:pants:3','worn:pants:4']);
+});
+
+test('four augmentation slots start with a fixed ID chip and reject player removal without granting item storage',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await page.getByRole('button',{name:'Inventory',exact:true}).click();
+    const slots=page.locator('.augmentation-slot');assert.equal(await slots.count(),4);assert.equal(await slots.first().locator('span').textContent(),'Basic ID chip');assert.ok(await slots.first().getByRole('button').isDisabled());assert.deepEqual(await slots.locator('span').allTextContents(),['Basic ID chip','Empty','Empty','Empty']);
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;const before=JSON.stringify(setup.augmentations.ensure()),count=setup.inventory.worn().length;
+        const denied=setup.augmentations.remove(0),moved=setup.equipment.drop('equipped:augmentation:0','basic-id-chip');setup.corporateAccess.toggleClearance();
+        return{before,after:JSON.stringify(setup.augmentations.ensure()),denied,moved,count,afterCount:setup.inventory.worn().length,authorized:setup.corporateAccess.authorized(),time:State.variables.world.elapsedSeconds};});
+    assert.equal(result.before,result.after);assert.equal(result.denied.ok,false);assert.equal(result.moved.ok,false);assert.equal(result.count,5);assert.equal(result.afterCount,5);assert.equal(result.authorized,true);assert.equal(result.time,0);
+    await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map');await page.getByRole('button',{name:'Inventory',exact:true}).click();assert.equal(await slots.first().locator('span').textContent(),'Basic ID chip');
+    const storyHook=await page.evaluate(()=>{const {setup}=SugarCube;setup.augmentations.ensure().slots[0]=null;return {present:setup.augmentations.has('basic-id-chip'),authorized:setup.corporateAccess.authorized()};});assert.deepEqual(storyHook,{present:false,authorized:false});
+});
+
+test('compact Apartments preserves old parked-car seating and ground items and stops sidewalks at the intersection',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.world={version:4,mapId:'apartments',x:13,y:49,elapsedSeconds:321};State.variables.vehicleSeat={version:1,mapId:'apartments',vehicleId:'parked-car-1',x:13,y:49};delete State.variables.worldLayoutVersion;
+        setup.inventory.ensure().containers['ground:apartments:12:50']=[{id:'kept-at-car',type:'cloth',x:0,y:0}];const world=structuredClone(setup.worldMovement.ensure()),seated=!!setup.vehicleCabin.current();
+        const items=setup.inventory.ensure().containers['ground:apartments:78:50'];const unchanged=structuredClone(setup.worldMovement.ensure());delete State.variables.vehicleSeat;
+        State.variables.world={version:4,mapId:'apartments',x:30,y:23,elapsedSeconds:321};const park=structuredClone(setup.worldMovement.ensure()),map=setup.worldMaps.apartments;
+        return {world,unchanged,seated,items,park,ends:[3,9].every(x=>[70,71,72,73].every(y=>map.tileAt(x,y).kind==='ground')),distance:map.roads.horizontal.y-(map.buildings[2].y+map.buildings[2].height)};});
+    assert.deepEqual(result.world,{version:5,mapId:'apartments',x:79,y:49,elapsedSeconds:321});assert.deepEqual(result.unchanged,result.world);assert.equal(result.seated,true);assert.deepEqual(result.items,[{id:'kept-at-car',type:'cloth',x:0,y:0}]);assert.deepEqual(result.park,{version:5,mapId:'apartments',x:30,y:33,elapsedSeconds:321});assert.equal(result.ends,true);assert.equal(result.distance,8);
 });

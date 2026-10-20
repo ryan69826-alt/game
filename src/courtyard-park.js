@@ -6,6 +6,8 @@ setup.courtyardPark=(()=>{
             benches:[{x:34,y:31,facing:'north'},{x:50,y:18,facing:'south'}],
             barePatches:[{x:33,y:30,width:5,height:2},{x:49,y:18,width:5,height:2},{x:42,y:25,width:4,height:2},{x:55,y:30,width:2,height:2}]
         };
+        map.parkScenery.shrubs=map.parkScenery.shrubs.map(([x,y])=>[x,y+10]);
+        for(const item of [...map.parkScenery.benches,...map.parkScenery.barePatches])item.y+=10;
     }
     function paint(ctx,map,size) {
         const scenery=map.parkScenery;if(!scenery)return;

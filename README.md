@@ -214,8 +214,8 @@ Blocked steps cost no time, endurance, or XP. At the limit the player walks
 instead and cannot use endurance again until usage falls strictly below 80% of
 maximum (below 20 at the base 25). This recovery state survives saves/reloads;
 holding Sprint resumes running once the threshold is crossed.
-Endurance use recovers by **5% of maximum capacity per five non-sprinting game
-seconds**: 1.25 at the base 25, or 15 at the level-10 maximum of 300. Fractional
+Endurance use recovers by **2% of maximum capacity per five non-sprinting game
+seconds**: 0.5 at the base 25, or 6 at the level-10 maximum of 300. Fractional
 usage is preserved, and recovery is capped at zero. This includes
 walking, waiting, sleep and unconsciousness. Partial recovery seconds survive
 saves. Starting a sprint resets the partial recovery interval.
@@ -314,6 +314,12 @@ two worn benches, with bare patches around the seating. This is inexpensive
 landscaping for low-end housing; the surrounding sidewalks remain clear.
 Scenery lives in `courtyard-park.js`, separately from movement geometry.
 Doors are walkable thresholds; buildings, cars, trees, and medians block movement.
+The buildings and landscaped courtyard sit ten squares closer to the southern
+road. The parking lot is on the east side, connected by a short driveway; the
+housing office fronts the courtyard near the road. Vertical sidewalks stop at
+the intersection instead of continuing through the empty southwest corner.
+Version-4 saves relocate parked players, seated vehicle anchors and ground piles
+together, preserving items, keys, leases and elapsed time.
 
 The description takes 60% of the main area and maps take 40%, beside the character
 sidebar. The scrolling local map occupies the right-side panel; the world atlas
@@ -334,6 +340,25 @@ active. Dialogs, blur, hidden tabs, and navigation clear held inputs. Movement a
 elapsed game seconds persist through reloads, Continue, and disk saves.
 
 ## Removable clothing and ground items
+
+On desktop, Inventory has three columns: reachable storage on the left, a larger
+full-body character view in the center, and equipment on the right. The portrait
+updates after clothing changes and uses the same crisp artwork as the sidebar.
+Narrow screens stack the panels without horizontal scrolling.
+
+The right panel groups fifteen slots in body order: Hat, Face Wear, Over Top,
+Top, Under Top, Waist, Wrists, Hands, Bottom, Under Bottom, Ankles, Feet, Shoes,
+Back and Handheld. Empty future slots provide no inventory capacity. Existing
+shirt, pants, shoes and backpack remain usable; creation retains its five current
+clothing dropdowns. New characters and old saves normalize the extra slots to empty.
+
+Augmentations sit below clothing in four separate positions. The leftmost starts
+with a **Basic ID chip**, which cannot be dragged, transferred or removed by player
+actions. Augmentations provide no item storage. `augmentations.js` keeps installed
+records separately from clothing; explicit empty slots remain empty so a later
+story event can remove an implant without it being automatically reinstalled.
+Corporate parking clearance now requires the installed ID chip as well as its
+authorization record. Granting clearance alone cannot replace a removed chip.
 
 Inventory shows draggable equipment slots. Drag a garment to reachable storage,
 another garment's bag, or **Drop on ground**; select then choose a block/drop
@@ -374,8 +399,9 @@ Large interiors scroll around the player. The nightclub is 42×21 inside its
 in one row. The district widens to 90 tiles, restoring both sides of the
 five-tile intersection at the southwest corner (vertical road x=4–8).
 
-World save version 4 migrates previous player positions, seated positions and
-ground containers once through frozen v3 geometry in `layout-history.js`.
+World save version 5 migrates previous player positions, seated positions and
+ground containers once, using frozen v3 geometry in `layout-history.js` and
+version-4 district relocation offsets.
 `layout-migration.js` maps retired unit IDs 5 and 6 to 3 and 4 in the same
 building; old physical keys retain their identities and work for the replacement
 unit. Leases retain due dates and arrears. Ground piles that converge on one
@@ -632,7 +658,7 @@ repositories; place `sugarcube-2` under Tweego's `storyformats`, then build with
 Old character saves migrate to Medium with shirt/pants/shoes and no backpack;
 other valid selections, traits and XP remain. Removed height/composition fields
 are discarded. Invalid traits are filtered; imported XP is rounded down and capped
-to 250 in skill order. `$world` stores only map ID, position and elapsed seconds (v4). `$openedObjects`
+to 250 in skill order. `$world` stores only map ID, position and elapsed seconds (v5). `$openedObjects`
 stores open/closed flags; `$doorLocks` stores shared lock states, `$endurance`
 stores breath/counters, `$vehicleSeat` stores the seated car and exit anchor,
 `$vehicleContents` stores cabin cash, and `$skillXp` stores earned XP independently of character creation.

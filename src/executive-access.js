@@ -2,10 +2,10 @@
 setup.corporateAccess=(()=>{
     function ensure() {
         const old=State.variables.corporateId;
-        State.variables.corporateId={version:1,implant:'basic-id',clearances:Array.isArray(old?.clearances)?old.clearances.filter(value=>value==='executive-parking'):[],gateOpen:old?.gateOpen===true};
+        State.variables.corporateId={version:1,implant:setup.augmentations.has('basic-id-chip')?'basic-id':null,clearances:Array.isArray(old?.clearances)?old.clearances.filter(value=>value==='executive-parking'):[],gateOpen:old?.gateOpen===true};
         return State.variables.corporateId;
     }
-    const authorized=()=>ensure().clearances.includes('executive-parking');
+    const authorized=()=>{const id=ensure();return id.implant==='basic-id'&&id.clearances.includes('executive-parking');};
     function toggleClearance() {
         const id=ensure();id.clearances=id.clearances.includes('executive-parking')?[]:['executive-parking'];
         State.create(State.passage);return authorized();

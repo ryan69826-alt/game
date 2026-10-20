@@ -18,7 +18,7 @@ setup.characterDisplay = (() => {
             }
             try {
                 setup.characterPreview.draw(sources, layers, canvas, character);
-                status.textContent = '';
+                status.textContent = '';$(document).trigger(':characterartchange');
             } catch (error) {
                 status.textContent = 'Preview could not render. Your selections are retained.';
                 console.error(error);

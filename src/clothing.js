@@ -1,8 +1,9 @@
 /* Equipment choices, separate pocket definitions, and serializable item IDs. */
 setup.clothing = (() => {
-    const slots = ['top', 'bottoms', 'shoes', 'storage', 'handheld'];
-    const labels = {top: 'Top', bottoms: 'Bottoms', shoes: 'Shoes', storage: 'Wearable Storage', handheld: 'Handheld'};
-    const choices = {top: ['none','shirt'], bottoms: ['none','pants'], shoes: ['none','shoes'], storage: ['none','backpack'], handheld: ['none']};
+    const slots=['hat','facewear','overtop','top','undertop','waist','wrists','hands','bottoms','underbottoms','ankles','feet','shoes','storage','handheld'];
+    const creatorSlots=['top','bottoms','shoes','storage','handheld'];
+    const labels = {hat:'Hat',facewear:'Face Wear',overtop:'Over Top',undertop:'Under Top',waist:'Waist',wrists:'Wrists',hands:'Hands',underbottoms:'Under Bottom',ankles:'Ankles',feet:'Feet',top: 'Top', bottoms: 'Bottoms', shoes: 'Shoes', storage: 'Wearable Storage', handheld: 'Handheld'};
+    const choices = {...Object.fromEntries(slots.map(slot=>[slot,['none']])),top: ['none','shirt'], bottoms: ['none','pants'], shoes: ['none','shoes'], storage: ['none','backpack'], handheld: ['none']};
     const definitions = {
         none: {name: 'None', pockets: []},
         shirt: {name: 'Generic shirt', pockets: [{id: 'worn:shirt', name: 'Shirt pocket', columns: 1, rows: 1}]},
@@ -11,7 +12,7 @@ setup.clothing = (() => {
         shoes: {name: 'Generic shoes', pockets: []},
         backpack: {name: 'Backpack', pockets: [{id: 'worn:backpack', name: 'Backpack', columns: 4, rows: 4}]}
     };
-    const defaults = () => ({top: 'shirt', bottoms: 'pants', shoes: 'shoes', storage: 'none', handheld: 'none'});
+    const defaults = () => ({...Object.fromEntries(slots.map(slot=>[slot,'none'])),top: 'shirt', bottoms: 'pants', shoes: 'shoes', storage: 'none', handheld: 'none'});
     function normalize(value) {
         const result = defaults();
         if (!value || typeof value !== 'object') return result;
@@ -22,8 +23,8 @@ setup.clothing = (() => {
         }
         return result;
     }
-    const equipped = character => slots.map(slot => character.clothing[slot]).filter(id => id !== 'none');
+    const equipped = character => slots.map(slot => character.clothing[slot]).filter(id => id !== 'none'&&Object.hasOwn(definitions,id));
     const summary = character => equipped(character).map(id => definitions[id].name).join(', ') || 'Base outfit only';
     const storage = character => equipped(character).flatMap(id => definitions[id].pockets);
-    return {slots, labels, choices, definitions, defaults, normalize, equipped, summary, storage};
+    return {slots, creatorSlots, labels, choices, definitions, defaults, normalize, equipped, summary, storage};
 })();

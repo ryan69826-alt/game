@@ -11,16 +11,35 @@ setup.inventoryUI = (() => {
         const root = Dialog.body();
         let selected = null, message = 'Drag an item to a free space. You can also select an item and then a destination square. Items cannot overlap or rotate.';
         const drag = setup.inventoryDrag.mount(root,externalId,result => {message=result.message;if(result.ok) selected=null;render();});
+        function refreshPortrait() {
+            const source=document.getElementById('character-canvas'),target=root.querySelector('.inventory-character-canvas');
+            if(!source||!target)return;
+            target.width=source.width;target.height=source.height;
+            const ctx=target.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.drawImage(source,0,0);
+            target.setAttribute('aria-label',source.getAttribute('aria-label')||'Your character');
+        }
+        $(document).off('.inventoryPortrait').on(':characterartchange.inventoryPortrait',refreshPortrait)
+            .one(':dialogclosed.inventoryPortrait :passageinit.inventoryPortrait',()=>$(document).off('.inventoryPortrait'));
         function render() {
             root.replaceChildren();
             const status = document.createElement('p');status.id = 'inventory-status';status.className = 'world-note';
             status.setAttribute('role', 'status');status.textContent = message;root.append(status);
+            const shell=document.createElement('div');shell.className='inventory-shell';root.append(shell);
+            const storage=document.createElement('section');storage.className='inventory-storage';storage.setAttribute('aria-label','Inventory storage');
+            const portrait=document.createElement('figure');portrait.className='inventory-portrait';
+            const portraitTitle=document.createElement('figcaption');portraitTitle.textContent='Your character';
+            const canvas=document.createElement('canvas');canvas.className='inventory-character-canvas';canvas.setAttribute('role','img');portrait.append(portraitTitle,canvas);
+            shell.append(storage,portrait);
             const equipment=document.createElement('section');equipment.className='equipment-panel';
             const equipmentTitle=document.createElement('h2');equipmentTitle.textContent='Equipped clothing';equipment.append(equipmentTitle);
-            const slots=document.createElement('div');slots.className='equipment-slots';equipment.append(slots);
-            for(const slot of setup.clothing.slots) {
+            const groups=[['Head',['hat','facewear']],['Upper body',['overtop','top','undertop','waist']],['Arms',['wrists','hands']],['Lower body',['bottoms','underbottoms','ankles','feet','shoes']],['Carry',['storage','handheld']]];
+            for(const [name,entries]of groups){
+                const group=document.createElement('section');group.className='equipment-group';
+                const heading=document.createElement('h3');heading.textContent=name;group.append(heading);
+                const slots=document.createElement('div');slots.className='equipment-slots';group.append(slots);equipment.append(group);
+            for(const slot of entries) {
                 const box=document.createElement('div');box.className='equipment-slot';box.dataset.equipSlot=slot;
-                const label=document.createElement('strong');label.textContent=setup.clothing.labels[slot];box.append(label);
+                const label=document.createElement('strong');label.textContent=({bottoms:'Bottom',storage:'Back'}[slot]||setup.clothing.labels[slot]);box.append(label);
                 const item=setup.equipment.preview(slot);
                 if(item) {
                     const source=document.createElement('div');source.dataset.container=`equipped:${slot}`;
@@ -28,29 +47,39 @@ setup.inventoryUI = (() => {
                     control.textContent=inventory.items[item.type].name;control.setAttribute('aria-label',`Equipped ${inventory.items[item.type].name}`);
                     control.addEventListener('click',()=>{if(drag.ignoreClick()) return;selected={container:`equipped:${slot}`,id:item.id};message='Choose a storage square, or Drop on ground. Pocket contents stay inside this garment.';render();});
                     source.append(control);box.append(source);
-                } else {const empty=document.createElement('span');empty.textContent='Empty · drop clothing here';box.append(empty);}
+                } else {const empty=document.createElement('span');empty.textContent='Empty';box.append(empty);}
                 slots.append(box);
-            }
+            }}
+            const augmentations=document.createElement('section');augmentations.className='augmentation-panel';
+            const augmentationTitle=document.createElement('h3');augmentationTitle.textContent='Augmentations';augmentations.append(augmentationTitle);
+            const augmentationSlots=document.createElement('div');augmentationSlots.className='augmentation-slots';augmentations.append(augmentationSlots);
+            setup.augmentations.ensure().slots.forEach((id,index)=>{
+                const slot=document.createElement('div');slot.className='augmentation-slot';slot.dataset.augmentationIndex=index;
+                const control=document.createElement('button');control.type='button';control.disabled=true;
+                control.textContent=id?'ID':'+';control.setAttribute('aria-label',id?'Basic ID chip · Cannot be removed':`Empty augmentation slot ${index+1}`);
+                control.title=id?'Basic ID chip — installed. Cannot be removed by the player.':'Empty augmentation slot';
+                const label=document.createElement('span');label.textContent=id?'Basic ID chip':'Empty';slot.append(control,label);augmentationSlots.append(slot);
+            });equipment.append(augmentations);
             const drop=document.createElement('button');drop.type='button';drop.dataset.groundDrop='true';drop.className='ground-drop';
             drop.textContent=setup.vehicleCabin.current()?'Drop to cabin floor':'Drop on ground';
             drop.addEventListener('click',()=>{if(drag.ignoreClick()) return;if(!selected){message='Select or drag an item or equipped garment first.';render();return;}const result=setup.equipment.drop(selected.container,selected.id,externalId);message=result.message;if(result.ok)selected=null;render();});
-            equipment.append(drop);root.append(equipment);
+            storage.append(drop);shell.append(equipment);
             const source=selected&&!selected.container.startsWith('equipped:')&&inventory.accessible(externalId)?.find(container=>container.id===selected.container);
             const garment=source&&inventory.placements(source).find(item=>item.id===selected.id&&setup.equipment.slotFor(item.type));
             if(garment) {
                 const wear=document.createElement('button');wear.type='button';wear.textContent=`Wear ${inventory.items[garment.type].name.toLowerCase()}`;
-                wear.addEventListener('click',()=>{const result=setup.equipment.equip(selected.container,selected.id,externalId);message=result.message;if(result.ok)selected=null;render();});root.append(wear);
+                wear.addEventListener('click',()=>{const result=setup.equipment.equip(selected.container,selected.id,externalId);message=result.message;if(result.ok)selected=null;render();});storage.append(wear);
             }
             const consumable=selected&&inventory.worn().find(container=>container.id===selected.container);
             if(consumable&&inventory.placements(consumable).some(item=>item.id===selected.id&&item.type==='coffee')) {
                 const use=document.createElement('button');use.type='button';use.textContent='Drink coffee';
-                use.addEventListener('click',()=>{const result=inventory.consume(selected.container,selected.id);message=result.message;if(result.ok) selected=null;render();});root.append(use);
+                use.addEventListener('click',()=>{const result=inventory.consume(selected.container,selected.id);message=result.message;if(result.ok) selected=null;render();});storage.append(use);
             }
             if(inventory.ensure().notices?.length) {
                 const notice=document.createElement('p');notice.className='world-note inventory-migration';
-                notice.textContent='Pocket layout updated. Items that no longer fit were returned to trunks: '+inventory.ensure().notices.join('; ');root.append(notice);
+                notice.textContent='Pocket layout updated. Items that no longer fit were returned to trunks: '+inventory.ensure().notices.join('; ');storage.append(notice);
             }
-            const layout = document.createElement('div');layout.className = 'inventory-layout';root.append(layout);
+            const layout = document.createElement('div');layout.className = 'inventory-layout';storage.append(layout);
             function drawContainer(container, parent) {
                 const section = document.createElement('section');section.className = 'inventory-container';section.dataset.container = container.id;
                 const title = document.createElement('h3');title.textContent = container.id.startsWith('worn:pants:') ? container.name.replace('Pants · ','').replace(' pocket','') : container.name;
@@ -126,6 +155,7 @@ setup.inventoryUI = (() => {
             for(const container of worn.filter(container=>container.id==='worn:backpack')) drawContainer(container,player);
             const ground=setup.groundItems.current();
             if(ground&&ground.id!==inventory.external(externalId)?.id&&inventory.placements(ground).length) drawContainer(ground,player);
+            refreshPortrait();
             if (!worn.length) {
                 const empty = document.createElement('p');empty.className = 'world-note';empty.textContent = 'No carrying space. You have no pockets or bags equipped.';player.append(empty);
             }
