@@ -12,6 +12,7 @@ setup.clothing = (() => {
         shoes: {name: 'Generic shoes', pockets: []},
         backpack: {name: 'Backpack', pockets: [{id: 'worn:backpack', name: 'Backpack', columns: 4, rows: 4}]}
     };
+    const slotLabel=slot=>({bottoms:'Bottom',storage:'Back'}[slot]||labels[slot]);
     const defaults = () => ({...Object.fromEntries(slots.map(slot=>[slot,'none'])),top: 'shirt', bottoms: 'pants', shoes: 'shoes', storage: 'none', handheld: 'none'});
     function normalize(value) {
         const result = defaults();
@@ -26,5 +27,5 @@ setup.clothing = (() => {
     const equipped = character => slots.map(slot => character.clothing[slot]).filter(id => id !== 'none'&&Object.hasOwn(definitions,id));
     const summary = character => equipped(character).map(id => definitions[id].name).join(', ') || 'Base outfit only';
     const storage = character => equipped(character).flatMap(id => definitions[id].pockets);
-    return {slots, creatorSlots, labels, choices, definitions, defaults, normalize, equipped, summary, storage};
+    return {slots, creatorSlots, labels, slotLabel, choices, definitions, defaults, normalize, equipped, summary, storage};
 })();

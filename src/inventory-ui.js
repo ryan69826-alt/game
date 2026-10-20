@@ -39,7 +39,7 @@ setup.inventoryUI = (() => {
                 const slots=document.createElement('div');slots.className='equipment-slots';group.append(slots);equipment.append(group);
             for(const slot of entries) {
                 const box=document.createElement('div');box.className='equipment-slot';box.dataset.equipSlot=slot;
-                const label=document.createElement('strong');label.textContent=({bottoms:'Bottom',storage:'Back'}[slot]||setup.clothing.labels[slot]);box.append(label);
+                const label=document.createElement('strong');label.textContent=setup.clothing.slotLabel(slot);box.append(label);
                 const item=setup.equipment.preview(slot);
                 if(item) {
                     const source=document.createElement('div');source.dataset.container=`equipped:${slot}`;
@@ -111,6 +111,13 @@ setup.inventoryUI = (() => {
                     button.style.gridColumn = `${item.x + 1} / span ${definition.width}`;button.style.gridRow = `${item.y + 1} / span ${definition.height}`;
                     button.style.setProperty('--item-color', definition.color);
                     button.textContent = item.type==='storageKey'?`S${item.id.split(':').at(-1)}`:{water:'Water',tools:'Tools',cloth:'Cloth',apartmentKey:'Key',storageKey:'Key',coffee:'Coffee'}[item.type] || definition.name;button.title=item.type==='apartmentKey'?`Key for ${setup.housing.units().find(unit=>unit.id===setup.layoutMigration.unitId(item.id.split(':').at(-1)))?.name||item.id.split(':').at(-1)}`:item.type==='storageKey'?`Key for storage unit ${item.id.split(':').at(-1)}`:definition.name;button.setAttribute('aria-label', `${item.type==='storageKey'?`Storage unit ${item.id.split(':').at(-1)} key`:definition.name}, ${definition.width} by ${definition.height} blocks, ${container.name}`);
+                    const clothingSlot=setup.equipment.slotFor(item.type);
+                    if(clothingSlot) {
+                        const name=document.createElement('span');name.className='inventory-item-name';name.textContent=definition.name;
+                        const slot=document.createElement('small');slot.className='inventory-item-slot';slot.textContent=setup.clothing.slotLabel(clothingSlot);
+                        button.replaceChildren(name,slot);button.title+=` · Slot: ${slot.textContent}`;
+                        button.setAttribute('aria-description',`Clothing slot: ${slot.textContent}`);
+                    }
                     if(item.pockets) button.title+=` · Pocket contents: ${Object.values(item.pockets).reduce((sum,list)=>sum+list.length,0)} item(s)`;
                     button.setAttribute('aria-pressed', String(selected?.id === item.id));
                     button.addEventListener('click', () => {

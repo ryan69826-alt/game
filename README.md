@@ -315,7 +315,9 @@ landscaping for low-end housing; the surrounding sidewalks remain clear.
 Scenery lives in `courtyard-park.js`, separately from movement geometry.
 Doors are walkable thresholds; buildings, cars, trees, and medians block movement.
 The buildings and landscaped courtyard sit ten squares closer to the southern
-road. The parking lot is on the east side, connected by a short driveway; the
+road. A compact marked lot sits southwest beside the road with two rows of bays,
+a clear driving aisle, a road entrance and a sidewalk to the apartments.
+Overflow parking remains on the east side, connected by a short driveway; the
 housing office fronts the courtyard near the road. Vertical sidewalks stop at
 the intersection instead of continuing through the empty southwest corner.
 Version-4 saves relocate parked players, seated vehicle anchors and ground piles
@@ -360,6 +362,8 @@ story event can remove an implant without it being automatically reinstalled.
 Corporate parking clearance now requires the installed ID chip as well as its
 authorization record. Granting clearance alone cannot replace a removed chip.
 
+Unequipped clothing shows its destination slot directly below its name in all
+storage and ground grids; the label also stays visible on its drag preview.
 Inventory shows draggable equipment slots. Drag a garment to reachable storage,
 another garment's bag, or **Drop on ground**; select then choose a block/drop
 button as a keyboard/touch alternative. Drag a stored garment onto an empty

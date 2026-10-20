@@ -194,3 +194,8 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 .inventory-storage .storage-count{margin-bottom:4px}
 .inventory-storage .pockets-heading{margin:8px 0 5px;font-size:.75rem}
 .inventory-storage .pocket-group .inventory-container h3{font-size:.58rem;min-height:2em}
+
+/* Slot labels travel with unequipped clothing, including its drag preview. */
+.inventory-item:has(.inventory-item-slot){display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.inventory-item-name{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inventory-item-slot{display:block;max-width:100%;font-size:9px;line-height:1.15;letter-spacing:.02em;color:#e1e9e4;white-space:nowrap}

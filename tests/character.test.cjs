@@ -415,6 +415,7 @@ test('Apartments has a connected 90 by 74 grid with two roads, parking, park, an
         return {width:map.width,height:map.height,
             horizontal:Array.from({length:90},(_,x)=>map.tileAt(x,66).kind),
             vertical:Array.from({length:65},(_,y)=>map.tileAt(6,y).kind),
+            frontParking:{lots:map.parkingLots.length,entrance:[11,12,13,14].every(x=>map.tileAt(x,63).kind==='parking'&&seen.has(`${x},63`)),aisle:[11,15,19,23].every(x=>[59,60].every(y=>map.tileAt(x,y).kind==='parking'&&seen.has(`${x},${y}`))),path:sidewalks.has('11,56'),bays:map.parkingBays.filter(b=>b.x<25).length},
             parking:map.tileAt(79,55).kind,park:map.tileAt(30,33).kind,
             horizontalWidth:[63,64,65,66,67,68,69].map(y=>map.tileAt(30,y).kind==='road'),
             verticalWidth:[3,4,5,6,7,8,9].map(x=>map.tileAt(x,5).kind==='road'),
@@ -436,6 +437,7 @@ test('Apartments has a connected 90 by 74 grid with two roads, parking, park, an
     assert.ok(layout.parkIsUncut&&layout.ring,'sidewalk surrounds the intact park');
     assert.ok(layout.cars.length>0);for(const car of layout.cars) assert.deepEqual(car,{area:4,cells:true});
     assert.equal(layout.median.kind,'median');assert.equal(layout.median.walkable,false);assert.ok(layout.aisles);
+    assert.deepEqual(layout.frontParking,{lots:2,entrance:true,aisle:true,path:true,bays:12});
     assert.equal(layout.parking,'parking');assert.equal(layout.park,'park');assert.equal(layout.entrances.length,4);
     for(const entrance of layout.entrances) assert.deepEqual(entrance,{reached:true,sidewalkConnected:true,door:'entrance',outward:true,inward:false});
 });
@@ -988,7 +990,7 @@ test('cars park nose-in toward bay ends and expose trunks to the driving aisles'
                 side:setup.interactions.actionsFor(object,side).map(action=>action.id)};
         });
     });
-    assert.equal(results.length,8);
+    assert.equal(results.length,12);
     for(const car of results) {
         const expected=[48,57].includes(car.y)?'north':'south';
         assert.equal(car.facing,expected);assert.equal(car.bay,expected);assert.equal(car.object,expected);
@@ -1008,8 +1010,9 @@ test('parked car headlights and taillights render in the same direction used by 
     await page.evaluate(()=>{SugarCube.State.variables.world.x=82;SugarCube.State.variables.world.y=54;SugarCube.Engine.play('Apartments');});
     await page.waitForSelector('#local-map[data-player-x="82"]');
     const lamps=await page.evaluate(()=>{
-        const canvas=document.getElementById('local-map'),ctx=canvas.getContext('2d');
-        const ox=Number(canvas.dataset.cameraX)*16,oy=Number(canvas.dataset.cameraY)*16;
+        // Check every lot, including cars outside the current camera viewport.
+        const canvas=SugarCube.setup.worldMapArt.paint(SugarCube.setup.worldMaps.apartments),ctx=canvas.getContext('2d');
+        const ox=0,oy=0;
         return SugarCube.setup.worldMaps.apartments.cars.map(car=>{
             const north=car.facing==='north',x=car.x*16-ox,y=car.y*16-oy;
             return {front:Array.from(ctx.getImageData(x+(north?8:23),y+(north?3:28),1,1).data),
@@ -2025,6 +2028,7 @@ test('removing and rewearing clothing preserves all four pants pockets and updat
     const stored=await page.evaluate(()=>{const {setup,State}=SugarCube;const ground=setup.groundItems.current();return {pants:setup.inventory.placements(ground)[0],pockets:setup.inventory.worn().map(c=>c.id),time:State.variables.world.elapsedSeconds};});
     assert.equal(stored.time,0);assert.equal(stored.pockets.some(id=>id.startsWith('worn:pants:')),false);
     assert.deepEqual(Object.values(stored.pants.pockets).flat().map(item=>item.id),['kept-1','kept-2','kept-3','kept-4']);
+    assert.equal(await page.getByRole('button',{name:'Generic pants, 2 by 2 blocks, Ground at your feet',exact:true}).locator('.inventory-item-slot').textContent(),'Bottom');
     await page.getByRole('button',{name:'Generic pants, 2 by 2 blocks, Ground at your feet',exact:true}).click();
     await page.getByRole('button',{name:'Wear generic pants',exact:true}).click();
     assert.equal(await page.getByRole('button',{name:'Equipped Generic pants',exact:true}).count(),1);assert.equal(await image(),before);
@@ -2047,6 +2051,7 @@ test('equipped clothing drags to rented storage with contents and invalid or sel
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.top),'none');
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.inventory.containers['storage:b1:2'][0].pockets['worn:shirt'][0].id),'kept-key');
     await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map');await page.keyboard.press('e');await page.getByRole('button',{name:'Open storage',exact:true}).click();
+    assert.equal(await page.getByRole('button',{name:'Generic shirt, 2 by 2 blocks, Storage unit 2',exact:true}).locator('.inventory-item-slot').textContent(),'Top');
     await page.getByRole('button',{name:'Generic shirt, 2 by 2 blocks, Storage unit 2',exact:true}).click();await page.getByRole('button',{name:'Wear generic shirt',exact:true}).click();
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.inventory.containers['worn:shirt'][0].id),'kept-key');
 });
@@ -2056,7 +2061,7 @@ test('dropped clothing has a visible ground marker, an E interaction, durable co
     const result=await page.evaluate(()=>{const {setup}=SugarCube;const ground=setup.groundItems.current();return {id:ground.id,...setup.equipment.drop('equipped:shoes','equipped:shoes')};});
     assert.equal(result.ok,true);assert.equal(await page.locator('#local-map').getAttribute('data-ground-count'),'1');
     await page.keyboard.press('e');await page.getByRole('button',{name:'View items',exact:true}).click();
-    assert.equal(await page.getByRole('button',{name:'Generic shoes, 2 by 1 blocks, Items on the ground',exact:true}).count(),1);
+    assert.equal(await page.getByRole('button',{name:'Generic shoes, 2 by 1 blocks, Items on the ground',exact:true}).locator('.inventory-item-slot').textContent(),'Shoes');
     await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map');
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.shoes),'none');
     assert.equal(await page.locator('#local-map').getAttribute('data-ground-count'),'1');
