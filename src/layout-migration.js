@@ -25,8 +25,14 @@ setup.layoutMigration=(()=>{
     function fromV4(id,p) {
         const map=setup.worldMaps[id];if(id!=='apartments')return p;
         if(p.x>=9&&p.x<=24&&p.y>=48&&p.y<=62)return nearest(map,{x:p.x+66,y:p.y});
-        if(p.x>=61&&p.x<=73&&p.y>=46&&p.y<=56)return nearest(map,{x:p.x,y:p.y+8});
+        if(p.x>=61&&p.x<=73&&p.y>=46&&p.y<=56)return nearest(map,{x:p.x,y:p.y+6});
         if(p.x>=14&&p.x<=74&&p.y>=4&&p.y<=45)return nearest(map,{x:p.x,y:p.y+10});
+        return nearest(map,p);
+    }
+    function fromV5(id,p) {
+        if(id!=='apartments')return p;
+        const map=setup.worldMaps[id];
+        if(p.x>=65&&p.x<=73&&p.y>=55&&p.y<=63)return nearest(map,{x:p.x,y:p.y-2});
         return nearest(map,p);
     }
     function currentPoint(id,p) {
@@ -47,11 +53,11 @@ setup.layoutMigration=(()=>{
         return nearest(map,{x:p.x*(map.width-1)/(old.width-1),y:p.y*(map.height-1)/(old.height-1)});
     }
     function migrate(value) {
-        if(!value||value.version===5)return value;
-        const oldVersion=value.version||1,convert=(id,p)=>oldVersion===4?fromV4(id,p):currentPoint(id,oldVersion<3?v3Point(id,p):p);
-        const converted={...value,...convert(value.mapId||'apartments',value),version:5};
+        if(!value||value.version===6)return value;
+        const oldVersion=value.version||1,convert=(id,p)=>oldVersion===5?fromV5(id,p):oldVersion===4?fromV4(id,p):currentPoint(id,oldVersion<3?v3Point(id,p):p);
+        const converted={...value,...convert(value.mapId||'apartments',value),version:6};
         const seat=State.variables.vehicleSeat;if(seat)Object.assign(seat,convert(seat.mapId,seat));
-        if(State.variables.worldLayoutVersion!==4) {
+        if(State.variables.worldLayoutVersion!==5) {
             const containers=State.variables.inventory?.containers;
             if(containers) {
                 const migrated={...containers};for(const id of Object.keys(containers))if(id.startsWith('ground:'))delete migrated[id];
@@ -72,7 +78,7 @@ setup.layoutMigration=(()=>{
                     if(renamed!==id&&!Object.hasOwn(flags,renamed))flags[renamed]=flag;
                 }
             }
-            State.variables.worldLayoutVersion=4;
+            State.variables.worldLayoutVersion=5;
         }
         return converted;
     }

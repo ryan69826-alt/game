@@ -5,7 +5,7 @@ setup.worldMovement = (() => {
         const map = Object.values(setup.worldMaps).find(map => map.id === value?.mapId) || setup.worldMaps.apartments;
         const valid = value && map.tileAt(value.x, value.y).walkable;
         State.variables.world = {
-            version: 5, mapId: map.id,
+            version: 6, mapId: map.id,
             x: valid ? value.x : map.spawn.x, y: valid ? value.y : map.spawn.y,
             elapsedSeconds: setup.gameClock.elapsed(value)
         };

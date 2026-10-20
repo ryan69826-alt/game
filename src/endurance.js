@@ -21,7 +21,13 @@ setup.endurance = (() => {
     function recover(seconds) {
         if(!Number.isSafeInteger(seconds)||seconds<0) return;
         const state=ensure(),elapsed=state.recoverySeconds+seconds;
-        state.used=Math.max(0,Math.round((state.used-Math.floor(elapsed/5)*capacity()*.02)*1e6)/1e6);state.recoverySeconds=elapsed%5;
+        const ticks=Math.floor(elapsed/5);
+        if(ticks) {
+            state.used*=Math.pow(.98,ticks);
+            // Treat values below the meter's display precision as fully recovered.
+            if(state.used<.005)state.used=0;
+        }
+        state.recoverySeconds=elapsed%5;
         if(state.used<capacity()*.8)state.exhausted=false;
     }
     function pauseRecovery() {ensure().recoverySeconds=0;}

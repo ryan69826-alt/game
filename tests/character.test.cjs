@@ -487,7 +487,7 @@ test('walls, parked cars, trees, map bounds, and distant clicks do not advance t
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     for(const [x,y,dx,dy] of [[32,23,0,-1],[80,52,0,1],[79,55,1,0],[29,36,0,-1],[4,0,0,-1],[89,73,0,1]]) {
         const result=await page.evaluate(({x,y,dx,dy})=>{
-            SugarCube.State.variables.world={version:5,mapId:'apartments',x,y,elapsedSeconds:35};
+            SugarCube.State.variables.world={version:6,mapId:'apartments',x,y,elapsedSeconds:35};
             const result=SugarCube.setup.worldMovement.move(dx,dy);
             return {result,world:structuredClone(SugarCube.State.variables.world)};
         },{x,y,dx,dy});
@@ -499,7 +499,7 @@ test('walls, parked cars, trees, map bounds, and distant clicks do not advance t
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),0);
     assert.match(await page.locator('#movement-status').textContent(),/adjacent square/);
     const results=await page.evaluate(()=>{
-        const cases=[undefined,{mapId:'constructor',x:NaN,y:50,elapsedSeconds:-1},{version:5,mapId:'apartments',x:33,y:20,elapsedSeconds:20}];
+        const cases=[undefined,{mapId:'constructor',x:NaN,y:50,elapsedSeconds:-1},{version:6,mapId:'apartments',x:33,y:20,elapsedSeconds:20}];
         return cases.map(value=>{SugarCube.State.variables.world=value;return structuredClone(SugarCube.setup.worldMovement.ensure());});
     });
     for(const result of results) {assert.equal(result.x,30);assert.equal(result.y,33);assert.equal(result.mapId,'apartments');}
@@ -548,7 +548,7 @@ test('held keys move at a controlled pace, stop on release/blur/dialogs, and res
     const paused=await world();await page.clock.runFor(600);assert.deepEqual(await world(),paused);
     await page.keyboard.up('s');await page.keyboard.press('Escape');
     await page.evaluate(()=>{
-        SugarCube.State.variables.world={version:5,mapId:'apartments',x:32,y:24,elapsedSeconds:0};
+        SugarCube.State.variables.world={version:6,mapId:'apartments',x:32,y:24,elapsedSeconds:0};
         SugarCube.Engine.play('Apartments');
     });
     await page.waitForSelector('#local-map[data-player-y="24"]');
@@ -616,7 +616,7 @@ test('a blocked held direction remains active and can resume after another direc
     await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     await page.evaluate(()=>{
-        SugarCube.State.variables.world={version:5,mapId:'apartments',x:28,y:35,elapsedSeconds:0};
+        SugarCube.State.variables.world={version:6,mapId:'apartments',x:28,y:35,elapsedSeconds:0};
         SugarCube.Engine.play('Apartments');
     });
     await page.waitForSelector('#local-map[data-player-x="28"]');
@@ -1178,7 +1178,7 @@ test('housing receptionist reach crosses the desk only at its service positions;
 
 test('renting through Talk provides a key to explicitly unlock the selected apartment and survives reloads and disk saves inside it',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await walkTo(69,55);await openPortal('Enter','housing-office');
+    await walkTo(69,53);await openPortal('Enter','housing-office');
     await walkTo(8,7);await page.keyboard.press('e');
     const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
     assert.deepEqual(await dialog.locator('.interaction-actions button').allTextContents(),['Talk','Attack']);
@@ -1259,7 +1259,7 @@ test('game time crosses midnight and year boundaries independently of the browse
 
 test('opening doors, changing maps, talking, renting, and real-time waiting never advance game time',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    await walkTo(69,55);const elapsed=await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds);
+    await walkTo(69,53);const elapsed=await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds);
     await openPortal('Enter','housing-office');assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),elapsed);
     await walkTo(8,7);const atDesk=await page.evaluate(()=>SugarCube.setup.gameClock.now());
     await page.keyboard.press('e');const dialog=page.getByRole('dialog',{name:'Interact',exact:true});
@@ -1311,7 +1311,7 @@ test('legacy turns and monthly leases migrate once without resetting time or cha
         return {world,again,first,lease,now:setup.gameClock.now(),money:State.variables.player.money,
             invalid:setup.character.normalize({startDate:'2026-02-30'}).startDate};
     });
-    assert.equal(result.world.version,5);assert.equal(result.world.turn,undefined);assert.equal(result.world.elapsedSeconds,85);assert.deepEqual(result.again,result.world);
+    assert.equal(result.world.version,6);assert.equal(result.world.turn,undefined);assert.equal(result.world.elapsedSeconds,85);assert.deepEqual(result.again,result.world);
     assert.equal(result.first.version,3);assert.equal(result.first.rentedUnit,'2-3');assert.equal(result.first.weeklyRent,600);
     assert.equal(result.first.monthlyRent,undefined);assert.equal(result.first.nextRentAt,result.now+604800);assert.deepEqual(result.lease,result.first);
     assert.equal(result.money,99999);assert.equal(result.invalid,'2026-03-20');
@@ -1737,10 +1737,10 @@ test('Shift sprinting halves input delay, spends two seconds per step and uses e
     await page.clock.runFor(1);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),32);
     await page.clock.runFor(100);assert.equal(await page.locator('#player-time').textContent(),'08:00:06');assert.equal(await page.locator('#player-endurance').textContent(),'3 / 25');
     await page.keyboard.up('Shift');await page.clock.runFor(199);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),33);
-    await page.clock.runFor(1);await page.keyboard.up('d');assert.equal(await page.locator('#player-time').textContent(),'08:00:11');assert.equal(await page.locator('#player-endurance').textContent(),'2.5 / 25');
+    await page.clock.runFor(1);await page.keyboard.up('d');assert.equal(await page.locator('#player-time').textContent(),'08:00:11');assert.equal(await page.locator('#player-endurance').textContent(),'2.94 / 25');
     await page.getByRole('button',{name:'Sprint [Shift]',exact:true}).click();await page.keyboard.press('a');
-    assert.equal(await page.locator('#player-time').textContent(),'08:00:13');assert.equal(await page.locator('#player-endurance').textContent(),'3.5 / 25');
-    await page.keyboard.press('t');await page.getByRole('button',{name:'Pass Time',exact:true}).click();assert.equal(await page.locator('#player-endurance').textContent(),'0 / 25');
+    assert.equal(await page.locator('#player-time').textContent(),'08:00:13');assert.equal(await page.locator('#player-endurance').textContent(),'3.94 / 25');
+    await page.keyboard.press('t');await page.getByRole('button',{name:'Pass Time',exact:true}).click();assert.equal(await page.locator('#player-endurance').textContent(),'0.1 / 25');
 });
 
 test('endurance limits sprinting, awards one earned XP per 25 steps, and adds cumulative level capacity without changing creation XP',async()=>{
@@ -1763,7 +1763,7 @@ test('endurance limits sprinting, awards one earned XP per 25 steps, and adds cu
     assert.deepEqual(result.levelup,{used:25,max:30,xp:50,base:49,earned:1});assert.equal(result.partial,10);
     await page.reload();await page.waitForSelector('#player-endurance');
     const after=await page.evaluate(()=>{SugarCube.setup.rest.advanceAwake(1);return {used:SugarCube.setup.endurance.ensure().used,max:SugarCube.setup.endurance.capacity(),earned:SugarCube.setup.skills.earned('Endurance')};});
-    assert.deepEqual(after,{used:9.4,max:30,earned:1});
+    assert.deepEqual(after,{used:9.8,max:30,earned:1});
     await page.getByRole('button',{name:'Stats',exact:true}).click();const endurance=page.locator('.world-skill[data-skill="Endurance"]');assert.match(await endurance.textContent(),/Level 1 \/ 10/);
 });
 
@@ -1775,7 +1775,7 @@ test('Rest in the T menu waits one awake minute and recovers endurance and fatig
     await dialog.getByRole('button',{name:'Rest',exact:true}).click();assert.match(await dialog.locator('#action-result').textContent(),/rest for 1 minute/);
     const after=await page.evaluate(()=>({world:structuredClone(SugarCube.State.variables.world),tiredness:SugarCube.State.variables.rest.tiredness,awake:SugarCube.State.variables.rest.awakeSeconds}));
     assert.deepEqual(after.world,{...before,elapsedSeconds:before.elapsedSeconds+60});assert.equal(after.tiredness,51);assert.equal(after.awake,959);
-    assert.equal(await page.locator('#player-endurance').textContent(),'14 / 25');assert.equal(await page.locator('#player-fatigue').textContent(),'49 / 100');
+    assert.equal(await page.locator('#player-endurance').textContent(),'15.69 / 25');assert.equal(await page.locator('#player-fatigue').textContent(),'49 / 100');
 });
 
 test('world atlas sits above the sidebar character and the local map uses the freed vertical space',async()=>{
@@ -1807,7 +1807,7 @@ test('repeated Shift events do not stall held sprinting; breath passes five and 
     assert.equal(await page.locator('#player-time').textContent(),'08:00:55');assert.equal(await page.locator('#player-endurance').textContent(),'24.5 / 25');
     assert.match(await page.locator('#movement-status').textContent(),/Out of breath/);
     await page.clock.runFor(100);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),36);
-    await page.clock.runFor(900);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),41);assert.equal(await page.locator('#player-endurance').textContent(),'22 / 25');
+    await page.clock.runFor(900);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),41);assert.equal(await page.locator('#player-endurance').textContent(),'22.15 / 25');
     await page.clock.runFor(100);assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.x),41);assert.equal(await page.locator('#player-time').textContent(),'08:01:20');
     await page.keyboard.up('d');await page.keyboard.up('Shift');assert.equal(await page.evaluate(()=>SugarCube.setup.skills.earned('Endurance')),1);
 });
@@ -2303,7 +2303,7 @@ test('exhaustion persists across reload and forces walking until endurance is st
     await page.reload();await page.waitForSelector('#local-map');
     assert.equal(await page.evaluate(()=>SugarCube.setup.endurance.canSprint()),false);
     const steps=await page.evaluate(()=>{const {setup,State}=SugarCube;return Array.from({length:6},(_,i)=>{const before=State.variables.world.elapsedSeconds,result=setup.worldMovement.move(i%2?-1:1,0,true);return {sprinted:result.sprinted,used:setup.endurance.ensure().used,seconds:State.variables.world.elapsedSeconds-before,can:setup.endurance.canSprint()};});});
-    assert.deepEqual(steps.map(step=>step.used),[24,23.5,23,22.5,22,21.5]);
+    for(let i=0;i<steps.length;i++)assert.ok(Math.abs(steps[i].used-25*Math.pow(.98,i+2))<1e-10);
     assert.deepEqual(steps.map(step=>step.sprinted),[false,false,false,false,false,false]);
     assert.deepEqual(steps.map(step=>step.seconds),[5,5,5,5,5,5]);
     assert.equal(steps[2].can,false);assert.equal(steps[3].can,false);
@@ -2312,10 +2312,10 @@ test('exhaustion persists across reload and forces walking until endurance is st
 test('exhaustion threshold scales with skill capacity and legacy maximum saves enter recovery',async()=>{
     const checks=await page.evaluate(()=>{const {setup,State}=SugarCube;return [0,50,350].map(xp=>{
         State.variables.character.skills.Endurance=xp;const max=setup.endurance.capacity();State.variables.endurance={version:1,used:max,sprintSteps:0,recoverySeconds:0};
-        const initial=setup.endurance.canSprint();setup.endurance.recover(50);const boundary={used:setup.endurance.ensure().used,can:setup.endurance.canSprint()};
+        const initial=setup.endurance.canSprint();setup.endurance.recover(55);const boundary={used:setup.endurance.ensure().used,can:setup.endurance.canSprint()};
         setup.endurance.recover(4);const partial=setup.endurance.canSprint();setup.endurance.recover(1);return {max,initial,boundary,partial,ready:setup.endurance.canSprint()};});});
     assert.deepEqual(checks.map(check=>check.max),[25,30,55]);
-    for(const check of checks){assert.equal(check.initial,false);assert.equal(check.boundary.used,check.max*.8);assert.equal(check.boundary.can,false);assert.equal(check.partial,false);assert.equal(check.ready,true);}
+    for(const check of checks){assert.equal(check.initial,false);assert.ok(Math.abs(check.boundary.used-check.max*Math.pow(.98,11))<1e-10);assert.equal(check.boundary.can,false);assert.equal(check.partial,false);assert.equal(check.ready,true);}
 });
 
 test('housing and storage sidewalks align at the boundary and remain continuous through the street flare',async()=>{
@@ -2444,7 +2444,7 @@ test('old layout saves migrate player and ground containers once without losing 
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     const result=await page.evaluate(()=>{const {State,setup}=SugarCube;const inventory=setup.inventory.ensure();inventory.containers['ground:apartments:12:30']=[{id:'migration-item',type:'cloth',x:0,y:0}];State.variables.world={version:2,mapId:'apartments',x:13,y:29,elapsedSeconds:12345};delete State.variables.worldLayoutVersion;State.variables.openedObjects={'lock:building-1':true};
         const first=structuredClone(setup.worldMovement.ensure()),second=structuredClone(setup.worldMovement.ensure());return {first,second,items:setup.inventory.ensure().containers['ground:apartments:78:50'],locks:State.variables.openedObjects,money:setup.playerState.ensure().money};});
-    assert.deepEqual(result.first,{version:5,mapId:'apartments',x:79,y:49,elapsedSeconds:12345});assert.deepEqual(result.second,result.first);assert.deepEqual(result.items,[{id:'migration-item',type:'cloth',x:0,y:0}]);assert.deepEqual(result.locks,{'lock:building-1':true});assert.equal(result.money,99999);
+    assert.deepEqual(result.first,{version:6,mapId:'apartments',x:79,y:49,elapsedSeconds:12345});assert.deepEqual(result.second,result.first);assert.deepEqual(result.items,[{id:'migration-item',type:'cloth',x:0,y:0}]);assert.deepEqual(result.locks,{'lock:building-1':true});assert.equal(result.money,99999);
 });
 
 test('the close sidebar atlas draws only real exits and discovery never opens A2 or B2',async()=>{
@@ -2513,15 +2513,15 @@ test('four-unit save migration preserves retired leases, physical keys and colli
         inventory.containers[`ground:apartment-1:${room.anchor.x}:${room.anchor.y}`]=[{id:'pile-a',type:'cloth',x:0,y:0}];inventory.containers[`ground:apartment-1:${other.anchor.x}:${other.anchor.y}`]=[{id:'pile-b',type:'cloth',x:0,y:0}];
         const migrated=structuredClone(setup.worldMovement.ensure()),again=structuredClone(setup.worldMovement.ensure()),housing=setup.housing.ensure();
         const piles=Object.entries(setup.inventory.ensure().containers).filter(([id])=>id.startsWith('ground:')).map(([id,items])=>({id,items}));return {migrated,again,unit:setup.rooms.current().unit?.id,housing,piles,hasKey:setup.housing.canEnter('1-3'),unlocked:State.variables.doorLocks['unit-1-3'],money:setup.playerState.ensure().money,key:setup.inventory.ensure().containers['worn:shirt'][0].id};});
-    assert.equal(result.migrated.version,5);assert.equal(result.migrated.elapsedSeconds,98765);assert.deepEqual(result.again,result.migrated);assert.equal(result.unit,'1-3');assert.equal(result.housing.rentedUnit,'1-3');assert.equal(result.housing.nextRentAt,9999999999);assert.equal(result.housing.arrears,1200);assert.equal(result.money,99999);assert.equal(result.key,'apartment-key:1-5');assert.equal(result.hasKey,true);assert.equal(result.unlocked,false);
+    assert.equal(result.migrated.version,6);assert.equal(result.migrated.elapsedSeconds,98765);assert.deepEqual(result.again,result.migrated);assert.equal(result.unit,'1-3');assert.equal(result.housing.rentedUnit,'1-3');assert.equal(result.housing.nextRentAt,9999999999);assert.equal(result.housing.arrears,1200);assert.equal(result.money,99999);assert.equal(result.key,'apartment-key:1-5');assert.equal(result.hasKey,true);assert.equal(result.unlocked,false);
     assert.equal(result.piles.length,2);assert.equal(new Set(result.piles.map(p=>p.id)).size,2);assert.deepEqual(result.piles.flatMap(p=>p.items.map(i=>i.id)).sort(),['pile-a','pile-b']);
     await page.evaluate(()=>SugarCube.Engine.play('Apartments'));await page.waitForSelector('#local-map[data-map-id="apartment-1"]');await page.getByRole('button',{name:'Inventory',exact:true}).click();assert.equal(await page.locator('button[title="Key for Apartment 1 · Unit 3"]').count(),1);
 });
 
-test('endurance recovers two percent of capacity each five seconds without losing fractional recovery',async()=>{
+test('endurance recovers two percent of current usage each five seconds without losing fractional recovery',async()=>{
     await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
-    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.endurance={used:25,exhausted:true};setup.endurance.recover(4);const partial=setup.endurance.ensure().used;setup.endurance.recover(1);const tick=setup.endurance.ensure().used;setup.endurance.recover(45);const boundary={used:setup.endurance.ensure().used,can:setup.endurance.canSprint()};setup.endurance.recover(5);const ready=setup.endurance.canSprint();setup.skills.award('Endurance',setup.characterRules.maxXp);State.variables.endurance={used:250};setup.endurance.recover(5);return {partial,tick,boundary,ready,max:setup.endurance.capacity(),large:setup.endurance.ensure().used};});
-    assert.equal(result.partial,25);assert.equal(result.tick,24.5);assert.deepEqual(result.boundary,{used:20,can:false});assert.equal(result.ready,true);assert.equal(result.max,300);assert.equal(result.large,244);
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;State.variables.endurance={used:25,exhausted:true};setup.endurance.recover(4);const partial=setup.endurance.ensure().used;setup.endurance.recover(1);const tick=setup.endurance.ensure().used;setup.endurance.recover(50);const boundary={used:setup.endurance.ensure().used,can:setup.endurance.canSprint()};setup.endurance.recover(5);const ready=setup.endurance.canSprint();setup.skills.award('Endurance',setup.characterRules.maxXp);State.variables.endurance={used:250};setup.endurance.recover(5);const large=setup.endurance.ensure().used;State.variables.endurance={used:10};setup.endurance.recover(10);const batch=setup.endurance.ensure().used;State.variables.endurance={used:10};setup.endurance.recover(5);const smallTick=setup.endurance.ensure().used;setup.endurance.recover(5);const split=setup.endurance.ensure().used;setup.endurance.recover(3600);return {partial,tick,boundary,ready,max:setup.endurance.capacity(),large,batch,smallTick,split,rested:setup.endurance.ensure().used};});
+    assert.equal(result.partial,25);assert.equal(result.tick,24.5);assert.ok(Math.abs(result.boundary.used-25*Math.pow(.98,11))<1e-10);assert.equal(result.boundary.can,false);assert.equal(result.ready,true);assert.equal(result.max,300);assert.equal(result.large,245);assert.equal(result.smallTick,9.8);assert.ok(Math.abs(result.batch-9.604)<1e-10);assert.ok(Math.abs(result.split-result.batch)<1e-10);assert.equal(result.rested,0);
 });
 
 test('Transit has a one-row shopping driveway and two station lots with open entrance aisles',async()=>{
@@ -2571,7 +2571,7 @@ test('compact Apartments preserves old parked-car seating and ground items and s
         const items=setup.inventory.ensure().containers['ground:apartments:78:50'];const unchanged=structuredClone(setup.worldMovement.ensure());delete State.variables.vehicleSeat;
         State.variables.world={version:4,mapId:'apartments',x:30,y:23,elapsedSeconds:321};const park=structuredClone(setup.worldMovement.ensure()),map=setup.worldMaps.apartments;
         return {world,unchanged,seated,items,park,ends:[3,9].every(x=>[70,71,72,73].every(y=>map.tileAt(x,y).kind==='ground')),distance:map.roads.horizontal.y-(map.buildings[2].y+map.buildings[2].height)};});
-    assert.deepEqual(result.world,{version:5,mapId:'apartments',x:79,y:49,elapsedSeconds:321});assert.deepEqual(result.unchanged,result.world);assert.equal(result.seated,true);assert.deepEqual(result.items,[{id:'kept-at-car',type:'cloth',x:0,y:0}]);assert.deepEqual(result.park,{version:5,mapId:'apartments',x:30,y:33,elapsedSeconds:321});assert.equal(result.ends,true);assert.equal(result.distance,8);
+    assert.deepEqual(result.world,{version:6,mapId:'apartments',x:79,y:49,elapsedSeconds:321});assert.deepEqual(result.unchanged,result.world);assert.equal(result.seated,true);assert.deepEqual(result.items,[{id:'kept-at-car',type:'cloth',x:0,y:0}]);assert.deepEqual(result.park,{version:6,mapId:'apartments',x:30,y:33,elapsedSeconds:321});assert.equal(result.ends,true);assert.equal(result.distance,8);
 });
 
 
@@ -2614,4 +2614,19 @@ test('dragging ground clothing onto the character equips an empty slot with its 
     await drag('spare-shirt',false);assert.match(await dialog.locator('#inventory-status').textContent(),/empty matching clothing slot/);
     await drag('not-clothing',false);assert.equal(await page.evaluate(()=>JSON.stringify({clothing:SugarCube.State.variables.character.clothing,inventory:SugarCube.State.variables.inventory})),before);
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),0);
+});
+
+
+test('housing office clears the road and sidewalk and v5 saves follow its relocated entrance only once',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube,map=setup.worldMaps.apartments,office=map.housingOffice;
+        State.variables.world={version:5,mapId:'apartments',x:69,y:55,elapsedSeconds:456};State.variables.worldLayoutVersion=4;
+        setup.inventory.ensure().containers['ground:apartments:69:55']=[{id:'office-kept',type:'cloth',x:0,y:0}];
+        const first=structuredClone(setup.worldMovement.ensure()),second=structuredClone(setup.worldMovement.ensure());
+        return {first,second,items:setup.inventory.ensure().containers['ground:apartments:69:53'],old:setup.inventory.ensure().containers['ground:apartments:69:55'],
+            gap:map.roads.horizontal.y-(office.y+office.height),curb:Array.from({length:office.width},(_,i)=>map.tileAt(office.x+i,63).kind),
+            street:Array.from({length:map.width},(_,x)=>map.tileAt(x,64).kind),apartmentGap:office.y-(map.buildings[1].y+map.buildings[1].height),path:map.tileAt(69,53).kind,door:map.tileAt(69,54).kind};});
+    assert.deepEqual(result.first,{version:6,mapId:'apartments',x:69,y:53,elapsedSeconds:456});assert.deepEqual(result.second,result.first);
+    assert.deepEqual(result.items,[{id:'office-kept',type:'cloth',x:0,y:0}]);assert.equal(result.old,undefined);assert.equal(result.gap,2);assert.equal(result.apartmentGap,2);
+    assert.ok(result.curb.every(kind=>kind==='pavement'));assert.ok(result.street.every(kind=>kind==='road'));assert.equal(result.path,'path');assert.equal(result.door,'entrance');
 });
