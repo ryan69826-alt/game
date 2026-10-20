@@ -45,7 +45,7 @@ setup.characterFemale = (() => {
         contexts.head.fillStyle=`rgb(${eyes.join(',')})`;
         for(const x of [324,357]) contexts.head.fillRect(X(x),Y(85),2,2);
         const worn=setup.clothing.equipped(character);
-        if(worn.includes('backpack')) {
+        if(worn.includes('backpack')||worn.includes('basic-backpack')) {
             const ctx=contexts.backpack,x=X(214),y=Y(165);
             ctx.fillStyle='#1b2825';ctx.fillRect(x-6,y,25,83);
             ctx.fillStyle='#3c5147';ctx.fillRect(x-4,y+3,21,77);
@@ -53,15 +53,20 @@ setup.characterFemale = (() => {
             ctx.fillStyle='#293c33';ctx.fillRect(x+3,y+45,12,28);
             ctx.fillStyle='#b2aa85';ctx.fillRect(x+4,y+45,10,2);
         }
-        for(const garment of ['pants','shirt','shoes']) if(worn.includes(garment)) {
-            const target=targets[garment],[x,y,w,h]=target.fit;
-            contexts.clothing.drawImage(cell(source,target.cell,skin),...target.crop,X(x),Y(y),Math.round(w*scale),Math.round(h*scale));
+        function template(garment){
+            const target=targets[garment],[x,y,w,h]=target.fit,result=make(288,416),ctx=result.getContext('2d');ctx.imageSmoothingEnabled=false;
+            ctx.drawImage(cell(source,target.cell,skin),...target.crop,X(x),Y(y),Math.round(w*scale),Math.round(h*scale));return result;
         }
-        if(worn.includes('backpack')) {
+        for(const slot of ['underbottoms','undertop','feet','bottoms','top','waist','ankles','shoes','hands','wrists','overtop','handheld']){
+            const garment=character.clothing[slot];
+            if(targets[garment])contexts.clothing.drawImage(template(garment),0,0);
+            else setup.clothingArt.draw(contexts.clothing,garment,template,X,Y,layers.body);
+        }
+        if(worn.includes('backpack')||worn.includes('basic-backpack')) {
             const ctx=contexts.clothing;ctx.fillStyle='#293c33';
             ctx.fillRect(X(259),Y(146),3,48);ctx.fillStyle='#6c7c64';ctx.fillRect(X(261),Y(150),1,42);
         }
-        return {contexts,neckX,neckY,headTop,scale,eye:{x:X(329),y:Y(85)},faceWidth:47,
+        return {contexts,neckX,neckY,headTop,scale,X,Y,eye:{x:X(329),y:Y(85)},faceWidth:47,
             head:{faceLeft:0,faceWidth:76,eye:{y:64}},headLeft:X(289)};
     }
     return {draw};

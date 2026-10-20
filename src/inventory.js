@@ -5,6 +5,7 @@ setup.inventory = (() => {
         pants:{name:'Generic pants',width:2,height:2,color:'#8b95b5'},
         shoes:{name:'Generic shoes',width:2,height:1,color:'#b1a48f'},
         backpack:{name:'Backpack',width:2,height:3,color:'#92aa8b'},
+        ...Object.fromEntries(setup.clothingCatalog.items.map(item=>[item.id,{name:item.name,width:item.size[0],height:item.size[1],color:item.color}])),
         water: {name: 'Water bottle', width: 1, height: 2, color: '#83c3d9'},
         tools: {name: 'Tool kit', width: 2, height: 2, color: '#d6aa70'},
         cloth: {name: 'Cleaning cloth', width: 1, height: 1, color: '#b4bfba'},

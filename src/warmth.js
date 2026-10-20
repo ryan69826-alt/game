@@ -8,7 +8,7 @@ setup.warmth=(()=>{
         const worn=character?.clothing||{};
         return Object.entries(weights).reduce((sum,[slot,weight])=>{
             const type=worn[slot],value=setup.clothing.choices[slot].includes(type)&&type!=='none'?setup.clothing.definitions[type]?.warmth:null;
-            return sum+(Number.isFinite(value)?Math.max(1,Math.min(10,value)):0)*weight;
+            return sum+(Number.isFinite(value)?Math.max(-1,Math.min(10,value)):0)*weight;
         },0)/totalWeight;
     }
     const worldRequirement=(temperature=setup.weather.temperature())=>Math.max(0,Math.min(10,10*(climate.hotF-temperature)/(climate.hotF-climate.coldF)));

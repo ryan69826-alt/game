@@ -1,7 +1,7 @@
 /* Removed garments carry their own pocket arrays, including nested items.
    Pocket IDs are active only while worn; failed moves never detach anything. */
 setup.equipment=(()=>{
-    const sizes={shirt:[2,2],pants:[2,2],shoes:[2,1],backpack:[2,3]};
+    const sizes={shirt:[2,2],pants:[2,2],shoes:[2,1],backpack:[2,3],...Object.fromEntries(setup.clothingCatalog.items.map(item=>[item.id,item.size]))};
     const slotFor=type=>setup.clothing.slots.find(slot=>setup.clothing.choices[slot].includes(type)&&type!=='none');
     function preview(slot) {
         const type=State.variables.character?.clothing[slot];

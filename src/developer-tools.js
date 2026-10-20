@@ -12,15 +12,21 @@ setup.developerTools=(()=>{
     function open() {
         if(Dialog.isOpen()||!document.querySelector('.world-sidebar'))return;
         Dialog.setup('Developer tools','character-window developer-window');
-        const root=Dialog.body();root.replaceChildren();
-        const help=document.createElement('p');help.className='world-note';help.textContent='Testing tools. Changes are saved with your character.';
-        const action=document.createElement('button');action.type='button';action.textContent='Max out all stats';
-        const result=document.createElement('p');result.setAttribute('role','status');
-        action.addEventListener('click',()=>{if(maxStats())result.textContent='All skills are level 10. Health is restored, fatigue and tiredness are cleared, endurance is recovered, and you have at least $999,999,999.';});
-        const clearance=document.createElement('button');clearance.type='button';
-        const label=()=>{clearance.textContent=setup.corporateAccess.authorized()?'Revoke corporate parking clearance':'Grant corporate parking clearance';};label();
-        clearance.addEventListener('click',()=>{const granted=setup.corporateAccess.toggleClearance();label();result.textContent=granted?'Your ID implant now has Executive Parking clearance.':'Executive Parking clearance removed from your ID implant.';});
-        root.append(help,action,clearance,result);Dialog.open();
+        const root=Dialog.body();
+        function main(){
+            root.replaceChildren();
+            const help=document.createElement('p');help.className='world-note';help.textContent='Testing tools. Changes are saved with your character.';
+            const action=document.createElement('button');action.type='button';action.textContent='Max out all stats';
+            const result=document.createElement('p');result.setAttribute('role','status');
+            action.addEventListener('click',()=>{if(maxStats())result.textContent='All skills are level 10. Health is restored, fatigue and tiredness are cleared, endurance is recovered, and you have at least $999,999,999.';});
+            const clearance=document.createElement('button');clearance.type='button';
+            const label=()=>{clearance.textContent=setup.corporateAccess.authorized()?'Revoke corporate parking clearance':'Grant corporate parking clearance';};label();
+            clearance.addEventListener('click',()=>{const granted=setup.corporateAccess.toggleClearance();label();result.textContent=granted?'Your ID implant now has Executive Parking clearance.':'Executive Parking clearance removed from your ID implant.';});
+            const clothing=document.createElement('button');clothing.type='button';clothing.textContent='Clothing selector';
+            clothing.addEventListener('click',()=>setup.developerClothing.show(root,main));
+            root.append(help,action,clearance,clothing,result);
+        }
+        main();Dialog.open();
     }
     return {open,maxStats};
 })();

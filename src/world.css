@@ -170,9 +170,9 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 .inventory-shell{display:grid;grid-template-columns:minmax(210px,1fr) minmax(240px,1.1fr) minmax(175px,.75fr) minmax(260px,1fr);gap:16px;align-items:start}
 .inventory-storage,.inventory-portrait,.inventory-shell>.equipment-panel{min-width:0}
 .inventory-layout{grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
-.inventory-portrait{display:flex;flex-direction:column;align-self:stretch;position:sticky;top:0;margin:0;padding:12px 6px;border:1px solid var(--line);background:radial-gradient(ellipse at center,#2a403b,#142426 70%);text-align:center}
+.inventory-portrait{max-height:calc(100dvh - 160px);box-sizing:border-box;display:flex;flex-direction:column;align-self:stretch;position:sticky;top:0;margin:0;padding:12px 6px;border:1px solid var(--line);background:radial-gradient(ellipse at center,#2a403b,#142426 70%);text-align:center}
 .inventory-portrait figcaption{font-size:.7rem;color:var(--muted);margin-bottom:12px;letter-spacing:.08em}
-.inventory-character-canvas{display:block;width:100%;height:auto;max-height:calc(100dvh - 210px);object-fit:contain;image-rendering:pixelated}
+.inventory-character-canvas{min-height:0;flex-shrink:1;display:block;width:100%;height:auto;max-height:calc(100dvh - 210px);object-fit:contain;image-rendering:pixelated}
 .inventory-shell>.equipment-panel{margin:0;padding:10px}
 .equipment-panel>h2{font-size:.85rem;margin:0 0 8px}
 .equipment-group h3,.augmentation-panel h3{font-size:.67rem;color:var(--muted);margin:8px 0 5px;text-transform:uppercase;letter-spacing:.08em}

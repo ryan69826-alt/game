@@ -212,6 +212,7 @@ setup.characterPreview = (() => {
             }
             const ctx=clearLayer(canvas);
             for(const name of ['backpack','body','clothing','head','hair']) ctx.drawImage(layers[name],0,0);
+            setup.clothingArt.foreground(ctx,character,model);
             Object.assign(canvas.dataset,{hairBounds:JSON.stringify(bounds),headHeight:neckY-headTop,figureHeight:340,
                 variation:'Female-Fixed',clothingFit:'Female-Fixed',neckX,neckY});
             canvas.setAttribute('aria-label',`Adult female bodysuit base, ${character.skinTone.toLowerCase()} skin, ${character.eyeColor.toLowerCase()} eyes, ${character.hairColor.toLowerCase()} ${character.hairLength.toLowerCase()} hair.`);

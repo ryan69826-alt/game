@@ -36,7 +36,7 @@ $(document).on(':passagedisplay', () => {
         const row = document.createElement('div');row.className = 'character-field';
         const label = document.createElement('label'), input = document.createElement('select');
         input.id = `clothing-${slot}`;input.name = slot;label.htmlFor = input.id;label.textContent = setup.clothing.labels[slot];
-        for (const id of setup.clothing.choices[slot]) {
+        for (const id of setup.clothing.creatorChoices[slot]) {
             const definition = setup.clothing.definitions[id];
             const blocks = definition.pockets.reduce((sum,pocket) => sum + pocket.columns*pocket.rows,0);
             input.append(new Option(`${definition.name}${blocks ? ` · ${blocks} block${blocks === 1 ? '' : 's'}` : ''}`, id));

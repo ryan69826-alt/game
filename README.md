@@ -769,7 +769,9 @@ off a major garment lowers insulation rather than raising the remaining outfit's
 average. Waist, Back, Handheld and augmentations do not contribute. Stored or
 dropped clothes and their pocket contents do not contribute either.
 
-Garment warmth values are 1–10, defined beside the item in `clothing.js`. Initial
+Ordinary garment warmth values are 1–10. Simple Glasses and Cheap Watch each
+contribute −1 warmth because they are metal; signed values are retained in the
+weighted calculation. Values live beside the item in the clothing definitions. Initial
 placeholder values are **shirt 4, pants 5, shoes 3**. A completely covered outfit
 with all values 10 averages 10; an unclothed player averages zero. The current
 shirt/pants/shoes outfit averages `(4×3 + 5×3 + 3×2) / 23`, including its empty slots.
@@ -793,3 +795,41 @@ precision for calculation, then round the final difference to the nearest intege
 comfort difference hidden. The ambient temperature is visible beside the date. Removing, wearing or changing clothing refreshes it
 immediately without passing time. Movement, waiting and sleep refresh it through
 the same game-time temperature system.
+
+
+## Spreadsheet clothing catalog and developer selector
+
+Press **P → Clothing selector**, choose a slot and an item, then **Equip clothing**.
+Choose None to remove that slot. All 34 wearable items from the supplied sheet
+are available here, including the Handheld Fishing Pole; the existing Basic ID
+chip remains fixed in its augmentation slot. **Character creation still has its
+original five dropdowns and original item choices.**
+
+`clothing-catalog.js` contains names, slots, warmth, independent pocket rectangles,
+provisional folded sizes and placeholder art styles. Generic Shoes belongs to
+**Shoes**, following the correction to the sheet. Existing generic shirt, pants,
+shoes and backpack IDs are retained for saves and marked “legacy” in the developer
+selector. Plain Pants is a new catalog item with two 2×1 pockets; the old Generic
+pants retain their original four 1×1 pockets. The new Basic Backpack has its own
+4×4 compartment; carrying one in storage never grants its capacity.
+
+The Hoodie has one 1×2 pocket. Plain Shirt, T-Shirt, Long Sleeve Shirt, Sports Bra
+and Plain Bra each have one 1×1 pocket. Basic Belt has two 2×1 and two 1×1 pockets
+(six blocks); Plain Pants and Shorts have two 2×1 pockets each; Skirt has two 1×1
+pockets. All other catalog garments have no storage. Belt warmth is recorded as
+2, but Waist stays unweighted under the current warmth rules, as do Back and
+Handheld. Backpack and Fishing Pole have no warmth rating. Other unspecified
+item statistics and tool actions have not been invented.
+
+Replacing equipment through the developer tool places the old garment at the
+player's feet (or on the cabin floor), retaining its identity and all nested
+pocket contents. If it cannot fit, replacement fails without changing equipment
+or deleting items; move to a clear tile to continue testing. A new garment starts
+with empty pockets. The tool does not charge money, spend game time, grant access
+rights or alter starting traits and skills. Equipped choices survive reloads and
+portable saves through the normal clothing and inventory systems.
+
+New garments use separate, temporary tinted garment templates and pixel overlays
+in `clothing-art.js`. They do not redraw or reshape the approved body/head. Art
+can be replaced item by item later; the fishing pole has only a placeholder
+appearance and no fishing interaction yet.

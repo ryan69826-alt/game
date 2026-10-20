@@ -2715,3 +2715,56 @@ test('removing and rewearing clothes immediately changes hidden warmth and feeli
     await page.keyboard.press('i');for(const name of ['Generic shirt','Generic pants','Generic shoes']){await page.getByRole('button',{name:new RegExp(`^${name},`)}).click();await page.getByRole('button',{name:`Wear ${name.toLowerCase()}`,exact:true}).click();}
     assert.equal(await page.locator('#attribute-effects').textContent(),before);assert.equal(await page.evaluate(()=>SugarCube.setup.gameClock.now()),stamp.time);assert.equal(await page.evaluate(()=>SugarCube.setup.weather.ensure().seed),stamp.seed);
 });
+
+
+test('spreadsheet clothing is available in gameplay without expanding character creation',async()=>{
+    const selections=await page.locator('#character-controls select[name="top"],#character-controls select[name="bottoms"],#character-controls select[name="shoes"],#character-controls select[name="storage"],#character-controls select[name="handheld"]').evaluateAll(nodes=>Object.fromEntries(nodes.map(node=>[node.name,Array.from(node.options,o=>o.value)])));
+    assert.deepEqual(selections,{top:['none','shirt'],bottoms:['none','pants'],shoes:['none','shoes'],storage:['none','backpack'],handheld:['none']});
+    const catalog=await page.evaluate(()=>SugarCube.setup.clothingCatalog.items.map(item=>({name:item.name,slot:item.slot,warmth:item.warmth})));
+    assert.equal(catalog.length,34);assert.equal(new Set(catalog.map(item=>item.name)).size,34);
+    assert.equal(catalog.find(item=>item.name==='Simple Glasses').warmth,-1);assert.equal(catalog.find(item=>item.name==='Cheap Watch').warmth,-1);assert.equal(catalog.find(item=>item.name==='Generic Shoes').slot,'shoes');
+    assert.equal(await page.evaluate(()=>SugarCube.setup.developerClothing.equip('hoodie').ok),false);
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await page.keyboard.press('p');await page.getByRole('button',{name:'Clothing selector',exact:true}).click();
+    const expected=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
+    await page.getByLabel('Clothing slot',{exact:true}).selectOption('overtop');await page.getByLabel('Clothing item',{exact:true}).selectOption('hoodie');await page.getByRole('button',{name:'Equip clothing',exact:true}).click();
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.overtop),'hoodie');assert.match(await page.locator('#developer-clothing-result').textContent(),/Hoodie equipped/);
+    await page.getByLabel('Clothing slot',{exact:true}).selectOption('facewear');await page.getByLabel('Clothing item',{exact:true}).selectOption('simple-glasses');await page.getByRole('button',{name:'Equip clothing',exact:true}).click();
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.facewear),'simple-glasses');assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),expected);
+    await page.getByRole('button',{name:'Back to developer tools',exact:true}).click();assert.ok(await page.getByRole('button',{name:'Max out all stats',exact:true}).isVisible());
+    await page.keyboard.press('Escape');await page.reload();await page.waitForSelector('#local-map');assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.overtop),'hoodie');assert.equal(await page.evaluate(()=>SugarCube.State.variables.character.clothing.facewear),'simple-glasses');
+    await page.keyboard.press('i');assert.equal(await page.locator('[data-equip-slot="overtop"] .inventory-item').textContent(),'Hoodie');assert.equal(await page.locator('.augmentation-slot').first().locator('span').textContent(),'Basic ID chip');
+    await page.keyboard.press('i');await page.setViewportSize({width:320,height:844});await page.keyboard.press('p');await page.getByRole('button',{name:'Clothing selector',exact:true}).click();
+    const layout=await page.getByRole('dialog',{name:'Developer tools',exact:true}).evaluate(node=>{SugarCube.Dialog.resize();const rect=node.getBoundingClientRect();return {left:rect.left,right:rect.right,client:node.clientWidth,scroll:node.scrollWidth};});
+    assert.ok(layout.left>=0&&layout.right<=320&&layout.scroll<=layout.client);
+});
+
+test('catalog pockets keep their distinct shapes and developer swaps preserve filled old garments',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;setup.inventory.ensure().containers['worn:shirt']=[{id:'kept-through-dev-swap',type:'apartmentKey',x:0,y:0}];
+        const changed=setup.developerClothing.equip('plain-shirt'),ground=setup.groundItems.current(),old=setup.inventory.placements(ground).find(item=>item.type==='shirt');
+        const belt=setup.developerClothing.equip('basic-belt'),hoodie=setup.developerClothing.equip('hoodie'),pants=setup.developerClothing.equip('plain-pants');
+        const worn=setup.inventory.worn(),select=id=>worn.filter(p=>p.id.startsWith(`worn:${id}:`));
+        const shapes=id=>select(id).map(p=>[p.columns,p.rows]);
+        const waterFitsHoodie=setup.inventory.fits(select('hoodie')[0],{type:'water'},0,0),toolFitsBelt=select('basic-belt').some(p=>setup.inventory.fits(p,{type:'tools'},0,0));
+        const pockets=Object.fromEntries(['basic-belt','hoodie','plain-pants','plain-shirt'].map(id=>[id,shapes(id)]));
+        return {changed,belt,hoodie,pants,old,pockets,waterFitsHoodie,toolFitsBelt,time:State.variables.world.elapsedSeconds,oldCount:setup.inventory.placements(ground).filter(item=>item.id===old.id).length};});
+    assert.ok(result.changed.ok&&result.belt.ok&&result.hoodie.ok&&result.pants.ok);assert.equal(result.time,0);assert.equal(result.oldCount,1);assert.equal(result.old.pockets['worn:shirt'][0].id,'kept-through-dev-swap');
+    assert.deepEqual(result.pockets,{'basic-belt':[[2,1],[2,1],[1,1],[1,1]],hoodie:[[1,2]],'plain-pants':[[2,1],[2,1]],'plain-shirt':[[1,1]]});assert.equal(result.waterFitsHoodie,true);assert.equal(result.toolFitsBelt,false);
+    const dropped=await page.evaluate(()=>{const {setup}=SugarCube;setup.inventory.ensure().containers['worn:basic-belt:1']=[{id:'belt-kept',type:'cloth',x:0,y:0}];const result=setup.equipment.drop('equipped:waist','equipped:waist');const item=setup.inventory.placements(setup.groundItems.current()).find(item=>item.type==='basic-belt');return {result,item};});
+    assert.equal(dropped.result.ok,true);assert.equal(dropped.item.pockets['worn:basic-belt:1'][0].id,'belt-kept');
+    await page.reload();await page.waitForSelector('#local-map');assert.equal(await page.evaluate(()=>SugarCube.setup.inventory.placements(SugarCube.setup.groundItems.current()).find(item=>item.type==='basic-belt').pockets['worn:basic-belt:1'][0].id),'belt-kept');
+});
+
+test('all catalog equipment can render independently, cool metal items subtract warmth and full ground rejects replacement safely',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const results=await page.evaluate(()=>{const {setup,State}=SugarCube;for(const slot of setup.clothing.slots)State.variables.character.clothing[slot]='none';$(document).trigger(':equipmentchange');
+        const body=document.getElementById('body-layer').toDataURL(),head=document.getElementById('head-layer').toDataURL(),base=document.getElementById('character-canvas').toDataURL(),failures=[];
+        for(const item of setup.clothingCatalog.items){State.variables.character.clothing[item.slot]=item.id;$(document).trigger(':equipmentchange');
+            if(document.getElementById('character-canvas').toDataURL()===base)failures.push(item.id+' invisible');
+            if(document.getElementById('body-layer').toDataURL()!==body||document.getElementById('head-layer').toDataURL()!==head)failures.push(item.id+' changes base');State.variables.character.clothing[item.slot]='none';}
+        const naked=setup.warmth.clothingAverage();State.variables.character.clothing.facewear='simple-glasses';State.variables.character.clothing.wrists='cheap-watch';const metal=setup.warmth.clothingAverage();
+        State.variables.character.clothing.top='plain-shirt';const ground=setup.groundItems.current(),inventory=setup.inventory.ensure();inventory.containers[ground.id]=Array.from({length:64},(_,i)=>({id:`full-${i}`,type:'cloth',x:i%8,y:Math.floor(i/8)}));
+        const before=JSON.stringify(State.variables.inventory),blocked=setup.developerClothing.equip('t-shirt');
+        return {failures,naked,metal,blocked,same:before===JSON.stringify(State.variables.inventory),top:State.variables.character.clothing.top,time:State.variables.world.elapsedSeconds};});
+    assert.deepEqual(results.failures,[]);assert.equal(results.naked,0);assert.equal(results.metal,-2/23);assert.equal(results.blocked.ok,false);assert.equal(results.same,true);assert.equal(results.top,'plain-shirt');assert.equal(results.time,0);
+});
