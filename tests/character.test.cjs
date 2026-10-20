@@ -2671,6 +2671,7 @@ test('temperature reaches morning plus ten at 7 PM and interpolates continuously
 test('temperature sensations sit below Sounds, hide exact values, refresh with game time and persist through reloads',async()=>{
     const seeded=await page.evaluate(()=>SugarCube.setup.weather.ensure().seed);await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
     const initial=await page.evaluate(()=>({seed:SugarCube.setup.weather.ensure().seed,temperature:SugarCube.setup.weather.temperature(),text:document.getElementById('attribute-effects').textContent}));assert.equal(initial.seed,seeded);
+    assert.equal(await page.locator('#player-temperature').textContent(),`${initial.temperature.toFixed(1)}°F`);
     assert.ok(await page.locator('#attribute-effects').isVisible());assert.ok(await page.evaluate(()=>!!(document.querySelector('.room-sounds').compareDocumentPosition(document.querySelector('.attribute-feelings'))&Node.DOCUMENT_POSITION_FOLLOWING)));
     assert.doesNotMatch(initial.text,/\d|°|fahrenheit|celsius/i);assert.match(initial.text,/You feel/);
     await page.reload();await page.waitForSelector('#attribute-effects');assert.deepEqual(await page.evaluate(()=>({seed:SugarCube.setup.weather.ensure().seed,temperature:SugarCube.setup.weather.temperature(),text:document.getElementById('attribute-effects').textContent})),initial);
@@ -2679,6 +2680,7 @@ test('temperature sensations sit below Sounds, hide exact values, refresh with g
     const migratedSeed=await page.evaluate(()=>SugarCube.setup.weather.ensure().seed);await page.reload();await page.waitForSelector('#attribute-effects');assert.equal(await page.evaluate(()=>SugarCube.setup.weather.ensure().seed),migratedSeed);
     const descriptions=await page.evaluate(()=>{const {setup,State}=SugarCube;const old=State.variables.character;State.variables.character={clothing:{}};const values=[20,79,100].map(setup.attributeEffects.temperatureFeeling);State.variables.character=old;return values;});assert.equal(new Set(descriptions).size,3);for(const text of descriptions)assert.doesNotMatch(text,/\d|°/);
     await page.keyboard.press('t');await page.getByRole('button',{name:'Pass Time',exact:true}).click();assert.equal(await page.locator('#attribute-effects').textContent(),await page.evaluate(()=>SugarCube.setup.attributeEffects.temperatureFeeling(SugarCube.setup.weather.temperature())));
+    assert.equal(await page.locator('#player-temperature').textContent(),await page.evaluate(()=>`${SugarCube.setup.weather.temperature().toFixed(1)}°F`));
 });
 
 

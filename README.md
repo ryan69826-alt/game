@@ -722,8 +722,9 @@ adding another feature.
 ## Seasonal temperature and attribute sensations
 
 Temperature is the first environmental input for character attributes. **How you
-feel**, below Sounds, describes cold, comfort or heat; exact temperatures are not
-shown in the player interface. Equipped clothing now determines insulation, as
+feel**, below Sounds, describes cold, comfort or heat. The current outdoor
+temperature is displayed beside the sidebar date in Fahrenheit to one decimal
+place, updating with game time and retaining the same forecast on reload. Equipped clothing now determines insulation, as
 described below. Body-heat accumulation, health damage and other attribute
 penalties are not part of this step.
 
@@ -786,7 +787,7 @@ precision for calculation, then round the final difference to the nearest intege
 | +2 to +3 | Warm |
 | ≥ +4 | Overheating |
 
-**How you feel** shows a description, with no numeric warmth, temperature or
-difference displayed. Removing, wearing or changing clothing refreshes it
+**How you feel** shows a description, with numeric clothing warmth and the
+comfort difference hidden. The ambient temperature is visible beside the date. Removing, wearing or changing clothing refreshes it
 immediately without passing time. Movement, waiting and sleep refresh it through
 the same game-time temperature system.

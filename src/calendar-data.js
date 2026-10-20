@@ -29,6 +29,8 @@ setup.gameClock = (() => {
         const timestamp=now(),iso=new Date(timestamp*1000).toISOString();
         date.textContent=formatDate(timestamp);date.dateTime=iso.slice(0,10);
         time.textContent=formatTime(timestamp);time.dateTime=iso;
+        const temperature=document.getElementById('player-temperature');
+        if(temperature)temperature.textContent=`${setup.weather.temperature(timestamp).toFixed(1)}°F`;
     }
     return {starts,stepSeconds,maxElapsedSeconds,elapsed,now,formatDate,formatTime,formatStamp,startLabel,refresh};
 })();

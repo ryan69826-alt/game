@@ -221,3 +221,6 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 
 .attribute-feelings{border-top:1px solid var(--line);padding-top:16px;color:#cedbd4;font-size:.85rem;line-height:1.7}
 .attribute-feelings h2{font-size:.8rem;color:var(--muted)}
+
+.sidebar-date-weather{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;min-width:0}
+#player-temperature{color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}

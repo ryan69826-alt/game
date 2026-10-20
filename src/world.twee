@@ -14,7 +14,7 @@
 </figure>
 <div class="sidebar-character"><<include "CharacterArtwork">></div>
 <p id="preview-status" class="preview-status" role="status" aria-live="polite"></p>
-<div class="sidebar-clock" aria-label="Game date and time"><time id="player-date"></time><time id="player-time"></time></div>
+<div class="sidebar-clock" aria-label="Game date and time"><div class="sidebar-date-weather"><time id="player-date"></time><output id="player-temperature" aria-label="Current temperature"></output></div><time id="player-time"></time></div>
 <div class="sidebar-vitals" aria-label="Money and health">
 <div><span>Money</span><output id="player-money"></output></div>
 <div><label for="player-health-bar">Health</label><output id="player-health"></output></div>
