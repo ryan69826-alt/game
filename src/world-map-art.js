@@ -24,6 +24,7 @@ setup.worldMapArt=(()=>{
                 if (x === centerX && y % 3 === 0 && y < map.roads.horizontal.y) terrainContext.fillRect(px + 7, py + 3, 2, 10);
             }
         }
+        setup.courtyardPark.paint(terrainContext,map,tileSize);
         if(map.rail) {
             const rail=map.rail,x=rail.x*tileSize,y=rail.y*tileSize,w=rail.width*tileSize;
             terrainContext.fillStyle='#685d4e';for(let xx=x;xx<x+w;xx+=12)terrainContext.fillRect(xx,y+8,3,56);

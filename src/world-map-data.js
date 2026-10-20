@@ -57,10 +57,12 @@ setup.worldMaps = (() => {
         return tile('ground', 'Apartment grounds');
     }
     return {apartments: {id: 'apartments', name: 'Apartments', width: 90, height: 74,
-        subtitle:'A small corner of the city.',description:'Four single-floor apartment buildings face a small central park. Each contains four apartments in a single row. Paths connect their entrances, with parking to the southwest. The housing office stands to the right of Apartment 3.',
+        subtitle:'A small corner of the city.',description:'Four single-floor apartment buildings face a patchy central lawn with mature trees, scruffy bushes and two worn benches. Each contains four apartments in a single row. Paths connect their entrances, with parking to the southwest. The housing office stands to the right of Apartment 3.',
         spawn: {x: 30, y: 23}, trees, buildings, housingOffice, roads, park, parking, parkingBays, cars, interactables, tileAt: apartmentTile},
         ...Object.fromEntries([...interiorMaps,officeMap].map(map=>[map.id,map]))};
 })();
+
+setup.courtyardPark.decorate(setup.worldMaps.apartments);
 
 setup.storageDistrict();
 

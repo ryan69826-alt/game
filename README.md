@@ -309,6 +309,10 @@ placements persist through movement, reload, menu/Continue and disk saves.
 Apartments is a 90×74 grid: four buildings face a park, a parking lot has edge and
 median bays, and two five-square-wide roads meet at the south edge. Cars occupy
 2×2 squares. A continuous sidewalk surrounds the park and connects each entrance.
+The courtyard uses patchy grass, irregular low shrubs, mature tree canopies and
+two worn benches, with bare patches around the seating. This is inexpensive
+landscaping for low-end housing; the surrounding sidewalks remain clear.
+Scenery lives in `courtyard-park.js`, separately from movement geometry.
 Doors are walkable thresholds; buildings, cars, trees, and medians block movement.
 
 The description takes 60% of the main area and maps take 40%, beside the character
