@@ -163,8 +163,10 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 .world-sidebar .preview-status:empty{display:none}
 
 /* Inventory: carried storage / full-body portrait / equipment, in body order. */
-#ui-dialog:has(#ui-dialog-body.inventory-window){max-width:calc(100vw - 24px)}
-#ui-dialog-body.inventory-window{width:min(1320px,calc(100vw - 24px));max-height:calc(100dvh - 100px);padding:18px}
+/* Keep inventory centered immediately, even while SugarCube's throttled resize
+   handler still has left/right insets from the previous viewport width. */
+#ui-dialog:has(#ui-dialog-body.inventory-window){width:min(1320px,calc(100vw - 24px));max-width:calc(100vw - 24px);left:50%!important;right:auto!important;transform:translateX(-50%)}
+#ui-dialog-body.inventory-window{width:100%;max-width:100%;max-height:calc(100dvh - 100px);padding:18px}
 .inventory-shell{display:grid;grid-template-columns:minmax(210px,1fr) minmax(240px,1.1fr) minmax(175px,.75fr) minmax(260px,1fr);gap:16px;align-items:start}
 .inventory-storage,.inventory-portrait,.inventory-shell>.equipment-panel{min-width:0}
 .inventory-layout{grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}

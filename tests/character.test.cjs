@@ -869,10 +869,14 @@ test('inventory fits narrow screens and large text and blocks movement while ope
     const dialog=page.getByRole('dialog',{name:'Trunk & inventory',exact:true});await dialog.waitFor({state:'visible'});
     const expected=await page.evaluate(()=>structuredClone(SugarCube.State.variables.world));
     await page.keyboard.press('ArrowDown');assert.deepEqual(await page.evaluate(()=>structuredClone(SugarCube.State.variables.world)),expected);
-    for(const width of [1440,700,390,320]) {
+    for(const width of [1440,700,390,320,700,1440,700]) {
         await page.setViewportSize({width,height:844});await page.evaluate(()=>document.documentElement.classList.add('large-text'));
-        // SugarCube repositions its fixed dialog after a resize. Its old
-        // left/right insets can temporarily collapse the wrapper to zero width.
+        if(width===700) {
+            const stale=await dialog.evaluate(node=>{node.style.left='100px';node.style.right='100px';const rect=node.getBoundingClientRect();return {client:node.clientWidth,scroll:node.scrollWidth,left:rect.left,right:rect.right};});
+            assert.ok(stale.scroll<=stale.client&&stale.left>=0&&stale.right<=width,'stale framework insets cannot squeeze inventory contents outside the window');
+        }
+        // Exercise both shrinking and growing while the dialog stays open.
+        // CSS sizing must remain valid before SugarCube's resize callback runs.
         await page.waitForFunction(()=>{
             const node=document.getElementById('ui-dialog'),rect=node?.getBoundingClientRect();
             return node?.clientWidth>0 && rect.left>=0 && rect.right<=innerWidth;
