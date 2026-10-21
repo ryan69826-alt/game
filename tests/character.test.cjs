@@ -2690,12 +2690,12 @@ test('clothing warmth weights coverage, keeps empty slots at zero and excludes b
         character.clothing.storage='backpack';const backpack=setup.warmth.clothingAverage();character.clothing=original;
         setup.inventory.ensure().containers['ground:apartments:30:33']=[{id:'stored-warm-clothes',type:'shirt',x:0,y:0}];const stored=setup.warmth.clothingAverage();
         for(const slot of Object.keys(setup.warmth.weights)){const type=`test-insulation-${slot}`;setup.clothing.definitions[type]={name:'Insulated garment',warmth:10,pockets:[]};setup.clothing.choices[slot].push(type);character.clothing[slot]=type;}
-        const full=setup.warmth.clothingAverage(),hot=setup.warmth.calculate(character,100).category,cold=setup.warmth.calculate(character,30).category;
+        const full=setup.warmth.clothingAverage(),hot=setup.warmth.calculate(character,100).category,cold=setup.warmth.calculate(character,0).category;
         character.clothing.overtop='none';const withoutCoat=setup.warmth.clothingAverage();character.clothing=original;
         return {baseline,noPants,shoesOnly,bare,backpack,stored,full,hot,cold,withoutCoat,weight:setup.warmth.totalWeight,weights:setup.warmth.weights};});
     assert.equal(result.weight,23);assert.deepEqual(result.weights,{top:3,bottoms:3,overtop:3,undertop:2,underbottoms:2,feet:2,hands:2,shoes:2,hat:1,facewear:1,wrists:1,ankles:1});
     assert.equal(result.baseline,33/23);assert.equal(result.noPants,18/23);assert.equal(result.shoesOnly,6/23);assert.equal(result.bare,0);assert.equal(result.backpack,0);assert.equal(result.stored,result.baseline);
-    assert.equal(result.full,10);assert.equal(result.hot,'Overheating');assert.equal(result.cold,'Comfortable');assert.equal(result.withoutCoat,200/23);
+    assert.equal(result.full,10);assert.equal(result.hot,'Overheating');assert.equal(result.cold,'Warm');assert.equal(result.withoutCoat,200/23);
 });
 
 test('developer warmth calculation shows live slot contributions and formulas without changing the player or time',async()=>{
@@ -2712,6 +2712,7 @@ test('developer warmth calculation shows live slot contributions and formulas wi
     assert.deepEqual(await table.locator('[data-slot="overtop"]').locator('th,td').allTextContents(),['Over Top','Empty','0','×3','0']);
     const summary=await page.locator('#developer-warmth-summary').textContent();
     assert.ok(summary.includes('31 ÷ 23 = 1.348'));assert.ok(summary.includes(`How you feel: ${before.result.category}`));
+    assert.ok(summary.includes('World requirement = 8 − (8 − 2) × (temperature − 0) ÷ (100 − 0), capped at 2–8'));
     assert.ok(summary.includes(`= ${Number(before.result.world.toFixed(3))}`));
     assert.ok(summary.includes(`= ${Number(before.result.difference.toFixed(3))}`));
     assert.equal(before.result.clothing,31/23);
@@ -2727,8 +2728,8 @@ test('developer warmth calculation shows live slot contributions and formulas wi
 });
 
 test('warmth requirement clamps its Fahrenheit range and feeling bands cover fractional differences symmetrically',async()=>{
-    const result=await page.evaluate(()=>{const {warmth}=SugarCube.setup;return {requirements:[-20,30,65,100,120].map(warmth.worldRequirement),bands:[-10,-4,-3.5,-3.49,-3,-2,-1.5,-1.49,-1,0,1,1.49,1.5,2,3,3.49,3.5,4,10].map(warmth.category)};});
-    assert.deepEqual(result.requirements,[10,10,5,0,0]);assert.deepEqual(result.bands,['Freezing','Freezing','Freezing','Cold','Cold','Cold','Cold','Comfortable','Comfortable','Comfortable','Comfortable','Comfortable','Warm','Warm','Warm','Warm','Overheating','Overheating','Overheating']);
+    const result=await page.evaluate(()=>{const {warmth}=SugarCube.setup;return {requirements:[-20,0,25,50,75,100,120].map(warmth.worldRequirement),bands:[-10,-4,-3.5,-3.49,-3,-2,-1.5,-1.49,-1,0,1,1.49,1.5,2,3,3.49,3.5,4,10].map(warmth.category)};});
+    assert.deepEqual(result.requirements,[8,8,6.5,5,3.5,2,2]);assert.deepEqual(result.bands,['Freezing','Freezing','Freezing','Cold','Cold','Cold','Cold','Comfortable','Comfortable','Comfortable','Comfortable','Comfortable','Warm','Warm','Warm','Warm','Overheating','Overheating','Overheating']);
 });
 
 test('removing and rewearing clothes immediately changes hidden warmth and feelings without time and survives reload',async()=>{

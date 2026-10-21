@@ -7,10 +7,11 @@ setup.developerTools=(()=>{
         const format=value=>Number(value.toFixed(3)).toString();
         const summary=document.createElement('div');summary.id='developer-warmth-summary';
         const total=rows.reduce((sum,row)=>sum+row.contribution,0),weight=setup.warmth.totalWeight;
+        const climate=setup.warmth.climate;
         for(const text of [
             `Current temperature: ${format(temperature)}°F`,
             `Clothing average = weighted total ÷ total weight = ${format(total)} ÷ ${weight} = ${format(result.clothing)}`,
-            `World requirement = 10 × (100 − temperature) ÷ (100 − 30), capped at 0–10 = ${format(result.world)}`,
+            `World requirement = ${climate.coldRequirement} − (${climate.coldRequirement} − ${climate.hotRequirement}) × (temperature − ${climate.coldF}) ÷ (${climate.hotF} − ${climate.coldF}), capped at ${climate.hotRequirement}–${climate.coldRequirement} = ${format(result.world)}`,
             `Difference = clothing average − world requirement = ${format(result.clothing)} − ${format(result.world)} = ${format(result.difference)}`,
             `How you feel: ${result.category}`
         ]){const line=document.createElement('p');line.textContent=text;summary.append(line);}

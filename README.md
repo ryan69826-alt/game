@@ -777,8 +777,9 @@ with all values 10 averages 10; an unclothed player averages zero. The current
 shirt/pants/shoes outfit averages `(4×3 + 5×3 + 3×2) / 23`, including its empty slots.
 Old saves automatically use the item definitions; no inventory reset is needed.
 
-The world requirement scales linearly from **10 at 30°F** to **0 at 100°F**, capped
-at those limits. These provisional endpoints live in `setup.warmth.climate`.
+The world requirement scales linearly from **8 at 0°F** to **2 at 100°F**, capped
+at those limits: `8 − 0.06 × temperatureF`. These endpoints live in
+`setup.warmth.climate` and also supply the developer tool's displayed formula.
 The hidden difference is `clothing average − world requirement`. Keep the full
 precision for calculation, then round the final difference to the nearest integer
 (symmetrically away from zero at half values) to apply these feeling bands:

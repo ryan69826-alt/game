@@ -3,7 +3,7 @@
 setup.warmth=(()=>{
     const weights=Object.freeze({top:3,bottoms:3,overtop:3,undertop:2,underbottoms:2,feet:2,hands:2,shoes:2,hat:1,facewear:1,wrists:1,ankles:1});
     const totalWeight=Object.values(weights).reduce((sum,weight)=>sum+weight,0);
-    const climate=Object.freeze({coldF:30,hotF:100});
+    const climate=Object.freeze({coldF:0,hotF:100,coldRequirement:8,hotRequirement:2});
     function clothingBreakdown(character=State.variables.character) {
         const worn=character?.clothing||{};
         return Object.entries(weights).map(([slot,weight])=>{
@@ -15,7 +15,8 @@ setup.warmth=(()=>{
     function clothingAverage(character=State.variables.character) {
         return clothingBreakdown(character).reduce((sum,row)=>sum+row.contribution,0)/totalWeight;
     }
-    const worldRequirement=(temperature=setup.weather.temperature())=>Math.max(0,Math.min(10,10*(climate.hotF-temperature)/(climate.hotF-climate.coldF)));
+    const worldRequirement=(temperature=setup.weather.temperature())=>Math.max(climate.hotRequirement,Math.min(climate.coldRequirement,
+        climate.coldRequirement-(climate.coldRequirement-climate.hotRequirement)*(temperature-climate.coldF)/(climate.hotF-climate.coldF)));
     function category(difference) {
         // Symmetric rounding fills the fractional gaps in the integer bands.
         const rounded=Math.sign(difference)*Math.round(Math.abs(difference));
