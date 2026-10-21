@@ -4,8 +4,10 @@ setup.attributeEffects=(()=>{
     const descriptions={
         Freezing:'You feel freezing cold. Your fingers sting, and you long for warmth.',
         Cold:'You feel cold. Your skin prickles, and you want to find somewhere warmer.',
+        Chilly:'You feel chilly. A little more warmth would be welcome.',
         Comfortable:'You feel comfortable, neither chilled nor overheated.',
         Warm:'You feel warm. Heat lingers beneath your clothing.',
+        Hot:'You feel hot. Your clothing feels stifling, and you want somewhere cooler.',
         Overheating:'You feel as though you are overheating. Sweat gathers, and you want to cool down.'
     };
     function temperatureFeeling(value) {

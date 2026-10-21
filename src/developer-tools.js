@@ -26,7 +26,7 @@ setup.developerTools=(()=>{
             }body.append(line);
         }
         table.append(caption,head,body);scroll.append(table);
-        const note=document.createElement('p');note.className='world-note';note.textContent='Empty weighted slots count as 0; total weight stays 23. Metal items can contribute −1 warmth. Waist, Back, Handheld and augmentations are unweighted. Comfort uses the difference rounded to the nearest whole number (halves away from zero): ≤ −4 Freezing; −3 to −2 Cold; −1 to +1 Comfortable; +2 to +3 Warm; ≥ +4 Overheating. Displayed decimals are rounded; calculations use full precision.';
+        const note=document.createElement('p');note.className='world-note';note.textContent='Empty weighted slots count as 0; total weight stays 23. Metal items can contribute −1 warmth. Waist, Back, Handheld and augmentations are unweighted. Comfort uses the exact difference: ≤ −4 Freezing; greater than −4 through −3 Cold; greater than −3 and below −2 Chilly; −2 through +2 Comfortable; greater than +2 and below +3 Warm; +3 and below +4 Hot; ≥ +4 Overheating. Displayed decimals are rounded; calculations use full precision.';
         const previous=document.createElement('button');previous.type='button';previous.textContent='Back to developer tools';previous.addEventListener('click',back);
         root.append(heading,summary,scroll,note,previous);
     }

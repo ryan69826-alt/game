@@ -780,16 +780,17 @@ Old saves automatically use the item definitions; no inventory reset is needed.
 The world requirement scales linearly from **8 at 0°F** to **2 at 100°F**, capped
 at those limits: `8 − 0.06 × temperatureF`. These endpoints live in
 `setup.warmth.climate` and also supply the developer tool's displayed formula.
-The hidden difference is `clothing average − world requirement`. Keep the full
-precision for calculation, then round the final difference to the nearest integer
-(symmetrically away from zero at half values) to apply these feeling bands:
+The hidden difference is `clothing average − world requirement`. Use the exact
+difference without rounding to apply these feeling bands:
 
-| Rounded difference | Feeling |
+| Exact difference | Feeling |
 | --- | --- |
 | ≤ −4 | Freezing |
-| −3 to −2 | Cold |
-| −1 to +1 | Comfortable |
-| +2 to +3 | Warm |
+| Greater than −4, through −3 | Cold |
+| Greater than −3, below −2 | Chilly |
+| −2 through +2 (inclusive) | Comfortable |
+| Greater than +2, below +3 | Warm |
+| +3 through below +4 | Hot |
 | ≥ +4 | Overheating |
 
 **How you feel** shows a description, with numeric clothing warmth and the
@@ -839,4 +840,4 @@ Press **P → Warmth calculation** to inspect the current temperature, each weig
 slot's equipped item, warmth, weight and contribution, the fixed-denominator
 clothing average, world requirement, difference and resulting comfort category.
 Empty weighted slots and negative metal warmth are included. The view explains
-unweighted slots and comfort rounding; it does not change equipment or pass time.
+unweighted slots and exact comfort thresholds; it does not change equipment or pass time.

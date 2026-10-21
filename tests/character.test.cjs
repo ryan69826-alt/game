@@ -2678,7 +2678,7 @@ test('temperature sensations sit below Sounds, hide exact values, refresh with g
     const moved=await page.evaluate(()=>{const before=SugarCube.setup.weather.temperature();SugarCube.setup.worldMovement.move(1,0);return {before,after:SugarCube.setup.weather.temperature(),text:document.getElementById('attribute-effects').textContent,expected:SugarCube.setup.attributeEffects.temperatureFeeling(SugarCube.setup.weather.temperature())};});assert.notEqual(moved.before,moved.after);assert.equal(moved.text,moved.expected);
     await page.evaluate(()=>{delete SugarCube.State.variables.weather;SugarCube.Engine.play('Apartments');});await page.waitForSelector('#attribute-effects');
     const migratedSeed=await page.evaluate(()=>SugarCube.setup.weather.ensure().seed);await page.reload();await page.waitForSelector('#attribute-effects');assert.equal(await page.evaluate(()=>SugarCube.setup.weather.ensure().seed),migratedSeed);
-    const descriptions=await page.evaluate(()=>{const {setup,State}=SugarCube;const old=State.variables.character;State.variables.character={clothing:setup.clothing.defaults()};const values=[20,79,100].map(setup.attributeEffects.temperatureFeeling);State.variables.character=old;return values;});assert.equal(new Set(descriptions).size,3);for(const text of descriptions)assert.doesNotMatch(text,/\d|°/);
+    const descriptions=await page.evaluate(()=>{const {setup,State}=SugarCube;const old=State.variables.character;State.variables.character={clothing:setup.clothing.defaults()};const values=[20,50,100].map(setup.attributeEffects.temperatureFeeling);State.variables.character=old;return values;});assert.equal(new Set(descriptions).size,3);for(const text of descriptions)assert.doesNotMatch(text,/\d|°/);
     await page.keyboard.press('t');await page.getByRole('button',{name:'Pass Time',exact:true}).click();assert.equal(await page.locator('#attribute-effects').textContent(),await page.evaluate(()=>SugarCube.setup.attributeEffects.temperatureFeeling(SugarCube.setup.weather.temperature())));
     assert.equal(await page.locator('#player-temperature').textContent(),await page.evaluate(()=>`${SugarCube.setup.weather.temperature().toFixed(1)}°F`));
 });
@@ -2691,11 +2691,13 @@ test('clothing warmth weights coverage, keeps empty slots at zero and excludes b
         setup.inventory.ensure().containers['ground:apartments:30:33']=[{id:'stored-warm-clothes',type:'shirt',x:0,y:0}];const stored=setup.warmth.clothingAverage();
         for(const slot of Object.keys(setup.warmth.weights)){const type=`test-insulation-${slot}`;setup.clothing.definitions[type]={name:'Insulated garment',warmth:10,pockets:[]};setup.clothing.choices[slot].push(type);character.clothing[slot]=type;}
         const full=setup.warmth.clothingAverage(),hot=setup.warmth.calculate(character,100).category,cold=setup.warmth.calculate(character,0).category;
+        const hotFeeling=setup.attributeEffects.temperatureFeeling(25);character.clothing={};const chillyFeeling=setup.attributeEffects.temperatureFeeling(85);character.clothing=Object.fromEntries(Object.keys(setup.warmth.weights).map(slot=>[slot,`test-insulation-${slot}`]));
         character.clothing.overtop='none';const withoutCoat=setup.warmth.clothingAverage();character.clothing=original;
-        return {baseline,noPants,shoesOnly,bare,backpack,stored,full,hot,cold,withoutCoat,weight:setup.warmth.totalWeight,weights:setup.warmth.weights};});
+        return {baseline,noPants,shoesOnly,bare,backpack,stored,full,hot,cold,hotFeeling,chillyFeeling,withoutCoat,weight:setup.warmth.totalWeight,weights:setup.warmth.weights};});
     assert.equal(result.weight,23);assert.deepEqual(result.weights,{top:3,bottoms:3,overtop:3,undertop:2,underbottoms:2,feet:2,hands:2,shoes:2,hat:1,facewear:1,wrists:1,ankles:1});
     assert.equal(result.baseline,33/23);assert.equal(result.noPants,18/23);assert.equal(result.shoesOnly,6/23);assert.equal(result.bare,0);assert.equal(result.backpack,0);assert.equal(result.stored,result.baseline);
-    assert.equal(result.full,10);assert.equal(result.hot,'Overheating');assert.equal(result.cold,'Warm');assert.equal(result.withoutCoat,200/23);
+    assert.equal(result.full,10);assert.equal(result.hot,'Overheating');assert.equal(result.cold,'Comfortable');assert.equal(result.withoutCoat,200/23);
+    assert.match(result.hotFeeling,/You feel hot/);assert.match(result.chillyFeeling,/You feel chilly/);
 });
 
 test('developer warmth calculation shows live slot contributions and formulas without changing the player or time',async()=>{
@@ -2727,9 +2729,9 @@ test('developer warmth calculation shows live slot contributions and formulas wi
     assert.equal(await page.locator('#developer-warmth-summary').textContent(),summary);
 });
 
-test('warmth requirement clamps its Fahrenheit range and feeling bands cover fractional differences symmetrically',async()=>{
-    const result=await page.evaluate(()=>{const {warmth}=SugarCube.setup;return {requirements:[-20,0,25,50,75,100,120].map(warmth.worldRequirement),bands:[-10,-4,-3.5,-3.49,-3,-2,-1.5,-1.49,-1,0,1,1.49,1.5,2,3,3.49,3.5,4,10].map(warmth.category)};});
-    assert.deepEqual(result.requirements,[8,8,6.5,5,3.5,2,2]);assert.deepEqual(result.bands,['Freezing','Freezing','Freezing','Cold','Cold','Cold','Cold','Comfortable','Comfortable','Comfortable','Comfortable','Comfortable','Warm','Warm','Warm','Warm','Overheating','Overheating','Overheating']);
+test('warmth requirement clamps its Fahrenheit range and all seven exact feeling bands include their intended boundaries',async()=>{
+    const result=await page.evaluate(()=>{const {warmth}=SugarCube.setup;return {requirements:[-20,0,25,50,75,100,120].map(warmth.worldRequirement),bands:[-10,-4.001,-4,-3.999,-3,-2.999,-2.001,-2,-1,0,1,2,2.001,2.999,3,3.999,4,4.001,10].map(warmth.category)};});
+    assert.deepEqual(result.requirements,[8,8,6.5,5,3.5,2,2]);assert.deepEqual(result.bands,['Freezing','Freezing','Freezing','Cold','Cold','Chilly','Chilly','Comfortable','Comfortable','Comfortable','Comfortable','Comfortable','Warm','Warm','Hot','Hot','Overheating','Overheating','Overheating']);
 });
 
 test('removing and rewearing clothes immediately changes hidden warmth and feelings without time and survives reload',async()=>{

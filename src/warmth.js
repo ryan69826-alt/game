@@ -18,12 +18,12 @@ setup.warmth=(()=>{
     const worldRequirement=(temperature=setup.weather.temperature())=>Math.max(climate.hotRequirement,Math.min(climate.coldRequirement,
         climate.coldRequirement-(climate.coldRequirement-climate.hotRequirement)*(temperature-climate.coldF)/(climate.hotF-climate.coldF)));
     function category(difference) {
-        // Symmetric rounding fills the fractional gaps in the integer bands.
-        const rounded=Math.sign(difference)*Math.round(Math.abs(difference));
-        if(rounded<=-4)return 'Freezing';
-        if(rounded<=-2)return 'Cold';
-        if(rounded<=1)return 'Comfortable';
-        if(rounded<=3)return 'Warm';
+        if(difference<=-4)return 'Freezing';
+        if(difference<=-3)return 'Cold';
+        if(difference<-2)return 'Chilly';
+        if(difference<=2)return 'Comfortable';
+        if(difference<3)return 'Warm';
+        if(difference<4)return 'Hot';
         return 'Overheating';
     }
     function calculate(character=State.variables.character,temperature=setup.weather.temperature()) {
