@@ -833,3 +833,9 @@ New garments use separate, temporary tinted garment templates and pixel overlays
 in `clothing-art.js`. They do not redraw or reshape the approved body/head. Art
 can be replaced item by item later; the fishing pole has only a placeholder
 appearance and no fishing interaction yet.
+
+Press **P → Warmth calculation** to inspect the current temperature, each weighted
+slot's equipped item, warmth, weight and contribution, the fixed-denominator
+clothing average, world requirement, difference and resulting comfort category.
+Empty weighted slots and negative metal warmth are included. The view explains
+unweighted slots and comfort rounding; it does not change equipment or pass time.

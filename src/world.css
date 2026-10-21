@@ -99,6 +99,12 @@ html:has(#ui-dialog-body.character-window) #ui-overlay{background:#050c10;opacit
 #interaction-result{font-size:.85rem;line-height:1.7;color:var(--accent);margin:18px 0}
 #interaction-result:empty{display:none}
 
+.developer-warmth-table{max-width:100%;overflow-x:auto;margin:18px 0}
+.developer-warmth-table table{width:100%;min-width:440px;border-collapse:collapse;font-size:.8rem}
+.developer-warmth-table caption{text-align:left;color:var(--accent);margin-bottom:8px}
+.developer-warmth-table th,.developer-warmth-table td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+#developer-warmth-summary{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+
 /* Storage cells remain keyboard buttons, including on touch screens. */
 #ui-dialog-body.inventory-window { transition: none; box-sizing: border-box; width: min(680px,calc(100vw - 24px)); max-width: calc(100vw - 24px); min-width: 0; scrollbar-gutter: stable; }
 .inventory-layout { transition: none; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; min-width: 0; }

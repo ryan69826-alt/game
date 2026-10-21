@@ -2698,6 +2698,34 @@ test('clothing warmth weights coverage, keeps empty slots at zero and excludes b
     assert.equal(result.full,10);assert.equal(result.hot,'Overheating');assert.equal(result.cold,'Comfortable');assert.equal(result.withoutCoat,200/23);
 });
 
+test('developer warmth calculation shows live slot contributions and formulas without changing the player or time',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const before=await page.evaluate(()=>{const {setup,State}=SugarCube;
+        Object.assign(State.variables.character.clothing,{facewear:'simple-glasses',wrists:'cheap-watch',waist:'basic-belt',storage:'basic-backpack'});
+        return {time:State.variables.world.elapsedSeconds,character:structuredClone(State.variables.character),result:setup.warmth.calculate()};
+    });
+    await page.keyboard.press('p');await page.getByRole('button',{name:'Warmth calculation',exact:true}).click();
+    const table=page.getByRole('table',{name:'Equipped clothing contributions',exact:true});
+    assert.equal(await table.locator('tbody tr').count(),12);
+    assert.deepEqual(await table.locator('[data-slot="top"]').locator('th,td').allTextContents(),['Top','Generic shirt','4','×3','12']);
+    assert.deepEqual(await table.locator('[data-slot="facewear"]').locator('th,td').allTextContents(),['Face Wear','Simple Glasses','-1','×1','-1']);
+    assert.deepEqual(await table.locator('[data-slot="overtop"]').locator('th,td').allTextContents(),['Over Top','Empty','0','×3','0']);
+    const summary=await page.locator('#developer-warmth-summary').textContent();
+    assert.ok(summary.includes('31 ÷ 23 = 1.348'));assert.ok(summary.includes(`How you feel: ${before.result.category}`));
+    assert.ok(summary.includes(`= ${Number(before.result.world.toFixed(3))}`));
+    assert.ok(summary.includes(`= ${Number(before.result.difference.toFixed(3))}`));
+    assert.equal(before.result.clothing,31/23);
+    await page.setViewportSize({width:320,height:844});await page.evaluate(()=>SugarCube.Dialog.resize());
+    const bounds=await page.locator('.developer-warmth-table').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth,right:el.getBoundingClientRect().right}));
+    assert.ok(bounds.scroll>bounds.width,'narrow table scrolls within its own region');assert.ok(bounds.right<=320,'table region stays inside the viewport');
+    await page.getByRole('button',{name:'Back to developer tools',exact:true}).click();
+    assert.ok(await page.getByRole('button',{name:'Clothing selector',exact:true}).isVisible());
+    const after=await page.evaluate(()=>({time:SugarCube.State.variables.world.elapsedSeconds,character:structuredClone(SugarCube.State.variables.character)}));
+    assert.equal(after.time,before.time);assert.deepEqual(after.character,before.character);
+    await page.getByRole('button',{name:'Warmth calculation',exact:true}).click();
+    assert.equal(await page.locator('#developer-warmth-summary').textContent(),summary);
+});
+
 test('warmth requirement clamps its Fahrenheit range and feeling bands cover fractional differences symmetrically',async()=>{
     const result=await page.evaluate(()=>{const {warmth}=SugarCube.setup;return {requirements:[-20,30,65,100,120].map(warmth.worldRequirement),bands:[-10,-4,-3.5,-3.49,-3,-2,-1.5,-1.49,-1,0,1,1.49,1.5,2,3,3.49,3.5,4,10].map(warmth.category)};});
     assert.deepEqual(result.requirements,[10,10,5,0,0]);assert.deepEqual(result.bands,['Freezing','Freezing','Freezing','Cold','Cold','Cold','Cold','Comfortable','Comfortable','Comfortable','Comfortable','Comfortable','Warm','Warm','Warm','Warm','Overheating','Overheating','Overheating']);
