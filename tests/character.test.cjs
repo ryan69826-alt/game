@@ -3069,3 +3069,47 @@ test('developer allure view explains hidden layers, refreshes after removing cov
     await page.keyboard.press('p');await page.getByRole('button',{name:'Allure calculation',exact:true}).click();assert.equal(await page.locator('#developer-allure-summary').textContent(),'Visible clothing allure: 10 points');
     assert.deepEqual(await page.locator('[data-slot="undertop"]').locator('th,td').allTextContents(),['Under Top','Sports Bra','10','Visible','10']);
 });
+
+test('exposure matches the sheet and the visible outer garment replaces bare regions and hidden clothing',async()=>{
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube,character=State.variables.character;
+        const catalog=Object.fromEntries(setup.clothingCatalog.items.map(item=>[item.id,item.exposure])),starter=setup.exposure.calculate();
+        character.clothing=Object.fromEntries(setup.clothing.slots.map(slot=>[slot,'none']));const scores=[setup.exposure.calculate().total];
+        character.clothing.top='plain-shirt';scores.push(setup.exposure.calculate().total);character.clothing.top='none';character.clothing.undertop='sports-bra';scores.push(setup.exposure.calculate().total);
+        character.clothing.underbottoms='panties';scores.push(setup.exposure.calculate().total);character.clothing.top='plain-shirt';scores.push(setup.exposure.calculate().total);
+        character.clothing.overtop='hoodie';scores.push(setup.exposure.calculate().total);character.clothing.bottoms='plain-pants';scores.push(setup.exposure.calculate().total);
+        const covered=setup.exposure.calculate();character.clothing.overtop='none';scores.push(setup.exposure.calculate().total);character.clothing.bottoms='shorts';scores.push(setup.exposure.calculate().total);
+        character.clothing.bottoms='skirt';scores.push(setup.exposure.calculate().total);character.clothing.top='long-sleeve-shirt';scores.push(setup.exposure.calculate().total);
+        return {catalog,starter,scores,covered};
+    });
+    assert.deepEqual(result.catalog,{'plain-cap':0,beanie:0,'simple-glasses':0,'face-mask':-5,hoodie:0,jacket:0,'rain-coat':0,'plain-shirt':5,'t-shirt':5,'long-sleeve-shirt':0,'tank-top':10,undershirt:10,'sports-bra':25,'plain-bra':25,'plain-tank-top':10,'basic-belt':-5,wristband:0,'cheap-watch':0,'light-gloves':-5,'plain-pants':0,shorts:15,skirt:20,underwear:25,boxers:20,panties:25,'ankle-bands':0,'ankle-socks':2,'plain-socks':0,'generic-shoes':0,sneakers:0,boots:-5,sandals:0,'basic-backpack':-10,'fishing-pole':0});
+    assert.equal(result.starter.total,5);assert.equal(result.starter.bareUpper,0);assert.equal(result.starter.bareLower,0);assert.deepEqual(result.scores,[100,55,75,50,30,25,0,5,20,25,20]);
+    const under=result.covered.rows.find(row=>row.slot==='undertop');assert.equal(under.raw,25);assert.equal(under.contribution,0);assert.equal(under.visible,false);
+});
+
+test('exposure uses shared visibility for accessories, caps 0–100 and keeps wet or torn clothing coverage',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube,character=State.variables.character;
+        character.clothing=Object.fromEntries(setup.clothing.slots.map(slot=>[slot,'none']));character.clothing.feet='ankle-socks';const high=setup.exposure.calculate();
+        Object.assign(character.clothing,{overtop:'jacket',top:'plain-shirt',undertop:'sports-bra',bottoms:'plain-pants',underbottoms:'panties',waist:'basic-belt',facewear:'face-mask',hands:'light-gloves',shoes:'boots',storage:'basic-backpack'});
+        const low=setup.exposure.calculate();setup.clothingCondition.assign('overtop',0,character,true);setup.clothingCondition.assign('bottoms',0,character,true);const damaged=setup.exposure.calculate();
+        const sameVisibility=JSON.stringify(damaged.rows.map(row=>[row.slot,row.visible,row.hiddenBy]))===JSON.stringify(setup.allure.calculate().rows.map(row=>[row.slot,row.visible,row.hiddenBy]));
+        setup.inventory.ensure().containers[setup.groundItems.current().id]=[{id:'stored-cover',type:'rain-coat',x:0,y:0}];const stored=setup.exposure.calculate().total;
+        character.clothing.overtop='none';const belt=setup.exposure.calculate().rows.find(row=>row.slot==='waist');
+        return {high,low,damaged,sameVisibility,stored,belt};
+    });
+    assert.equal(result.high.rawTotal,102);assert.equal(result.high.total,100);assert.equal(result.high.bareUpper,50);assert.equal(result.high.bareLower,50);
+    assert.equal(result.low.rawTotal,-25);assert.equal(result.low.total,0);assert.equal(result.damaged.total,result.low.total);assert.equal(result.damaged.rows.find(row=>row.slot==='undertop').visible,false);assert.equal(result.sameVisibility,true);assert.equal(result.stored,0);
+    assert.equal(result.low.rows.find(row=>row.slot==='waist').contribution,0);assert.equal(result.belt.contribution,-5);
+});
+
+test('developer exposure breakdown shows zero-value outer overrides and restores inner exposure after unequipping',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await page.evaluate(()=>{const {setup}=SugarCube;setup.developerClothing.equip('sports-bra');setup.developerClothing.equip('hoodie');});
+    await page.keyboard.press('p');const before=await page.evaluate(()=>JSON.stringify(SugarCube.State.variables));await page.getByRole('button',{name:'Exposure calculation',exact:true}).click();
+    const table=page.getByRole('table',{name:'Visible clothing exposure contributions',exact:true});assert.equal(await table.locator('tbody tr').count(),15);
+    assert.deepEqual(await table.locator('[data-slot="overtop"]').locator('th,td').allTextContents(),['Over Top','Hoodie','0','Visible','0']);
+    const under=await table.locator('[data-slot="undertop"]').locator('th,td').allTextContents();assert.equal(under[2],'25');assert.match(under[3],/Hidden by Hoodie/);assert.equal(under[4],'0');assert.match(await page.locator('#developer-exposure-summary').textContent(),/capped at 0–100 = 0 \/ 100/);
+    await page.setViewportSize({width:320,height:844});await page.evaluate(()=>SugarCube.Dialog.resize());const bounds=await page.locator('.developer-warmth-table').evaluate(el=>({right:el.getBoundingClientRect().right,scroll:el.scrollWidth,width:el.clientWidth}));assert.ok(bounds.right<=320);assert.ok(bounds.scroll>bounds.width);
+    await page.getByRole('button',{name:'Back to developer tools',exact:true}).click();await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>JSON.stringify(SugarCube.State.variables)),before);
+    await page.evaluate(()=>{const {setup}=SugarCube;setup.equipment.drop('equipped:overtop','equipped:overtop');setup.equipment.drop('equipped:top','equipped:top');});await page.reload();await page.waitForSelector('#local-map');
+    await page.keyboard.press('p');await page.getByRole('button',{name:'Exposure calculation',exact:true}).click();assert.match(await page.locator('#developer-exposure-summary').textContent(),/capped at 0–100 = 25 \/ 100/);assert.deepEqual(await page.locator('[data-slot="undertop"]').locator('th,td').allTextContents(),['Under Top','Sports Bra','25','Visible','25']);
+});

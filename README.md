@@ -1001,3 +1001,27 @@ selector also lists item allure. The calculation is read-only and the exact
 numbers remain in developer tools. No creator options, NPC preferences or
 attraction outcomes are added here: this outfit total is points, not a percentage
 chance for every NPC to be attracted.
+
+### Exposure
+
+Exposure uses the supplied item values and the **same visibility rules as allure**.
+An unclothed player has **100/100**: 50 for a bare upper body and 50 for a bare
+lower body, following the approved baseline. The visible outermost garment in
+Over Top/Top/Under Top replaces the upper region's bare 50 with its listed value;
+Bottom/Under Bottom does the same for the lower region. A value of **0 still
+overrides the inner layer** and the bare-region default. Hidden items contribute
+zero, so a shirt's 5 replaces a bra's 25, and a coat's 0 replaces both.
+
+Visible accessory values are added, including negatives (for example the face
+mask's −5). Clamp the combined total to **0–100**. An original shirt/pants/shoes
+outfit has 5 exposure; a visible bra and panties have 25 + 25 = 50. Empty accessory
+slots add nothing. Legacy shirt, pants, shoes and backpack use 5, 0, 0 and −10.
+Generic Shoes stays in Shoes. The Basic ID chip is N/A and does not contribute.
+
+`setup.exposure.calculate()` derives the total, raw sum, clothing rows and bare
+upper/lower contributions from saved equipment. It does not save a second copy
+of the stat. **P → Exposure calculation** shows those parts and why each covered
+item is ignored. The clothing selector lists raw item exposure. No new creator
+options or NPC responses are added. As with allure, current whole-slot coverage
+is unaffected by wetness or tears; no new durability/opacity modifiers have been
+invented. Exposure is a skin-exposure score, not a detection/attraction chance.

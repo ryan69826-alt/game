@@ -6,11 +6,11 @@ setup.clothing = (() => {
     const choices = {...Object.fromEntries(slots.map(slot=>[slot,['none']])),top: ['none','shirt'], bottoms: ['none','pants'], shoes: ['none','shoes'], storage: ['none','backpack'], handheld: ['none']};
     const definitions = {
         none: {name: 'None', pockets: []},
-        shirt: {allure:0, covers:['undertop'], waterProtection:0, protection:1, stealth:0, maxDurability:50, name: 'Generic shirt', warmth:4, pockets: [{id: 'worn:shirt', name: 'Shirt pocket', columns: 1, rows: 1}]},
-        pants: {allure:0, covers:['underbottoms','ankles','feet'], waterProtection:0, protection:2, stealth:5, maxDurability:75, name: 'Generic pants', warmth:5, pockets: ['Front left','Front right','Back left','Back right'].map((name,index) =>
+        shirt: {exposure:5, allure:0, covers:['undertop'], waterProtection:0, protection:1, stealth:0, maxDurability:50, name: 'Generic shirt', warmth:4, pockets: [{id: 'worn:shirt', name: 'Shirt pocket', columns: 1, rows: 1}]},
+        pants: {exposure:0, allure:0, covers:['underbottoms','ankles','feet'], waterProtection:0, protection:2, stealth:5, maxDurability:75, name: 'Generic pants', warmth:5, pockets: ['Front left','Front right','Back left','Back right'].map((name,index) =>
             ({id: `worn:pants:${index+1}`, name: `Pants · ${name.toLowerCase()} pocket`, columns: 1, rows: 1}))},
-        shoes: {allure:0, covers:['feet'], waterProtection:0, protection:1, stealth:-15, maxDurability:30, name: 'Generic shoes', warmth:3, pockets: []},
-        backpack: {allure:0, covers:[], waterProtection:0, protection:0, stealth:-30, maxDurability:100, name: 'Backpack', pockets: [{id: 'worn:backpack', name: 'Backpack', columns: 4, rows: 4}]}
+        shoes: {exposure:0, allure:0, covers:['feet'], waterProtection:0, protection:1, stealth:-15, maxDurability:30, name: 'Generic shoes', warmth:3, pockets: []},
+        backpack: {exposure:-10, allure:0, covers:[], waterProtection:0, protection:0, stealth:-30, maxDurability:100, name: 'Backpack', pockets: [{id: 'worn:backpack', name: 'Backpack', columns: 4, rows: 4}]}
     };
     // Freeze the original five creator dropdowns before expanding gameplay equipment.
     const creatorChoices=Object.fromEntries(creatorSlots.map(slot=>[slot,[...choices[slot]]]));
