@@ -14,6 +14,7 @@ setup.developerClothing=(()=>{
         const definition=setup.clothing.definitions[type],inventory=setup.inventory.ensure();
         const serial=(State.variables.garmentSerial||0)+1;State.variables.garmentSerial=serial;
         State.variables.character.clothing[slot]=type;
+        setup.clothingCondition.assign(slot,definition.maxDurability);
         State.variables.wornGarmentIds={...State.variables.wornGarmentIds,[slot]:`garment:${serial}`};
         for(const pocket of definition.pockets)inventory.containers[pocket.id]=[];
         State.create(State.passage);$(document).trigger(':equipmentchange');$(document).trigger(':interactionchange');
@@ -35,7 +36,7 @@ setup.developerClothing=(()=>{
         function describe() {
             const item=setup.clothing.definitions[items.value],blocks=item.pockets.reduce((sum,p)=>sum+p.columns*p.rows,0);
             const pockets=item.pockets.map(p=>`${p.columns}×${p.rows}`).join(', ')||'None';
-            detail.textContent=`Warmth: ${item.warmth??'N/A'} · Storage: ${blocks} blocks · Compartments: ${pockets}`;
+            detail.textContent=`Warmth: ${item.warmth??'N/A'} · Maximum durability: ${item.maxDurability??'N/A'} · Storage: ${blocks} blocks · Compartments: ${pockets}`;
             apply.textContent=items.value==='none'?'Remove clothing':'Equip clothing';
         }
         function populate() {
@@ -49,5 +50,35 @@ setup.developerClothing=(()=>{
         const previous=document.createElement('button');previous.type='button';previous.textContent='Back to developer tools';previous.addEventListener('click',back);
         form.append(slotLabel,slots,itemLabel,items,detail,apply);root.append(heading,help,form,result,chip,previous);populate();slots.focus();
     }
-    return {equip,show};
+    function showDurability(root,back) {
+        root.replaceChildren();
+        const heading=document.createElement('h2');heading.textContent='Clothing durability';
+        const help=document.createElement('p');help.className='world-note';help.textContent='Test equipped clothing condition without passing time. Wear changes every 25% lost. At 0, warmth, protection, stealth and water protection bonuses are disabled; pockets and their contents remain. No automatic wear from movement is added yet.';
+        const form=document.createElement('form');form.className='rental-form';
+        const label=document.createElement('label');label.htmlFor='developer-durability-slot';label.textContent='Equipped clothing slot';
+        const slots=document.createElement('select');slots.id=label.htmlFor;
+        for(const slot of setup.clothing.slots)slots.append(new Option(setup.clothing.slotLabel(slot),slot));
+        const inputLabel=document.createElement('label');inputLabel.htmlFor='developer-durability-value';inputLabel.textContent='Current durability';
+        const input=document.createElement('input');input.id=inputLabel.htmlFor;input.type='number';input.min='0';input.step='any';input.required=true;
+        const detail=document.createElement('p');detail.id='developer-durability-detail';detail.className='world-note';
+        const result=document.createElement('p');result.setAttribute('role','status');result.id='developer-durability-result';
+        const apply=document.createElement('button');apply.type='submit';apply.textContent='Set durability';
+        const presets=document.createElement('div');presets.className='developer-durability-presets';
+        function refresh(){
+            const type=State.variables.character.clothing[slots.value],limit=setup.clothingCondition.max(type);
+            input.disabled=apply.disabled=limit===null;input.max=String(limit??0);input.value=String(setup.clothingCondition.current(slots.value)??0);
+            detail.textContent=limit===null?'This slot is empty.':`${setup.clothing.definitions[type].name} · ${setup.clothingCondition.describe(type,setup.clothingCondition.current(slots.value))}`;
+            for(const button of presets.children)button.disabled=limit===null;
+        }
+        function update(value){result.textContent=setup.clothingCondition.set(slots.value,value).message;refresh();}
+        for(const percent of [100,75,50,25,0]){
+            const button=document.createElement('button');button.type='button';button.textContent=`${percent}%`;
+            button.addEventListener('click',()=>update(setup.clothingCondition.max(State.variables.character.clothing[slots.value])*percent/100));presets.append(button);
+        }
+        slots.addEventListener('change',()=>{result.textContent='';refresh();});
+        form.addEventListener('submit',event=>{event.preventDefault();update(input.valueAsNumber);});
+        const previous=document.createElement('button');previous.type='button';previous.textContent='Back to developer tools';previous.addEventListener('click',back);
+        form.append(label,slots,inputLabel,input,apply);root.append(heading,help,form,detail,presets,result,previous);refresh();slots.focus();
+    }
+    return {equip,show,showDurability};
 })();

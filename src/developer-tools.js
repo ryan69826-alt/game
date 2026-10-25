@@ -54,9 +54,11 @@ setup.developerTools=(()=>{
             clearance.addEventListener('click',()=>{const granted=setup.corporateAccess.toggleClearance();label();result.textContent=granted?'Your ID implant now has Executive Parking clearance.':'Executive Parking clearance removed from your ID implant.';});
             const clothing=document.createElement('button');clothing.type='button';clothing.textContent='Clothing selector';
             clothing.addEventListener('click',()=>setup.developerClothing.show(root,main));
+            const durability=document.createElement('button');durability.type='button';durability.textContent='Clothing durability';
+            durability.addEventListener('click',()=>setup.developerClothing.showDurability(root,main));
             const warmth=document.createElement('button');warmth.type='button';warmth.textContent='Warmth calculation';
             warmth.addEventListener('click',()=>showWarmth(root,main));
-            root.append(help,action,clearance,clothing,warmth,result);
+            root.append(help,action,clearance,clothing,durability,warmth,result);
         }
         main();Dialog.open();
     }

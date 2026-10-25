@@ -841,3 +841,34 @@ slot's equipped item, warmth, weight and contribution, the fixed-denominator
 clothing average, world requirement, difference and resulting comfort category.
 Empty weighted slots and negative metal warmth are included. The view explains
 unweighted slots and exact comfort thresholds; it does not change equipment or pass time.
+
+### Clothing durability
+
+Each catalog item now has the maximum durability from the supplied sheet.
+The Basic ID chip has no durability. Existing generic shirt, pants, shoes and
+backpack use 50, 75, 30 and 100 respectively, matching their catalog equivalents.
+Old garments without a saved condition start intact; no inventory reset is needed.
+
+Condition belongs to an individual garment: equipped condition lives in
+`character.clothingDurability`, and removed items carry `durability` beside their
+identity and pocket contents. Dropping, storage transfers, re-equipping, reloads
+and portable saves preserve it. Same-type garments can have different condition.
+
+At **75%, 50%, 25% and 0% remaining**, the isolated garment rendering gains another
+stage of fading and pixel tears. These are percentages of its own maximum, not
+25-point steps. Intact, Worn, Tattered, Ragged and Broken labels appear with the
+current/maximum durability in inventory; unequipped items also show the numbers.
+The underlying body/head and other garments remain independent.
+
+At **0 durability**, warmth, protection, stealth and water-protection contributions
+are zero. Above zero their values are unchanged. `clothingCondition.effectiveStat`
+is the shared getter; warmth uses it now, while protection, stealth and water
+protection still await their own item values and gameplay systems. Negative metal
+warmth also stops applying when broken. Broken clothes remain wearable and keep
+their storage compartments and contents.
+
+Use **P → Clothing durability** to select an equipped slot and set a value, or
+click **100%, 75%, 50%, 25%, 0%** to test the stages. These controls spend no game
+time and can restore condition for testing. `clothingCondition.damage(slot,amount)`
+provides the hook for later actions; this update adds no automatic damage from
+walking or other gameplay actions and no player repair mechanic.

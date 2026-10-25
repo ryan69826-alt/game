@@ -63,15 +63,19 @@ setup.clothingArt=(()=>{
     }
     function foreground(ctx,character,model){
         const {X,Y}=model,hat=setup.clothing.definitions[character.clothing.hat],face=setup.clothing.definitions[character.clothing.facewear];
+        setup.clothingCondition.render(ctx,character,'hat',ctx=>{
         if(hat?.art){const points=hat.art==='beanie'?[[271,32],[288,20],[337,21],[364,40],[365,62],[269,62]]:[[273,35],[294,23],[337,25],[361,45],[359,61],[271,61]];
             polygon(ctx,points.map(([x,y])=>[X(x),Y(y)]),'#26322e');polygon(ctx,points.map(([x,y])=>[X(x+2),Y(y+3)]),hat.color);
             ctx.fillStyle=hat.color;ctx.fillRect(X(277),Y(58),hat.art==='cap'?53:40,4);
         }
+        });
+        setup.clothingCondition.render(ctx,character,'facewear',ctx=>{
         if(face?.art==='glasses'){
             ctx.fillStyle='#384440';const y=Y(81);
             for(const x of [X(315),X(346)]){ctx.fillRect(x,y,10,1);ctx.fillRect(x,y+6,10,1);ctx.fillRect(x,y,1,7);ctx.fillRect(x+9,y,1,7);}
             ctx.fillRect(X(335),y+2,6,1);ctx.fillRect(X(294),y,10,1);
         }else if(face?.art==='mask')polygon(ctx,[[310,100],[365,97],[362,121],[330,129],[305,117]].map(([x,y])=>[X(x),Y(y)]),face.color);
+        });
     }
     return {draw,foreground};
 })();

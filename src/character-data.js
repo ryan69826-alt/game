@@ -25,6 +25,13 @@ setup.character = (() => {
                 if (allowed.includes(value[key])) result[key] = value[key];
             }
             result.clothing = setup.clothing.normalize(value.clothing);
+            if(value.clothingDurability&&typeof value.clothingDurability==='object'){
+                result.clothingDurability={};
+                for(const slot of setup.clothing.slots){const record=value.clothingDurability[slot];
+                    if(record?.type===result.clothing[slot]&&Number.isFinite(record.current))
+                        result.clothingDurability[slot]={type:record.type,current:setup.clothingCondition.value(record.type,record.current)};
+                }
+            }
             const rules = setup.characterRules;
             if (Array.isArray(value.traits)) {
                 result.traits = rules.traits.filter(name => value.traits.includes(name));

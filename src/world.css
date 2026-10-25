@@ -210,6 +210,10 @@ html:has(#ui-dialog-body.atlas-window) #ui-overlay{opacity:.45}
 .inventory-item:has(.inventory-item-slot){display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
 .inventory-item-name{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .inventory-item-slot{display:block;max-width:100%;font-size:9px;line-height:1.15;letter-spacing:.02em;color:#e1e9e4;white-space:nowrap}
+.inventory-item:has(.inventory-item-condition){gap:1px}
+.inventory-item-condition{font-size:8px;line-height:1.1;color:#e1e9e4;white-space:nowrap}
+.equipment-condition{display:block;font-size:.55rem;line-height:1.4;color:var(--muted);margin-bottom:4px}
+.developer-durability-presets{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 20px}
 
 .sidebar-nav a{display:flex;align-items:center;justify-content:space-between;gap:6px}
 .sidebar-shortcut{margin-left:auto;color:var(--muted);font-size:.75em;white-space:nowrap}

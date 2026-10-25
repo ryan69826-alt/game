@@ -2799,3 +2799,70 @@ test('all catalog equipment can render independently, cool metal items subtract 
         return {failures,naked,metal,blocked,same:before===JSON.stringify(State.variables.inventory),top:State.variables.character.clothing.top,time:State.variables.world.elapsedSeconds};});
     assert.deepEqual(results.failures,[]);assert.equal(results.naked,0);assert.equal(results.metal,-2/23);assert.equal(results.blocked.ok,false);assert.equal(results.same,true);assert.equal(results.top,'plain-shirt');assert.equal(results.time,0);
 });
+
+test('clothing durability matches the sheet, uses percentage boundaries and disables all four bonuses only when broken',async()=>{
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube,condition=setup.clothingCondition;
+        const catalog=Object.fromEntries(setup.clothingCatalog.items.map(item=>[item.id,item.maxDurability]));
+        const stages=[20,75,5,100].map(max=>{const type=Object.keys(catalog).find(id=>catalog[id]===max);return [1,.7501,.75,.5001,.5,.2501,.25,.0001,0].map(ratio=>condition.stage(type,max*ratio));});
+        const original=setup.clothing.definitions.shirt;setup.clothing.definitions.shirt={...original,protection:4,stealth:3,waterProtection:7};
+        const intact=['warmth','protection','stealth','waterProtection'].map(stat=>condition.effectiveStat('shirt',stat,.01));
+        const broken=['warmth','protection','stealth','waterProtection'].map(stat=>condition.effectiveStat('shirt',stat,0));setup.clothing.definitions.shirt=original;
+        const metal=[condition.effectiveStat('simple-glasses','warmth',1),condition.effectiveStat('simple-glasses','warmth',0)];
+        const legacy=condition.current('top'),normalized=setup.character.normalize({...State.variables.character,clothingDurability:{top:{type:'shirt',current:0},bottoms:{type:'shirt',current:0}}});
+        return {catalog,stages,intact,broken,metal,legacy,normalized:normalized.clothingDurability,chip:condition.max('basic-id-chip'),legacyMax:['shirt','pants','shoes','backpack'].map(condition.max)};
+    });
+    assert.deepEqual(result.catalog,{'plain-cap':20,beanie:20,'simple-glasses':10,'face-mask':10,hoodie:75,jacket:75,'rain-coat':75,'plain-shirt':50,'t-shirt':50,'long-sleeve-shirt':60,'tank-top':40,undershirt:40,'sports-bra':25,'plain-bra':25,'plain-tank-top':30,'basic-belt':15,wristband:5,'cheap-watch':10,'light-gloves':20,'plain-pants':75,shorts:50,skirt:50,underwear:25,boxers:25,panties:25,'ankle-bands':10,'ankle-socks':20,'plain-socks':20,'generic-shoes':30,sneakers:30,boots:40,sandals:20,'basic-backpack':100,'fishing-pole':100});
+    for(const stages of result.stages)assert.deepEqual(stages,[0,0,1,1,2,2,3,3,4]);
+    assert.deepEqual(result.intact,[4,4,3,7]);assert.deepEqual(result.broken,[0,0,0,0]);assert.deepEqual(result.metal,[-1,0]);
+    assert.equal(result.legacy,50);assert.deepEqual(result.legacyMax,[50,75,30,100]);assert.equal(result.chip,null);assert.deepEqual(result.normalized,{top:{type:'shirt',current:0}});
+});
+
+test('damaged garments keep individual durability and filled pockets through drops, storage, re-equipping and reload',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube,condition=setup.clothingCondition;
+        setup.inventory.ensure().containers['worn:shirt']=[{id:'durability-kept',type:'cloth',x:0,y:0}];condition.set('top',12.5);
+        const ground=setup.groundItems.current();setup.equipment.drop('equipped:top','equipped:top');
+        const original=setup.inventory.placements(ground).find(item=>item.type==='shirt');
+        setup.developerClothing.equip('shirt');const fresh=condition.current('top');setup.equipment.drop('equipped:top','equipped:top');
+        const copies=setup.inventory.placements(ground).filter(item=>item.type==='shirt').map(item=>({id:item.id,durability:item.durability}));
+        setup.equipment.equip(ground.id,original.id);const restored=condition.current('top'),pocket=setup.inventory.ensure().containers['worn:shirt'][0].id;
+        setup.developerClothing.equip('basic-backpack');condition.set('top',0);setup.equipment.drop('equipped:top','equipped:top');
+        const bag=setup.clothing.definitions['basic-backpack'].pockets[0];const moved=setup.inventory.transfer(ground.id,bag.id,original.id,0,0);
+        const stored=structuredClone(setup.inventory.placements(bag).find(item=>item.id===original.id));
+        const damage=condition.damage('storage',25),clamped=condition.damage('storage',1000);condition.set('storage',100);
+        return {fresh,copies,restored,pocket,moved,stored,damage,clamped,ground:ground.id,bag:bag.id,time:State.variables.world.elapsedSeconds};
+    });
+    assert.equal(result.fresh,50);assert.equal(new Set(result.copies.map(item=>item.id)).size,2);assert.deepEqual(result.copies.map(item=>item.durability),[12.5,50]);
+    assert.equal(result.restored,12.5);assert.equal(result.pocket,'durability-kept');assert.equal(result.moved.ok,true);assert.equal(result.stored.durability,0);assert.equal(result.stored.pockets['worn:shirt'][0].id,'durability-kept');assert.equal(result.damage.ok,true);assert.equal(result.clamped.ok,true);assert.equal(result.time,0);
+    await page.reload();await page.waitForSelector('#local-map');
+    const restored=await page.evaluate(({bag,id})=>{const {setup}=SugarCube;const equipped=setup.equipment.equip(bag,id);return {equipped,current:setup.clothingCondition.current('top'),pocket:setup.inventory.ensure().containers['worn:shirt'][0].id,warmth:setup.warmth.clothingBreakdown().find(row=>row.slot==='top').contribution};},{bag:result.bag,id:result.stored.id});
+    assert.equal(restored.equipped.ok,true);assert.equal(restored.current,0);assert.equal(restored.pocket,'durability-kept');assert.equal(restored.warmth,0);
+});
+
+test('all garment wear stages change only garment pixels and developer durability controls save fractional and broken conditions',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const artwork=await page.evaluate(()=>{const {setup,State}=SugarCube;const character=State.variables.character,original=structuredClone(character);
+        character.hairLength='Shaved';character.clothing=Object.fromEntries(setup.clothing.slots.map(slot=>[slot,'none']));$(document).trigger(':equipmentchange');
+        const body=document.getElementById('body-layer').toDataURL(),head=document.getElementById('head-layer').toDataURL(),failures=[];
+        const items=[...setup.clothingCatalog.items,...['shirt','pants','shoes','backpack'].map(id=>({id,slot:setup.equipment.slotFor(id),maxDurability:setup.clothingCondition.max(id)}))];
+        for(const item of items){character.clothing[item.slot]=item.id;const images=[];
+            for(const ratio of [1,.75,.5,.25,0]){setup.clothingCondition.assign(item.slot,item.maxDurability*ratio,character);$(document).trigger(':equipmentchange');images.push(document.getElementById('character-canvas').toDataURL());
+                if(document.getElementById('body-layer').toDataURL()!==body||document.getElementById('head-layer').toDataURL()!==head)failures.push(`${item.id} changes body/head`);
+            }
+            if(new Set(images).size!==5)failures.push(`${item.id} missing wear stage`);character.clothing[item.slot]='none';
+        }
+        State.variables.character=original;$(document).trigger(':equipmentchange');return failures;
+    });assert.deepEqual(artwork,[]);
+    const before=await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds);
+    await page.keyboard.press('p');await page.getByRole('button',{name:'Clothing durability',exact:true}).click();
+    await page.getByLabel('Equipped clothing slot',{exact:true}).selectOption('top');await page.getByRole('button',{name:'75%',exact:true}).click();
+    assert.match(await page.locator('#developer-durability-detail').textContent(),/37.5\/50 \(75%\).*Worn/);
+    await page.getByRole('button',{name:'0%',exact:true}).click();assert.match(await page.locator('#developer-durability-detail').textContent(),/0\/50 \(0%\).*Broken/);
+    assert.equal(await page.evaluate(()=>SugarCube.setup.warmth.clothingBreakdown().find(row=>row.slot==='top').warmth),0);
+    await page.setViewportSize({width:320,height:844});await page.evaluate(()=>SugarCube.Dialog.resize());
+    assert.ok(await page.getByRole('button',{name:'Set durability',exact:true}).isVisible());
+    await page.getByRole('button',{name:'Back to developer tools',exact:true}).click();await page.keyboard.press('Escape');await page.keyboard.press('i');
+    assert.match(await page.locator('[data-equip-slot="top"] .equipment-condition').textContent(),/0\/50.*Broken/);
+    assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),before);
+    await page.reload();await page.waitForSelector('#local-map');assert.equal(await page.evaluate(()=>SugarCube.setup.clothingCondition.current('top')),0);
+});
