@@ -2866,3 +2866,51 @@ test('all garment wear stages change only garment pixels and developer durabilit
     assert.equal(await page.evaluate(()=>SugarCube.State.variables.world.elapsedSeconds),before);
     await page.reload();await page.waitForSelector('#local-map');assert.equal(await page.evaluate(()=>SugarCube.setup.clothingCondition.current('top')),0);
 });
+
+test('stealth uses the signed sheet values, starts at 80 base and counts only equipped clothing with 0–100 limits',async()=>{
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;
+        const catalog=Object.fromEntries(setup.clothingCatalog.items.map(item=>[item.id,item.stealth]));
+        const legacy=['shirt','pants','shoes','backpack'].map(id=>setup.clothing.definitions[id].stealth);
+        const base=setup.playerState.ensure().baseStealth,starter=setup.stealth.calculate().score;
+        const original=structuredClone(State.variables.character.clothing);State.variables.character.clothing=Object.fromEntries(setup.clothing.slots.map(slot=>[slot,'none']));
+        const empty=setup.stealth.calculate();setup.inventory.ensure().containers['ground:apartments:30:33']=[{id:'stored-pole',type:'fishing-pole',x:0,y:0}];const stored=setup.stealth.calculate().score;
+        Object.assign(State.variables.character.clothing,{hat:'beanie',facewear:'face-mask',top:'long-sleeve-shirt',bottoms:'plain-pants'});const positive=setup.stealth.calculate();
+        State.variables.player.baseStealth=95;const upper=setup.stealth.calculate().score;State.variables.player.baseStealth=80;
+        Object.assign(State.variables.character.clothing,{hat:'none',facewear:'simple-glasses',overtop:'rain-coat',top:'tank-top',bottoms:'shorts',waist:'basic-belt',wrists:'cheap-watch',ankles:'ankle-bands',shoes:'boots',storage:'basic-backpack',handheld:'fishing-pole'});const lower=setup.stealth.calculate();
+        State.variables.character.clothing=original;return {catalog,legacy,base,starter,empty,stored,positive,upper,lower,skill:State.variables.character.skills.Stealth};
+    });
+    assert.deepEqual(result.catalog,{'plain-cap':0,beanie:2,'simple-glasses':-5,'face-mask':5,hoodie:0,jacket:0,'rain-coat':-5,'plain-shirt':0,'t-shirt':0,'long-sleeve-shirt':5,'tank-top':-5,undershirt:0,'sports-bra':0,'plain-bra':0,'plain-tank-top':0,'basic-belt':-10,wristband:0,'cheap-watch':-5,'light-gloves':0,'plain-pants':5,shorts:-10,skirt:-10,underwear:0,boxers:0,panties:0,'ankle-bands':-5,'ankle-socks':0,'plain-socks':0,'generic-shoes':-15,sneakers:-15,boots:-20,sandals:-10,'basic-backpack':-30,'fishing-pole':-50});
+    assert.deepEqual(result.legacy,[0,5,-15,-30]);assert.equal(result.base,80);assert.equal(result.starter,70);assert.equal(result.skill,0);
+    assert.equal(result.empty.score,80);assert.equal(result.empty.clothing,0);assert.equal(result.empty.rows.length,15);assert.ok(result.empty.rows.every(row=>row.modifier===0));assert.equal(result.stored,80);
+    assert.equal(result.positive.score,97);assert.equal(result.positive.clothing,17);assert.equal(result.upper,100);assert.equal(result.lower.score,0);assert.equal(result.lower.detectionChance,100);
+});
+
+test('stealth checks have exact success boundaries and the developer test spends no time, money or skill XP',async()=>{
+    const beforeStart=await page.evaluate(()=>SugarCube.setup.stealth.check());assert.equal(beforeStart.ok,false);
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const checks=await page.evaluate(()=>{const {setup}=SugarCube;return {rolls:[[0,.01],[0,100],[100,.01],[100,100],[80,80],[80,80.01],[45.25,45.25],[45.25,45.26]].map(([chance,roll])=>setup.stealth.resolve(chance,roll)),invalid:[setup.stealth.resolve(80,0),setup.stealth.resolve(80,101),setup.stealth.resolve(NaN,1)]};});
+    assert.deepEqual(checks.rolls.map(check=>check.success),[false,false,true,true,true,false,true,false]);assert.ok(checks.rolls.every(check=>check.detected===!check.success));assert.ok(checks.invalid.every(check=>check.ok===false));
+    const snapshot=()=>page.evaluate(()=>({time:SugarCube.State.variables.world.elapsedSeconds,money:SugarCube.State.variables.player.money,skills:structuredClone(SugarCube.State.variables.character.skills)}));
+    const before=await snapshot();await page.keyboard.press('p');await page.getByRole('button',{name:'Stealth calculation',exact:true}).click();
+    assert.match(await page.locator('#developer-stealth-summary').textContent(),/Base stealth: 80 \/ 100/);assert.match(await page.locator('#developer-stealth-summary').textContent(),/Remain undetected: 70% · Detected: 30%/);
+    const table=page.getByRole('table',{name:'Equipped stealth modifiers',exact:true});assert.equal(await table.locator('tbody tr').count(),15);
+    assert.deepEqual(await table.locator('[data-slot="shoes"]').locator('th,td').allTextContents(),['Shoes','Generic shoes','-15','-15']);
+    await page.getByRole('button',{name:'Test stealth check',exact:true}).click();assert.match(await page.locator('#developer-stealth-result').textContent(),/Roll: .*Needed: 70 or lower · (Remain undetected|Detected)/);assert.deepEqual(await snapshot(),before);
+    await page.setViewportSize({width:320,height:844});await page.evaluate(()=>SugarCube.Dialog.resize());const bounds=await page.locator('.developer-warmth-table').evaluate(el=>({right:el.getBoundingClientRect().right,scroll:el.scrollWidth,width:el.clientWidth}));assert.ok(bounds.right<=320);assert.ok(bounds.scroll>bounds.width);
+    await page.getByRole('button',{name:'Back to developer tools',exact:true}).click();assert.ok(await page.getByRole('button',{name:'Clothing durability',exact:true}).isVisible());
+});
+
+test('broken positive and negative clothing modifiers become zero and stealth stays correct through reload and re-equipping',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;setup.developerClothing.equip('simple-glasses');const intact=setup.stealth.calculate().score;
+        setup.clothingCondition.set('facewear',.01);const worn=setup.stealth.calculate().score;setup.clothingCondition.set('facewear',0);const brokenNegative=setup.stealth.calculate().score;
+        setup.clothingCondition.set('bottoms',0);const brokenPositive=setup.stealth.calculate().score;const row=setup.stealth.calculate().rows.find(row=>row.slot==='facewear');
+        const ground=setup.groundItems.current();setup.equipment.drop('equipped:facewear','equipped:facewear');const glasses=setup.inventory.placements(ground).find(item=>item.type==='simple-glasses');
+        setup.equipment.equip(ground.id,glasses.id);return {intact,worn,brokenNegative,brokenPositive,row,base:State.variables.player.baseStealth,score:setup.stealth.calculate().score};});
+    assert.equal(result.intact,65);assert.equal(result.worn,65);assert.equal(result.brokenNegative,70);assert.equal(result.brokenPositive,65);assert.equal(result.row.raw,-5);assert.equal(result.row.modifier,0);assert.equal(result.row.broken,true);assert.equal(result.base,80);assert.equal(result.score,65);
+    await page.reload();await page.waitForSelector('#local-map');assert.equal(await page.evaluate(()=>SugarCube.setup.stealth.calculate().score),65);
+    await page.keyboard.press('p');await page.getByRole('button',{name:'Stealth calculation',exact:true}).click();
+    assert.deepEqual(await page.locator('[data-slot="facewear"]').locator('th,td').allTextContents(),['Face Wear','Simple Glasses (Broken)','-5','0']);
+    await page.keyboard.press('Escape');await page.evaluate(()=>{delete SugarCube.State.variables.player.baseStealth;SugarCube.State.create(SugarCube.State.passage);});
+    await page.reload();await page.waitForSelector('#local-map');assert.equal(await page.evaluate(()=>SugarCube.State.variables.player.baseStealth),80);
+});

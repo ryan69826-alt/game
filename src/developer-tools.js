@@ -58,7 +58,9 @@ setup.developerTools=(()=>{
             durability.addEventListener('click',()=>setup.developerClothing.showDurability(root,main));
             const warmth=document.createElement('button');warmth.type='button';warmth.textContent='Warmth calculation';
             warmth.addEventListener('click',()=>showWarmth(root,main));
-            root.append(help,action,clearance,clothing,durability,warmth,result);
+            const stealth=document.createElement('button');stealth.type='button';stealth.textContent='Stealth calculation';
+            stealth.addEventListener('click',()=>setup.developerStealth.show(root,main));
+            root.append(help,action,clearance,clothing,durability,warmth,stealth,result);
         }
         main();Dialog.open();
     }

@@ -7,6 +7,7 @@ setup.playerState = (() => {
         State.variables.player={version:1,
             money:Number.isSafeInteger(old?.money) && old.money>=0 ? old.money : startingMoney,
             health:Number.isFinite(old?.health) ? Math.max(0,Math.min(maxHealth,Math.floor(old.health))) : maxHealth,
+            baseStealth:Number.isFinite(old?.baseStealth)?Math.max(0,Math.min(100,old.baseStealth)):setup.stealth.startingBase,
             maxHealth};
         return State.variables.player;
     }

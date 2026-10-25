@@ -872,3 +872,35 @@ click **100%, 75%, 50%, 25%, 0%** to test the stages. These controls spend no ga
 time and can restore condition for testing. `clothingCondition.damage(slot,amount)`
 provides the hook for later actions; this update adds no automatic damage from
 walking or other gameplay actions and no player repair mechanic.
+
+### Stealth percentage
+
+The player has **80 base stealth out of 100**. Each equipped item's signed
+Stealth value from the sheet is added, then the result is capped at 0–100.
+Positive values help and negative values hinder. Empty slots, carried/stored
+clothes, augmentations and zero-durability gear contribute nothing. All clothing
+slots contribute equally; warmth's slot weights do not apply to stealth.
+Any condition above zero retains the item's full modifier, including penalties.
+
+Legacy generic shirt, pants, shoes and backpack use 0, +5, −15 and −30,
+respectively. Thus the original shirt/pants/shoes outfit starts at **70/100**
+after modifiers; an unclothed player has **80/100**. Generic Shoes remains in
+Shoes following the earlier correction to the sheet. No items are added to the
+creator. `player.baseStealth` persists with a default of 80 for old saves;
+the final score is calculated from current equipment rather than saved twice.
+
+`setup.stealth.calculate()` returns the base, clothing rows, total modifier,
+score and complementary detection chance. Encounters can explicitly call
+`setup.stealth.check()` to roll 0.01–100 in 0.01 increments: a roll at or below
+the score means undetected; a higher roll means detected. At 0 stealth detection
+is certain, and at 100 remaining undetected is certain. The helper reports the
+outcome; the calling encounter owns consequences, time and any XP awards.
+This update does not introduce NPC patrols or checks on walking/lockpicking.
+The existing Stealth skill and its XP are separate; no level-based adjustment
+has been invented.
+
+**P → Stealth calculation** shows the exact hidden numbers and the per-slot
+breakdown, including raw versus effective modifiers on broken gear. **Test stealth
+check** uses the same check function without passing time, spending money,
+awarding XP or setting NPC detection flags. Normal player-facing views continue
+to hide exact attribute numbers.
