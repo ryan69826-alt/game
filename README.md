@@ -963,3 +963,41 @@ values. These controls do not spend time, award XP or damage clothing.
 This update adds no rain/swimming triggers, timed drying, protection for inner
 layers or water spreading to pocket contents. Future events must expose the
 appropriate individual garments explicitly.
+
+### Visible clothing allure
+
+The catalog uses the supplied **Allure** values. A garment's value assumes it is
+visible as the outer layer; a hidden garment contributes **zero**, even if the
+garment covering it has zero allure. `setup.clothingVisibility.calculate()` uses
+explicit per-item `covers` metadata, and `setup.allure.calculate()` returns each
+item's base points, visibility, covering items, applied contribution and total.
+Stored items, empty slots and augmentations contribute zero. Legacy shirt,
+pants, shoes and backpack have zero allure and retain their normal coverage.
+
+Initial coverage treats items as closed and opaque, with binary whole-slot
+visibility rather than pixel/percentage exposure:
+
+| Covering garment | Hidden slots |
+| --- | --- |
+| Hoodie, Jacket, Rain Coat | Top, Under Top, Waist, Wrists |
+| Plain Shirt, T-Shirt, Tank Top, legacy shirt | Under Top |
+| Long Sleeve Shirt | Under Top, Wrists |
+| Plain Pants, legacy pants | Under Bottom, Ankles, Feet |
+| Shorts, Skirt | Under Bottom |
+| Generic Shoes, Sneakers, legacy shoes | Feet |
+| Boots | Feet, Ankles |
+
+Sandals leave socks visible. Items not listed hide no other slots. Headwear,
+facewear, gloves, backpacks and handheld items do not fully conceal another
+current clothing slot. These are editable coverage rules independent of art;
+open coats, transparency, partial exposure and holes revealing lower layers can
+be developed later. Damaged/broken clothing retains its coverage and allure, and
+wetness does not change allure; the earlier zero-durability rule still applies
+only to warmth, protection, stealth and water protection.
+
+**P → Allure calculation** shows the visible outfit total and a per-slot table
+with base points, visibility/hidden-by reason and applied points. The clothing
+selector also lists item allure. The calculation is read-only and the exact
+numbers remain in developer tools. No creator options, NPC preferences or
+attraction outcomes are added here: this outfit total is points, not a percentage
+chance for every NPC to be attracted.

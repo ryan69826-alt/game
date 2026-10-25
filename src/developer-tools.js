@@ -64,7 +64,9 @@ setup.developerTools=(()=>{
             protection.addEventListener('click',()=>setup.developerProtection.show(root,main));
             const water=document.createElement('button');water.type='button';water.textContent='Water protection';
             water.addEventListener('click',()=>setup.developerWater.show(root,main));
-            root.append(help,action,clearance,clothing,durability,warmth,stealth,protection,water,result);
+            const allure=document.createElement('button');allure.type='button';allure.textContent='Allure calculation';
+            allure.addEventListener('click',()=>setup.developerAllure.show(root,main));
+            root.append(help,action,clearance,clothing,durability,warmth,stealth,protection,water,allure,result);
         }
         main();Dialog.open();
     }

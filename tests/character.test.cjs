@@ -3018,3 +3018,54 @@ test('developer water exposure updates warmth and inventory wet labels without s
     await page.keyboard.press('Escape');await page.keyboard.press('p');await page.getByRole('button',{name:'Water protection',exact:true}).click();await page.getByLabel('Clothing slot',{exact:true}).selectOption('top');await page.getByRole('button',{name:'Dry item',exact:true}).click();
     assert.match(await page.locator('#developer-water-detail').textContent(),/Dry · Base warmth: 4 · Current warmth: 4/);assert.deepEqual(await snapshot(),before);
 });
+
+test('allure matches the sheet and only equipped visible items contribute',async()=>{
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;
+        const catalog=Object.fromEntries(setup.clothingCatalog.items.map(item=>[item.id,item.allure]));
+        const starter=setup.allure.calculate().total;State.variables.character.clothing=Object.fromEntries(setup.clothing.slots.map(slot=>[slot,'none']));
+        const bare=setup.allure.calculate();setup.inventory.ensure().containers['ground:apartments:30:33']=[{id:'stored-bra',type:'sports-bra',x:0,y:0}];const stored=setup.allure.calculate().total;
+        const failures=[];for(const item of setup.clothingCatalog.items){State.variables.character.clothing[item.slot]=item.id;const result=setup.allure.calculate();
+            if(result.total!==item.allure||!result.rows.find(row=>row.slot===item.slot).visible)failures.push(item.id);State.variables.character.clothing[item.slot]='none';
+        }
+        return {catalog,starter,bare,stored,failures};
+    });
+    assert.deepEqual(result.catalog,{'plain-cap':0,beanie:0,'simple-glasses':2,'face-mask':0,hoodie:0,jacket:0,'rain-coat':0,'plain-shirt':0,'t-shirt':0,'long-sleeve-shirt':0,'tank-top':3,undershirt:2,'sports-bra':10,'plain-bra':10,'plain-tank-top':3,'basic-belt':0,wristband:1,'cheap-watch':2,'light-gloves':0,'plain-pants':0,shorts:3,skirt:5,underwear:10,boxers:5,panties:10,'ankle-bands':2,'ankle-socks':0,'plain-socks':0,'generic-shoes':0,sneakers:0,boots:0,sandals:2,'basic-backpack':0,'fishing-pole':0});
+    assert.equal(result.starter,0);assert.equal(result.bare.total,0);assert.ok(result.bare.rows.every(row=>!row.visible&&row.contribution===0));assert.equal(result.stored,0);assert.deepEqual(result.failures,[]);
+});
+
+test('zero-allure covering garments hide underwear and sleeves or trousers hide accessories without double counting',async()=>{
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube,character=State.variables.character;
+        character.clothing=Object.fromEntries(setup.clothing.slots.map(slot=>[slot,'none']));const scores=[];
+        Object.assign(character.clothing,{undertop:'sports-bra',underbottoms:'panties'});scores.push(setup.allure.calculate().total);
+        character.clothing.top='plain-shirt';scores.push(setup.allure.calculate().total);character.clothing.overtop='jacket';scores.push(setup.allure.calculate().total);
+        character.clothing.bottoms='skirt';scores.push(setup.allure.calculate().total);character.clothing.top='tank-top';scores.push(setup.allure.calculate().total);
+        character.clothing.overtop='none';scores.push(setup.allure.calculate().total);character.clothing.top='none';scores.push(setup.allure.calculate().total);character.clothing.bottoms='none';scores.push(setup.allure.calculate().total);
+        Object.assign(character.clothing,{wrists:'cheap-watch',ankles:'ankle-bands',shoes:'sandals',facewear:'simple-glasses'});scores.push(setup.allure.calculate().total);
+        character.clothing.top='long-sleeve-shirt';scores.push(setup.allure.calculate().total);const sleeves=setup.allure.calculate().rows.find(row=>row.slot==='wrists');
+        character.clothing.bottoms='plain-pants';scores.push(setup.allure.calculate().total);character.clothing.shoes='boots';scores.push(setup.allure.calculate().total);
+        const ankles=setup.allure.calculate().rows.find(row=>row.slot==='ankles');character.clothing.top='plain-shirt';scores.push(setup.allure.calculate().total);
+        character.clothing.overtop='hoodie';scores.push(setup.allure.calculate().total);
+        setup.clothingCondition.assign('overtop',0,character,true);const brokenCover=setup.allure.calculate().rows.find(row=>row.slot==='undertop');
+        character.clothing.overtop='none';character.clothing.top='tank-top';setup.clothingCondition.assign('top',0,character,true);
+        const damagedVisible=setup.allure.calculate().rows.find(row=>row.slot==='top');
+        return {scores,sleeves,ankles,brokenCover,damagedVisible};
+    });
+    assert.deepEqual(result.scores,[20,10,10,5,5,8,15,20,28,16,4,2,4,2]);
+    assert.equal(result.sleeves.contribution,0);assert.equal(result.sleeves.raw,2);assert.deepEqual(result.sleeves.hiddenBy,[{slot:'top',name:'Long Sleeve Shirt'}]);
+    assert.equal(result.ankles.contribution,0);assert.deepEqual(result.ankles.hiddenBy.map(item=>item.name),['Plain Pants','Boots']);
+    assert.equal(result.brokenCover.visible,false);assert.equal(result.brokenCover.contribution,0);assert.equal(result.damagedVisible.visible,true);assert.equal(result.damagedVisible.contribution,3);
+});
+
+test('developer allure view explains hidden layers, refreshes after removing covers and spends no time or stats',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await page.evaluate(()=>SugarCube.setup.developerClothing.equip('sports-bra'));
+    const snapshot=()=>page.evaluate(()=>JSON.stringify(SugarCube.State.variables));
+    await page.keyboard.press('p');const before=await snapshot();await page.getByRole('button',{name:'Allure calculation',exact:true}).click();
+    const table=page.getByRole('table',{name:'Visible clothing allure contributions',exact:true});assert.equal(await table.locator('tbody tr').count(),15);
+    assert.deepEqual(await table.locator('[data-slot="undertop"]').locator('th,td').allTextContents(),['Under Top','Sports Bra','10','Hidden by Generic shirt','0']);
+    assert.equal(await page.locator('#developer-allure-summary').textContent(),'Visible clothing allure: 0 points');
+    await page.setViewportSize({width:320,height:844});await page.evaluate(()=>SugarCube.Dialog.resize());const bounds=await page.locator('.developer-warmth-table').evaluate(el=>({right:el.getBoundingClientRect().right,scroll:el.scrollWidth,width:el.clientWidth}));assert.ok(bounds.right<=320);assert.ok(bounds.scroll>bounds.width);
+    await page.getByRole('button',{name:'Back to developer tools',exact:true}).click();assert.ok(await page.getByRole('button',{name:'Clothing selector',exact:true}).isVisible());await page.keyboard.press('Escape');assert.equal(await snapshot(),before);
+    await page.evaluate(()=>SugarCube.setup.equipment.drop('equipped:top','equipped:top'));await page.reload();await page.waitForSelector('#local-map');
+    await page.keyboard.press('p');await page.getByRole('button',{name:'Allure calculation',exact:true}).click();assert.equal(await page.locator('#developer-allure-summary').textContent(),'Visible clothing allure: 10 points');
+    assert.deepEqual(await page.locator('[data-slot="undertop"]').locator('th,td').allTextContents(),['Under Top','Sports Bra','10','Visible','10']);
+});
