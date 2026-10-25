@@ -47,7 +47,7 @@ setup.inventoryUI = (() => {
                     const source=document.createElement('div');source.dataset.container=`equipped:${slot}`;
                     const control=document.createElement('button');control.type='button';control.className='inventory-item';control.dataset.item=item.id;
                     control.textContent=inventory.items[item.type].name;control.setAttribute('aria-label',`Equipped ${inventory.items[item.type].name}`);
-                    const condition=setup.clothingCondition.describe(item.type,item.durability);control.title=condition;control.setAttribute('aria-description',condition);
+                    const condition=setup.clothingCondition.describe(item.type,item.durability,item.wet);control.title=condition;control.setAttribute('aria-description',condition);
                     const conditionLabel=document.createElement('small');conditionLabel.className='equipment-condition';conditionLabel.textContent=condition;box.append(conditionLabel);
                     control.addEventListener('click',()=>{if(drag.ignoreClick()) return;selected={container:`equipped:${slot}`,id:item.id};message='Choose a storage square, or Drop on ground. Pocket contents stay inside this garment.';render();});
                     source.append(control);box.append(source);
@@ -120,9 +120,9 @@ setup.inventoryUI = (() => {
                         const name=document.createElement('span');name.className='inventory-item-name';name.textContent=definition.name;
                         const slot=document.createElement('small');slot.className='inventory-item-slot';slot.textContent=setup.clothing.slotLabel(clothingSlot);
                         button.replaceChildren(name,slot);button.title+=` · Slot: ${slot.textContent}`;
-                        const condition=setup.clothingCondition.describe(item.type,item.durability);
+                        const condition=setup.clothingCondition.describe(item.type,item.durability,item.wet);
                         button.title+=` · ${condition}`;
-                        const durability=document.createElement('small');durability.className='inventory-item-condition';durability.textContent=`${setup.clothingCondition.value(item.type,item.durability)}/${setup.clothingCondition.max(item.type)}`;
+                        const durability=document.createElement('small');durability.className='inventory-item-condition';durability.textContent=`${setup.clothingCondition.value(item.type,item.durability)}/${setup.clothingCondition.max(item.type)}${item.wet?' · Wet':''}`;
                         button.append(durability);
                         button.setAttribute('aria-description',`Clothing slot: ${slot.textContent}. ${condition}`);
                     }

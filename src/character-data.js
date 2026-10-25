@@ -29,7 +29,7 @@ setup.character = (() => {
                 result.clothingDurability={};
                 for(const slot of setup.clothing.slots){const record=value.clothingDurability[slot];
                     if(record?.type===result.clothing[slot]&&Number.isFinite(record.current))
-                        result.clothingDurability[slot]={type:record.type,current:setup.clothingCondition.value(record.type,record.current)};
+                        result.clothingDurability[slot]={type:record.type,current:setup.clothingCondition.value(record.type,record.current),...(record.wet===true?{wet:true}:{})};
                 }
             }
             const rules = setup.characterRules;

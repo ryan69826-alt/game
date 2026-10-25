@@ -14,7 +14,7 @@ setup.developerClothing=(()=>{
         const definition=setup.clothing.definitions[type],inventory=setup.inventory.ensure();
         const serial=(State.variables.garmentSerial||0)+1;State.variables.garmentSerial=serial;
         State.variables.character.clothing[slot]=type;
-        setup.clothingCondition.assign(slot,definition.maxDurability);
+        setup.clothingCondition.assign(slot,definition.maxDurability,State.variables.character,false);
         State.variables.wornGarmentIds={...State.variables.wornGarmentIds,[slot]:`garment:${serial}`};
         for(const pocket of definition.pockets)inventory.containers[pocket.id]=[];
         State.create(State.passage);$(document).trigger(':equipmentchange');$(document).trigger(':interactionchange');
@@ -36,7 +36,7 @@ setup.developerClothing=(()=>{
         function describe() {
             const item=setup.clothing.definitions[items.value],blocks=item.pockets.reduce((sum,p)=>sum+p.columns*p.rows,0);
             const pockets=item.pockets.map(p=>`${p.columns}×${p.rows}`).join(', ')||'None';
-            detail.textContent=`Warmth: ${item.warmth??'N/A'} · Stealth: ${item.stealth??'N/A'} · Protection: ${item.protection??'N/A'} · Maximum durability: ${item.maxDurability??'N/A'} · Storage: ${blocks} blocks · Compartments: ${pockets}`;
+            detail.textContent=`Warmth: ${item.warmth??'N/A'} · Stealth: ${item.stealth??'N/A'} · Protection: ${item.protection??'N/A'} · Water protection: ${item.waterProtection??'N/A'} · Maximum durability: ${item.maxDurability??'N/A'} · Storage: ${blocks} blocks · Compartments: ${pockets}`;
             apply.textContent=items.value==='none'?'Remove clothing':'Equip clothing';
         }
         function populate() {
@@ -67,7 +67,7 @@ setup.developerClothing=(()=>{
         function refresh(){
             const type=State.variables.character.clothing[slots.value],limit=setup.clothingCondition.max(type);
             input.disabled=apply.disabled=limit===null;input.max=String(limit??0);input.value=String(setup.clothingCondition.current(slots.value)??0);
-            detail.textContent=limit===null?'This slot is empty.':`${setup.clothing.definitions[type].name} · ${setup.clothingCondition.describe(type,setup.clothingCondition.current(slots.value))}`;
+            detail.textContent=limit===null?'This slot is empty.':`${setup.clothing.definitions[type].name} · ${setup.clothingCondition.describe(type,setup.clothingCondition.current(slots.value),setup.clothingCondition.isWet(slots.value))}`;
             for(const button of presets.children)button.disabled=limit===null;
         }
         function update(value){result.textContent=setup.clothingCondition.set(slots.value,value).message;refresh();}

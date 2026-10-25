@@ -1,5 +1,5 @@
-/* Definitions hold maximums; worn records and item placements hold current
-   durability. Missing legacy values mean fully intact. Reads never change saves. */
+/* Worn records and item placements hold current durability and wetness.
+   Missing legacy values mean intact and dry. Reads never change saves. */
 setup.clothingCondition=(()=>{
     const stages=['Intact','Worn','Tattered','Ragged','Broken'];
     const max=type=>setup.clothing.definitions[type]?.maxDurability??null;
@@ -9,11 +9,16 @@ setup.clothingCondition=(()=>{
     }
     function current(slot,character=State.variables.character) {
         const type=character?.clothing?.[slot],record=character?.clothingDurability?.[slot];
-        return value(type,record?.type===type?record.current:undefined);
+        return value(type,record?.type===type?record?.current:undefined);
     }
-    function assign(slot,durability,character=State.variables.character) {
-        const type=character.clothing[slot];
-        character.clothingDurability={...character.clothingDurability,[slot]:{type,current:value(type,durability)}};
+    function isWet(slot,character=State.variables.character) {
+        const type=character?.clothing?.[slot],record=character?.clothingDurability?.[slot];
+        return record?.type===type&&record?.wet===true&&effectiveStat(type,'waterProtection',current(slot,character))!==1;
+    }
+    function assign(slot,durability,character=State.variables.character,wet) {
+        const type=character.clothing[slot],record=character.clothingDurability?.[slot],remaining=value(type,durability);
+        const damp=(typeof wet==='boolean'?wet:record?.type===type&&record?.wet===true)&&effectiveStat(type,'waterProtection',remaining)!==1;
+        character.clothingDurability={...character.clothingDurability,[slot]:{type,current:remaining,...(damp?{wet:true}:{})}};
     }
     function stage(type,durability) {
         const limit=max(type),remaining=value(type,durability);
@@ -24,13 +29,14 @@ setup.clothingCondition=(()=>{
         if(remaining<=limit*.75)return 1;
         return 0;
     }
-    function effectiveStat(type,stat,durability) {
+    function effectiveStat(type,stat,durability,wet=false) {
         if(value(type,durability)===0&&['warmth','protection','stealth','waterProtection'].includes(stat))return 0;
-        return setup.clothing.definitions[type]?.[stat]??0;
+        const amount=setup.clothing.definitions[type]?.[stat]??0;
+        return stat==='warmth'&&wet&&effectiveStat(type,'waterProtection',durability)!==1?amount/2:amount;
     }
-    function describe(type,durability) {
+    function describe(type,durability,wet=false) {
         const limit=max(type),remaining=value(type,durability);
-        return limit===null?'':`Durability: ${Number(remaining.toFixed(2))}/${limit} (${Number((remaining/limit*100).toFixed(1))}%) · ${stages[stage(type,remaining)]}`;
+        return limit===null?'':`Durability: ${Number(remaining.toFixed(2))}/${limit} (${Number((remaining/limit*100).toFixed(1))}%) · ${stages[stage(type,remaining)]}${wet?' · Wet':''}`;
     }
     function set(slot,durability) {
         if(!State.variables.worldStarted||!Number.isFinite(durability)||max(State.variables.character?.clothing?.[slot])===null)
@@ -38,7 +44,7 @@ setup.clothingCondition=(()=>{
         assign(slot,durability);State.create(State.passage);
         $(document).trigger(':equipmentchange');$(document).trigger(':interactionchange');
         const type=State.variables.character.clothing[slot];
-        return {ok:true,message:describe(type,current(slot))};
+        return {ok:true,message:describe(type,current(slot),isWet(slot))};
     }
     function damage(slot,amount) {
         if(!Number.isFinite(amount)||amount<0)return {ok:false,message:'Damage must be a nonnegative number.'};
@@ -62,5 +68,5 @@ setup.clothingCondition=(()=>{
         }
         output.putImageData(pixels,0,0);ctx.drawImage(layer,0,0);
     }
-    return {max,value,current,assign,stage,effectiveStat,describe,set,damage,render};
+    return {max,value,current,isWet,assign,stage,effectiveStat,describe,set,damage,render};
 })();

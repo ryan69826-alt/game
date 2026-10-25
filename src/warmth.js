@@ -7,7 +7,7 @@ setup.warmth=(()=>{
     function clothingBreakdown(character=State.variables.character) {
         const worn=character?.clothing||{};
         return Object.entries(weights).map(([slot,weight])=>{
-            const type=worn[slot],value=setup.clothing.choices[slot].includes(type)&&type!=='none'?setup.clothingCondition.effectiveStat(type,'warmth',setup.clothingCondition.current(slot,character)):null;
+            const type=worn[slot],value=setup.clothing.choices[slot].includes(type)&&type!=='none'?setup.clothingCondition.effectiveStat(type,'warmth',setup.clothingCondition.current(slot,character),setup.clothingCondition.isWet(slot,character)):null;
             const warmth=Number.isFinite(value)?Math.max(-1,Math.min(10,value)):0;
             return {slot,item:Number.isFinite(value)?setup.clothing.definitions[type].name:'Empty',warmth,weight,contribution:warmth*weight};
         });

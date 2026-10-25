@@ -2962,3 +2962,59 @@ test('developer protection breakdown previews damage safely and explicitly appli
     await page.evaluate(()=>SugarCube.setup.clothingCondition.set('bottoms',0));await page.keyboard.press('p');await page.getByRole('button',{name:'Protection calculation',exact:true}).click();
     assert.deepEqual(await page.locator('[data-slot="bottoms"]').locator('th,td').allTextContents(),['Bottom','Generic pants (Broken)','2','0']);assert.match(await page.locator('#developer-protection-summary').textContent(),/Equipped protection: 2 points/);
 });
+
+test('water protection matches the sheet, wet warmth halves once and broken waterproof clothes lose resistance',async()=>{
+    assert.equal(await page.evaluate(()=>SugarCube.setup.clothingWater.expose('top').ok),false);
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup}=SugarCube;
+        const values=Object.fromEntries(setup.clothingCatalog.items.map(item=>[item.id,item.waterProtection]));
+        const before=setup.warmth.clothingAverage(),exposed=setup.clothingWater.expose('top'),once=setup.warmth.clothingAverage();setup.clothingWater.expose('top');const twice=setup.warmth.clothingAverage();
+        setup.clothingWater.dry('top');const dry=setup.warmth.clothingAverage();
+        setup.developerClothing.equip('simple-glasses');setup.clothingWater.expose('facewear');const metal=setup.warmth.clothingBreakdown().find(row=>row.slot==='facewear').warmth;
+        setup.developerClothing.equip('jacket');const jacket=setup.clothingWater.expose('overtop'),waterproof=setup.clothingWater.status('overtop');
+        setup.clothingCondition.set('overtop',0);setup.clothingWater.expose('overtop');const broken=setup.clothingWater.status('overtop');
+        setup.clothingCondition.set('overtop',75);const restored=setup.clothingWater.status('overtop');
+        setup.developerClothing.equip('rain-coat');setup.clothingWater.expose('overtop');const rain=setup.clothingWater.status('overtop');
+        setup.developerClothing.equip('fishing-pole');const pole=setup.clothingWater.expose('handheld');
+        return {values,before,exposed,once,twice,dry,metal,jacket,waterproof,broken,restored,rain,pole};
+    });
+    assert.equal(Object.keys(result.values).length,34);for(const [id,value] of Object.entries(result.values))assert.equal(value,id==='fishing-pole'?null:['jacket','rain-coat'].includes(id)?1:0,id);
+    assert.equal(result.before,33/23);assert.equal(result.exposed.wet,true);assert.equal(result.once,27/23);assert.equal(result.twice,result.once);assert.equal(result.dry,result.before);assert.equal(result.metal,-.5);
+    assert.equal(result.jacket.wet,false);assert.equal(result.waterproof.waterproof,true);assert.equal(result.waterproof.warmth,8);assert.equal(result.waterproof.wet,false);
+    assert.equal(result.broken.waterproof,false);assert.equal(result.broken.wet,true);assert.equal(result.broken.warmth,0);assert.equal(result.restored.waterproof,true);assert.equal(result.restored.wet,false);assert.equal(result.restored.warmth,8);
+    assert.equal(result.rain.wet,false);assert.equal(result.rain.warmth,6);assert.equal(result.pole.ok,false);
+});
+
+test('wet garments keep individual wetness, durability and pocket contents through storage and reload without spreading water',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;
+        setup.inventory.ensure().containers['worn:shirt']=[{id:'wet-kept-cloth',type:'cloth',x:0,y:0}];setup.clothingWater.expose('top');setup.clothingCondition.damage('top',10);
+        const condition=setup.clothingCondition.current('top'),stillWet=setup.clothingCondition.isWet('top');
+        const ground=setup.groundItems.current();setup.equipment.drop('equipped:top','equipped:top');const original=setup.inventory.placements(ground).find(item=>item.type==='shirt');
+        setup.developerClothing.equip('shirt');const freshDry=!setup.clothingCondition.isWet('top');setup.equipment.drop('equipped:top','equipped:top');
+        const copies=setup.inventory.placements(ground).filter(item=>item.type==='shirt').map(item=>({id:item.id,wet:item.wet}));
+        setup.developerClothing.equip('basic-backpack');const bag=setup.clothing.definitions['basic-backpack'].pockets[0];setup.inventory.transfer(ground.id,bag.id,original.id,0,0);
+        return {condition,stillWet,freshDry,copies,bag:bag.id,item:structuredClone(setup.inventory.placements(bag)[0]),bagWet:setup.clothingCondition.isWet('storage'),time:State.variables.world.elapsedSeconds};
+    });
+    assert.equal(result.condition,40);assert.equal(result.stillWet,true);assert.equal(result.freshDry,true);assert.deepEqual(result.copies.map(item=>item.wet),[true,false]);assert.equal(new Set(result.copies.map(item=>item.id)).size,2);
+    assert.equal(result.item.wet,true);assert.equal(result.item.durability,40);assert.equal(result.item.pockets['worn:shirt'][0].id,'wet-kept-cloth');assert.equal(result.item.pockets['worn:shirt'][0].wet,undefined);assert.equal(result.bagWet,false);assert.equal(result.time,0);
+    await page.reload();await page.waitForSelector('#local-map');
+    const equipped=await page.evaluate(({bag,id})=>{const {setup,State}=SugarCube;const equip=setup.equipment.equip(bag,id),wet=setup.clothingCondition.isWet('top');const normalized=setup.character.normalize(State.variables.character).clothingDurability.top;
+        return {equip,wet,normalized,warmth:setup.warmth.clothingBreakdown().find(row=>row.slot==='top').warmth,contents:setup.inventory.ensure().containers['worn:shirt'][0].id};},{bag:result.bag,id:result.item.id});
+    assert.equal(equipped.equip.ok,true);assert.equal(equipped.wet,true);assert.deepEqual(equipped.normalized,{type:'shirt',current:40,wet:true});assert.equal(equipped.warmth,2);assert.equal(equipped.contents,'wet-kept-cloth');
+    await page.reload();await page.waitForSelector('#local-map');assert.equal(await page.evaluate(()=>SugarCube.setup.clothingCondition.isWet('top')),true);
+    const dried=await page.evaluate(()=>{const {setup}=SugarCube;setup.clothingWater.dry('top');return {wet:setup.clothingCondition.isWet('top'),durability:setup.clothingCondition.current('top'),warmth:setup.warmth.clothingBreakdown().find(row=>row.slot==='top').warmth};});assert.deepEqual(dried,{wet:false,durability:40,warmth:4});
+});
+
+test('developer water exposure updates warmth and inventory wet labels without spending time or changing other stats',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const snapshot=()=>page.evaluate(()=>({time:SugarCube.State.variables.world.elapsedSeconds,player:structuredClone(SugarCube.State.variables.player),skills:structuredClone(SugarCube.State.variables.character.skills),stealth:SugarCube.setup.stealth.calculate().score,protection:SugarCube.setup.protection.calculate().total}));const before=await snapshot();
+    await page.keyboard.press('p');await page.getByRole('button',{name:'Water protection',exact:true}).click();await page.getByLabel('Clothing slot',{exact:true}).selectOption('top');
+    await page.getByRole('button',{name:'Expose to water',exact:true}).click();assert.match(await page.locator('#developer-water-detail').textContent(),/Water protection: 0 \(effective 0\) · Wet · Base warmth: 4 · Current warmth: 2/);
+    await page.setViewportSize({width:320,height:844});await page.evaluate(()=>SugarCube.Dialog.resize());assert.ok(await page.getByRole('button',{name:'Dry item',exact:true}).isVisible());
+    await page.getByRole('button',{name:'Back to developer tools',exact:true}).click();await page.getByRole('button',{name:'Warmth calculation',exact:true}).click();
+    assert.deepEqual(await page.locator('[data-slot="top"]').locator('th,td').allTextContents(),['Top','Generic shirt','2','×3','6']);
+    await page.keyboard.press('Escape');await page.keyboard.press('i');assert.match(await page.locator('[data-equip-slot="top"] .equipment-condition').textContent(),/Wet/);
+    await page.keyboard.press('Escape');await page.keyboard.press('p');await page.getByRole('button',{name:'Water protection',exact:true}).click();await page.getByLabel('Clothing slot',{exact:true}).selectOption('top');await page.getByRole('button',{name:'Dry item',exact:true}).click();
+    assert.match(await page.locator('#developer-water-detail').textContent(),/Dry · Base warmth: 4 · Current warmth: 4/);assert.deepEqual(await snapshot(),before);
+});

@@ -5,7 +5,7 @@ setup.equipment=(()=>{
     const slotFor=type=>setup.clothing.slots.find(slot=>setup.clothing.choices[slot].includes(type)&&type!=='none');
     function preview(slot) {
         const type=State.variables.character?.clothing[slot];
-        return sizes[type]?{id:`equipped:${slot}`,type,durability:setup.clothingCondition.current(slot)}:null;
+        return sizes[type]?{id:`equipped:${slot}`,type,durability:setup.clothingCondition.current(slot),wet:setup.clothingCondition.isWet(slot)}:null;
     }
     const failed=message=>({ok:false,message});
     function commit(message) {
@@ -41,7 +41,7 @@ setup.equipment=(()=>{
         if(pockets.some(pocket=>state.containers[pocket.id]?.length)) return failed('Existing pocket contents must be recovered before equipping this garment.');
         state.containers[fromId]=inventory.placements(source).filter(entry=>entry.id!==itemId);
         State.variables.character.clothing[slot]=item.type;
-        setup.clothingCondition.assign(slot,item.durability);
+        setup.clothingCondition.assign(slot,item.durability,State.variables.character,item.wet===true);
         for(const pocket of pockets) state.containers[pocket.id]=item.pockets?.[pocket.id]||[];
         State.variables.wornGarmentIds={...State.variables.wornGarmentIds,[slot]:item.id};
         return commit(`You put on ${setup.clothing.definitions[item.type].name.toLowerCase()}. Its pocket contents are restored.`);

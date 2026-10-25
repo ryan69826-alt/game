@@ -862,8 +862,7 @@ The underlying body/head and other garments remain independent.
 
 At **0 durability**, warmth, protection, stealth and water-protection contributions
 are zero. Above zero their values are unchanged. `clothingCondition.effectiveStat`
-is the shared getter; warmth, protection and stealth use it now, while water
-protection still awaits its item values and gameplay system. Negative metal
+is the shared getter; warmth, protection, stealth and water protection use it. Negative metal
 warmth also stops applying when broken. Broken clothes remain wearable and keep
 their storage compartments and contents.
 
@@ -932,3 +931,35 @@ time or award XP; those effects belong to the encounter when implemented.
 Enter damage and use **Preview damage** to see the calculation without changing
 health, or **Apply test damage** to use the real protected damage handler and
 update sidebar health. The exact protection numbers stay in developer tools.
+
+### Waterproof clothing and wetness
+
+Water Protection uses the sheet's binary values: **0** means water can wet the
+item, and **1** means it stays dry on exposure. **Jacket and Rain Coat are 1**;
+the other clothing entries, including the legacy shirt/pants/shoes/backpack, are
+0. Fishing Pole and the Basic ID chip are N/A. This updates only Water Protection;
+other columns remain as previously supplied (and Generic Shoes remains in Shoes).
+
+Wet, non-waterproof clothing supplies **half its normal warmth** before the slot
+weight is applied. Repeated exposure does not halve it again. Drying restores its
+normal warmth without restoring durability. Signed warmth is halved literally,
+so the −1 glasses/watch warmth becomes −0.5 when wet. Protection and stealth are
+unaffected by wetness. A broken item still supplies zero warmth; a broken jacket
+or rain coat also loses waterproofing and can become wet.
+
+Each garment saves its own wet flag alongside durability while equipped, then
+carries it on its inventory placement when removed. Condition changes preserve
+wetness unless waterproofing becomes active. Drop/storage/equip/reload preserve
+the flag and pockets, same-type garments can differ, and old items default to
+dry. New clothing injected by the developer selector starts dry.
+
+`clothingWater.status(slot)` reports waterproofing, wetness and effective warmth;
+`clothingWater.expose(slot)` applies water to that equipped garment, and
+`clothingWater.dry(slot)` dries it. The shared warmth getter and calculation use
+this saved state. **P → Water protection** exposes the same controls, and inventory
+shows **Wet** on affected garments. **P → Warmth calculation** reflects the halved
+values. These controls do not spend time, award XP or damage clothing.
+
+This update adds no rain/swimming triggers, timed drying, protection for inner
+layers or water spreading to pocket contents. Future events must expose the
+appropriate individual garments explicitly.

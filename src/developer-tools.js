@@ -26,7 +26,7 @@ setup.developerTools=(()=>{
             }body.append(line);
         }
         table.append(caption,head,body);scroll.append(table);
-        const note=document.createElement('p');note.className='world-note';note.textContent='Empty weighted slots count as 0; total weight stays 23. Metal items can contribute −1 warmth. Waist, Back, Handheld and augmentations are unweighted. Comfort uses the exact difference: ≤ −4 Freezing; greater than −4 through −3 Cold; greater than −3 and below −2 Chilly; −2 through +2 Comfortable; greater than +2 and below +3 Warm; +3 and below +4 Hot; ≥ +4 Overheating. Displayed decimals are rounded; calculations use full precision.';
+        const note=document.createElement('p');note.className='world-note';note.textContent='Empty weighted slots count as 0; total weight stays 23. Metal items can contribute −1 warmth. Wet non-waterproof clothing contributes half warmth. Waist, Back, Handheld and augmentations are unweighted. Comfort uses the exact difference: ≤ −4 Freezing; greater than −4 through −3 Cold; greater than −3 and below −2 Chilly; −2 through +2 Comfortable; greater than +2 and below +3 Warm; +3 and below +4 Hot; ≥ +4 Overheating. Displayed decimals are rounded; calculations use full precision.';
         const previous=document.createElement('button');previous.type='button';previous.textContent='Back to developer tools';previous.addEventListener('click',back);
         root.append(heading,summary,scroll,note,previous);
     }
@@ -62,7 +62,9 @@ setup.developerTools=(()=>{
             stealth.addEventListener('click',()=>setup.developerStealth.show(root,main));
             const protection=document.createElement('button');protection.type='button';protection.textContent='Protection calculation';
             protection.addEventListener('click',()=>setup.developerProtection.show(root,main));
-            root.append(help,action,clearance,clothing,durability,warmth,stealth,protection,result);
+            const water=document.createElement('button');water.type='button';water.textContent='Water protection';
+            water.addEventListener('click',()=>setup.developerWater.show(root,main));
+            root.append(help,action,clearance,clothing,durability,warmth,stealth,protection,water,result);
         }
         main();Dialog.open();
     }
