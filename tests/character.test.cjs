@@ -3113,3 +3113,43 @@ test('developer exposure breakdown shows zero-value outer overrides and restores
     await page.evaluate(()=>{const {setup}=SugarCube;setup.equipment.drop('equipped:overtop','equipped:overtop');setup.equipment.drop('equipped:top','equipped:top');});await page.reload();await page.waitForSelector('#local-map');
     await page.keyboard.press('p');await page.getByRole('button',{name:'Exposure calculation',exact:true}).click();assert.match(await page.locator('#developer-exposure-summary').textContent(),/capped at 0–100 = 25 \/ 100/);assert.deepEqual(await page.locator('[data-slot="undertop"]').locator('th,td').allTextContents(),['Under Top','Sports Bra','25','Visible','25']);
 });
+
+test('clothing accessibility matches the sheet as individual 1–10 ratings with N/A for empty slots and the fixed implant',async()=>{
+    const result=await page.evaluate(()=>{const {setup}=SugarCube;
+        const catalog=Object.fromEntries(setup.clothingCatalog.items.map(item=>[item.id,setup.clothingAccess.rating(item.id)]));
+        const legacy=['shirt','pants','shoes','backpack'].map(setup.clothingAccess.rating),missing=['none','basic-id-chip','unknown'].map(setup.clothingAccess.rating);
+        const original=setup.clothing.definitions.shirt.accessibility;const ranges=[0,1,10,11,2.5,NaN].map(value=>{setup.clothing.definitions.shirt.accessibility=value;return setup.clothingAccess.rating('shirt');});setup.clothing.definitions.shirt.accessibility=original;
+        return {catalog,legacy,missing,ranges,worn:setup.clothingAccess.worn()};
+    });
+    assert.deepEqual(result.catalog,{'plain-cap':8,beanie:8,'simple-glasses':10,'face-mask':6,hoodie:2,jacket:2,'rain-coat':2,'plain-shirt':4,'t-shirt':4,'long-sleeve-shirt':4,'tank-top':7,undershirt:7,'sports-bra':8,'plain-bra':8,'plain-tank-top':7,'basic-belt':5,wristband:9,'cheap-watch':8,'light-gloves':3,'plain-pants':3,shorts:6,skirt:7,underwear:8,boxers:7,panties:8,'ankle-bands':7,'ankle-socks':7,'plain-socks':7,'generic-shoes':6,sneakers:6,boots:4,sandals:8,'basic-backpack':4,'fishing-pole':8});
+    assert.deepEqual(result.legacy,[4,3,6,4]);assert.deepEqual(result.missing,[null,null,null]);assert.deepEqual(result.ranges,[null,1,10,null,null,null]);assert.equal(result.worn.length,15);assert.equal(result.worn.find(row=>row.slot==='top').rating,4);assert.equal(result.worn.find(row=>row.slot==='undertop').rating,null);
+});
+
+test('accessibility stays per item beneath layers and inventory details preserve it through condition, removal and reload',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const layered=await page.evaluate(()=>{const {setup,State}=SugarCube;setup.developerClothing.equip('sports-bra');setup.developerClothing.equip('hoodie');
+        setup.inventory.ensure().containers['worn:sports-bra:1']=[{id:'accessibility-kept',type:'cloth',x:0,y:0}];
+        const before=setup.clothingAccess.worn().find(row=>row.slot==='undertop');setup.clothingCondition.set('undertop',0);setup.clothingWater.expose('undertop');
+        return {before,after:setup.clothingAccess.worn().find(row=>row.slot==='undertop'),outer:setup.clothingAccess.worn().find(row=>row.slot==='overtop'),id:State.variables.wornGarmentIds.undertop};
+    });
+    assert.equal(layered.before.rating,8);assert.equal(layered.before.visible,false);assert.deepEqual(layered.before.coveredBy.map(row=>row.name),['Hoodie','Generic shirt']);assert.deepEqual(layered.after,layered.before);assert.equal(layered.outer.rating,2);
+    await page.keyboard.press('i');const equipped=page.getByRole('button',{name:'Equipped Sports Bra',exact:true});assert.match(await equipped.getAttribute('title'),/Accessibility: 8\/10/);assert.match(await equipped.getAttribute('aria-description'),/Accessibility: 8\/10/);
+    await equipped.click();await page.getByRole('button',{name:'Drop on ground',exact:true}).click();
+    const stored=page.locator('.inventory-grid').locator(`[data-item="${layered.id}"]`);assert.match(await stored.getAttribute('title'),/Accessibility: 8\/10/);assert.match(await stored.getAttribute('title'),/Pocket contents: 1/);assert.match(await stored.getAttribute('aria-description'),/Accessibility: 8\/10/);
+    await page.reload();await page.waitForSelector('#local-map');
+    const restored=await page.evaluate(id=>{const {setup}=SugarCube;const ground=setup.groundItems.current(),item=setup.inventory.placements(ground).find(item=>item.id===id);const before={rating:setup.clothingAccess.rating(item.type),wet:item.wet,durability:item.durability,contents:item.pockets['worn:sports-bra:1'][0].id};
+        const equip=setup.equipment.equip(ground.id,id);return {before,equip,after:setup.clothingAccess.worn().find(row=>row.slot==='undertop')};},layered.id);
+    assert.deepEqual(restored.before,{rating:8,wet:true,durability:0,contents:'accessibility-kept'});assert.equal(restored.equip.ok,true);assert.deepEqual(restored.after,layered.before);
+});
+
+test('developer accessibility view lists covered item ratings without changing state and fits narrow screens',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();await page.evaluate(()=>{const {setup}=SugarCube;setup.developerClothing.equip('sports-bra');setup.developerClothing.equip('hoodie');});
+    await page.keyboard.press('p');const before=await page.evaluate(()=>JSON.stringify(SugarCube.State.variables));await page.getByRole('button',{name:'Clothing accessibility',exact:true}).click();
+    const table=page.getByRole('table',{name:'Equipped clothing accessibility',exact:true});assert.equal(await table.locator('tbody tr').count(),15);
+    assert.deepEqual(await table.locator('[data-slot="undertop"]').locator('th,td').allTextContents(),['Under Top','Sports Bra','8 / 10','Covered by Hoodie, Generic shirt']);
+    assert.deepEqual(await table.locator('[data-slot="overtop"]').locator('th,td').allTextContents(),['Over Top','Hoodie','2 / 10','Outer / visible']);assert.equal(await table.locator('[data-slot="hat"] td').nth(1).textContent(),'N/A');
+    assert.match(await page.getByRole('dialog').textContent(),/Basic ID chip: Accessibility N\/A/);
+    await page.setViewportSize({width:320,height:844});await page.evaluate(()=>SugarCube.Dialog.resize());const bounds=await page.locator('.developer-warmth-table').evaluate(el=>({right:el.getBoundingClientRect().right,scroll:el.scrollWidth,width:el.clientWidth}));assert.ok(bounds.right<=320);assert.ok(bounds.scroll>bounds.width);
+    await page.getByRole('button',{name:'Back to developer tools',exact:true}).click();await page.getByRole('button',{name:'Clothing selector',exact:true}).click();await page.getByLabel('Clothing slot',{exact:true}).selectOption('undertop');assert.match(await page.locator('#developer-clothing-detail').textContent(),/Accessibility: 8\/10/);
+    await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>JSON.stringify(SugarCube.State.variables)),before);
+});

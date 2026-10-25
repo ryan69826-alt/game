@@ -68,7 +68,9 @@ setup.developerTools=(()=>{
             allure.addEventListener('click',()=>setup.developerAllure.show(root,main));
             const exposure=document.createElement('button');exposure.type='button';exposure.textContent='Exposure calculation';
             exposure.addEventListener('click',()=>setup.developerExposure.show(root,main));
-            root.append(help,action,clearance,clothing,durability,warmth,stealth,protection,water,allure,exposure,result);
+            const accessibility=document.createElement('button');accessibility.type='button';accessibility.textContent='Clothing accessibility';
+            accessibility.addEventListener('click',()=>setup.developerAccessibility.show(root,main));
+            root.append(help,action,clearance,clothing,durability,warmth,stealth,protection,water,allure,exposure,accessibility,result);
         }
         main();Dialog.open();
     }

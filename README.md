@@ -1025,3 +1025,30 @@ item is ignored. The clothing selector lists raw item exposure. No new creator
 options or NPC responses are added. As with allure, current whole-slot coverage
 is unaffected by wetness or tears; no new durability/opacity modifiers have been
 invented. Exposure is a skin-exposure score, not a detection/attraction chance.
+
+### Clothing accessibility
+
+Every catalog item has the supplied **Accessibility** rating, from **1 to 10**,
+where **10 is easiest** to reach underneath or remove. This is an individual
+item property, not an outfit sum or a success percentage. The Basic ID chip has
+no rating and stays in its existing fixed augmentation slot. The Handheld Fishing
+Pole uses its supplied rating of 8. Generic Shoes stays in Shoes. Legacy shirt,
+pants, shoes and backpack use 4, 3, 6 and 4 respectively.
+
+`setup.clothingAccess.rating(type)` returns the item rating or `null` for N/A;
+`worn(character)` returns each equipped slot with its rating and covering layers.
+Hidden clothing keeps its own rating instead of being zeroed as it is for allure
+and exposure. The covering layers are context, not an automatic success/failure
+rule. Wetness and durability leave accessibility unchanged; no additional damage,
+wetness, skill or fastening modifiers are defined in this update.
+
+**P → Clothing accessibility** shows all equipped ratings and their layer context.
+The developer clothing selector lists the raw value, and inventory button tooltips
+and screen-reader descriptions include it both while worn and in storage/on the
+ground. Item definitions supply the value, so old saves, newly equipped items and
+removed garments use the same rating without duplicating it in save data.
+
+No automatic clothing removal, NPC actions or random checks are added here.
+Those interactions can consume the rating once their rules are specified. The
+normal player equipment controls, pocket contents, fixed implant and character
+creation choices are unchanged.
