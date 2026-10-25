@@ -862,8 +862,8 @@ The underlying body/head and other garments remain independent.
 
 At **0 durability**, warmth, protection, stealth and water-protection contributions
 are zero. Above zero their values are unchanged. `clothingCondition.effectiveStat`
-is the shared getter; warmth uses it now, while protection, stealth and water
-protection still await their own item values and gameplay systems. Negative metal
+is the shared getter; warmth, protection and stealth use it now, while water
+protection still awaits its item values and gameplay system. Negative metal
 warmth also stops applying when broken. Broken clothes remain wearable and keep
 their storage compartments and contents.
 
@@ -904,3 +904,31 @@ breakdown, including raw versus effective modifiers on broken gear. **Test steal
 check** uses the same check function without passing time, spending money,
 awarding XP or setting NPC detection flags. Normal player-facing views continue
 to hide exact attribute numbers.
+
+### Protection and damage
+
+Equipped clothing protection adds together: **one point reduces incoming damage
+by 1%**, capped at **80% damage reduction**. There is no innate protection and no
+slot weighting. Empty slots, stored items, augmentations and broken gear contribute
+zero; positive durability keeps the full item value. The catalog uses the supplied
+sheet. Legacy shirt, pants, shoes and backpack have 1, 2, 1 and 0 protection.
+The original outfit therefore has 4% reduction. A coat (2), shirt (1), plain
+pants (2) and boots (3) currently total 8%; stronger gear can use the same 80% cap.
+
+`setup.protection.calculate()` exposes total points, capped reduction and rows.
+`setup.protection.previewDamage(amount)` returns a read-only calculation:
+`damage = incoming × (1 − reduction / 100)`. Amounts, final damage and health are
+rounded to two decimal places, so a 1-damage hit against 4 protection deals 0.96.
+Health remains bounded at 0–100 and decimals survive reloads.
+
+Incoming hits use **`setup.playerState.takeDamage(amount)`**, which applies
+protection once and commits the resulting health. The existing `changeHealth`
+method remains a direct adjustment for healing and stat corrections; it does
+not apply armor. Healing is unchanged by protection. Invalid negative/nonfinite
+incoming damage is rejected. A hit does not automatically damage clothing, pass
+time or award XP; those effects belong to the encounter when implemented.
+
+**P → Protection calculation** shows raw/effective contributions and the cap.
+Enter damage and use **Preview damage** to see the calculation without changing
+health, or **Apply test damage** to use the real protected damage handler and
+update sidebar health. The exact protection numbers stay in developer tools.

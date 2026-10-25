@@ -2914,3 +2914,51 @@ test('broken positive and negative clothing modifiers become zero and stealth st
     await page.keyboard.press('Escape');await page.evaluate(()=>{delete SugarCube.State.variables.player.baseStealth;SugarCube.State.create(SugarCube.State.passage);});
     await page.reload();await page.waitForSelector('#local-map');assert.equal(await page.evaluate(()=>SugarCube.State.variables.player.baseStealth),80);
 });
+
+test('protection uses all sheet values, sums only equipped unbroken gear and caps damage reduction at 80 percent',async()=>{
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;
+        const catalog=Object.fromEntries(setup.clothingCatalog.items.map(item=>[item.id,item.protection])),starter=setup.protection.calculate();
+        State.variables.character.clothing=Object.fromEntries(setup.clothing.slots.map(slot=>[slot,'none']));const bare=setup.protection.calculate();
+        setup.inventory.ensure().containers['ground:apartments:30:33']=[{id:'stored-armor',type:'jacket',x:0,y:0}];const stored=setup.protection.calculate().total;
+        Object.assign(State.variables.character.clothing,{overtop:'jacket',top:'plain-shirt',bottoms:'plain-pants',shoes:'boots'});const layered=setup.protection.calculate();
+        setup.clothingCondition.assign('overtop',.01);const worn=setup.protection.calculate().total;setup.clothingCondition.assign('overtop',0);const broken=setup.protection.calculate();
+        State.variables.character.clothing=Object.fromEntries(setup.clothing.slots.map(slot=>[slot,'none']));State.variables.character.clothing.top='shirt';
+        setup.clothing.definitions.shirt.protection=80;const atCap=setup.protection.previewDamage(100);setup.clothing.definitions.shirt.protection=95;const aboveCap=setup.protection.previewDamage(100);
+        State.variables.character.clothing.top='none';const unprotected=setup.protection.previewDamage(100);
+        return {catalog,starter,bare,stored,layered,worn,broken,atCap,aboveCap,unprotected,invalid:[-1,NaN,Infinity].map(setup.protection.previewDamage)};
+    });
+    assert.deepEqual(result.catalog,{'plain-cap':0,beanie:0,'simple-glasses':0,'face-mask':0,hoodie:2,jacket:2,'rain-coat':2,'plain-shirt':1,'t-shirt':1,'long-sleeve-shirt':1,'tank-top':0,undershirt:0,'sports-bra':0,'plain-bra':0,'plain-tank-top':0,'basic-belt':0,wristband:0,'cheap-watch':0,'light-gloves':0,'plain-pants':2,shorts:1,skirt:1,underwear:0,boxers:0,panties:0,'ankle-bands':0,'ankle-socks':0,'plain-socks':0,'generic-shoes':1,sneakers:2,boots:3,sandals:0,'basic-backpack':0,'fishing-pole':0});
+    assert.equal(result.starter.total,4);assert.equal(result.starter.reduction,4);assert.equal(result.bare.total,0);assert.equal(result.stored,0);assert.equal(result.layered.total,8);assert.equal(result.worn,8);assert.equal(result.broken.total,6);
+    const coat=result.broken.rows.find(row=>row.slot==='overtop');assert.equal(coat.raw,2);assert.equal(coat.points,0);assert.equal(coat.broken,true);
+    assert.equal(result.atCap.reduction,80);assert.equal(result.atCap.damage,20);assert.equal(result.aboveCap.total,95);assert.equal(result.aboveCap.reduction,80);assert.equal(result.aboveCap.damage,20);assert.equal(result.unprotected.damage,100);assert.ok(result.invalid.every(result=>result.ok===false));
+});
+
+test('protected damage preserves fractional health, clamps at zero, leaves healing intact and rejects invalid hits',async()=>{
+    assert.equal(await page.evaluate(()=>SugarCube.setup.playerState.takeDamage(10).ok),false);
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    const result=await page.evaluate(()=>{const {setup,State}=SugarCube;
+        const before={time:State.variables.world.elapsedSeconds,skills:structuredClone(State.variables.character.skills),equipment:structuredClone(State.variables.character.clothing),durability:structuredClone(State.variables.character.clothingDurability)};
+        const hit=setup.playerState.takeDamage(1);const normalized=setup.playerState.ensure().health;
+        const rejected=[-1,NaN,Infinity].map(amount=>setup.playerState.takeDamage(amount));const afterReject=State.variables.player.health;
+        setup.playerState.changeHealth(1000);const healed=State.variables.player.health;const lethal=setup.playerState.takeDamage(1000);const dead=State.variables.player.health;
+        setup.playerState.changeHealth(100);setup.playerState.takeDamage(1);
+        const after={time:State.variables.world.elapsedSeconds,skills:structuredClone(State.variables.character.skills),equipment:structuredClone(State.variables.character.clothing),durability:structuredClone(State.variables.character.clothingDurability)};
+        return {before,after,hit,normalized,rejected,afterReject,healed,lethal,dead};
+    });
+    assert.equal(result.hit.reduction,4);assert.equal(result.hit.damage,.96);assert.equal(result.hit.blocked,.04);assert.equal(result.hit.health,99.04);assert.equal(result.hit.healthLost,.96);assert.equal(result.normalized,99.04);assert.equal(result.afterReject,99.04);
+    assert.ok(result.rejected.every(hit=>hit.ok===false));assert.equal(result.healed,100);assert.equal(result.dead,0);assert.equal(result.lethal.healthLost,100);assert.deepEqual(result.after,result.before);
+    await page.reload();await page.waitForSelector('#local-map');assert.equal(await page.locator('#player-health').textContent(),'99.04 / 100');assert.equal(await page.evaluate(()=>SugarCube.setup.playerState.ensure().health),99.04);
+});
+
+test('developer protection breakdown previews damage safely and explicitly applies the real protected hit',async()=>{
+    await page.getByRole('link',{name:'Start at Apartments',exact:true}).click();
+    await page.keyboard.press('p');await page.getByRole('button',{name:'Protection calculation',exact:true}).click();
+    assert.match(await page.locator('#developer-protection-summary').textContent(),/Equipped protection: 4 pointsDamage reduction: 4% \(maximum 80%\)/);
+    const table=page.getByRole('table',{name:'Equipped protection contributions',exact:true});assert.equal(await table.locator('tbody tr').count(),15);assert.deepEqual(await table.locator('[data-slot="bottoms"]').locator('th,td').allTextContents(),['Bottom','Generic pants','2','2']);
+    await page.getByLabel('Incoming damage',{exact:true}).fill('100');await page.getByRole('button',{name:'Preview damage',exact:true}).click();assert.match(await page.locator('#developer-protection-result').textContent(),/= 96 damage · 4 blocked · Preview only/);assert.equal(await page.locator('#player-health').textContent(),'100 / 100');
+    await page.getByLabel('Incoming damage',{exact:true}).fill('1');await page.getByRole('button',{name:'Apply test damage',exact:true}).click();assert.match(await page.locator('#developer-protection-result').textContent(),/Health: 99.04 \/ 100 \(0.96 lost\)/);assert.equal(await page.locator('#player-health').textContent(),'99.04 / 100');
+    await page.setViewportSize({width:320,height:844});await page.evaluate(()=>SugarCube.Dialog.resize());const bounds=await page.locator('.developer-warmth-table').evaluate(el=>({right:el.getBoundingClientRect().right,scroll:el.scrollWidth,width:el.clientWidth}));assert.ok(bounds.right<=320);assert.ok(bounds.scroll>bounds.width);
+    await page.getByRole('button',{name:'Back to developer tools',exact:true}).click();await page.keyboard.press('Escape');
+    await page.evaluate(()=>SugarCube.setup.clothingCondition.set('bottoms',0));await page.keyboard.press('p');await page.getByRole('button',{name:'Protection calculation',exact:true}).click();
+    assert.deepEqual(await page.locator('[data-slot="bottoms"]').locator('th,td').allTextContents(),['Bottom','Generic pants (Broken)','2','0']);assert.match(await page.locator('#developer-protection-summary').textContent(),/Equipped protection: 2 points/);
+});

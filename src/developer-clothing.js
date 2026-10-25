@@ -36,7 +36,7 @@ setup.developerClothing=(()=>{
         function describe() {
             const item=setup.clothing.definitions[items.value],blocks=item.pockets.reduce((sum,p)=>sum+p.columns*p.rows,0);
             const pockets=item.pockets.map(p=>`${p.columns}×${p.rows}`).join(', ')||'None';
-            detail.textContent=`Warmth: ${item.warmth??'N/A'} · Stealth: ${item.stealth??'N/A'} · Maximum durability: ${item.maxDurability??'N/A'} · Storage: ${blocks} blocks · Compartments: ${pockets}`;
+            detail.textContent=`Warmth: ${item.warmth??'N/A'} · Stealth: ${item.stealth??'N/A'} · Protection: ${item.protection??'N/A'} · Maximum durability: ${item.maxDurability??'N/A'} · Storage: ${blocks} blocks · Compartments: ${pockets}`;
             apply.textContent=items.value==='none'?'Remove clothing':'Equip clothing';
         }
         function populate() {

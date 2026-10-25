@@ -60,7 +60,9 @@ setup.developerTools=(()=>{
             warmth.addEventListener('click',()=>showWarmth(root,main));
             const stealth=document.createElement('button');stealth.type='button';stealth.textContent='Stealth calculation';
             stealth.addEventListener('click',()=>setup.developerStealth.show(root,main));
-            root.append(help,action,clearance,clothing,durability,warmth,stealth,result);
+            const protection=document.createElement('button');protection.type='button';protection.textContent='Protection calculation';
+            protection.addEventListener('click',()=>setup.developerProtection.show(root,main));
+            root.append(help,action,clearance,clothing,durability,warmth,stealth,protection,result);
         }
         main();Dialog.open();
     }
